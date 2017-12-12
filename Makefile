@@ -26,7 +26,7 @@ build: deps $(TARGET)
 
 clean:
 	@rm -f $(TARGET)
-	$(shell find ./bin -type f -perm +111)
+	$(shell find ./bin -type f -perm +111 -delete)
 
 install:
 	@go install $(LDFLAGS)
@@ -52,7 +52,8 @@ test:
 	@go test -v
 
 deps:
-	@go get ./...
+	@glide up
+	@glide install
 
 mac: GOOS = darwin
 mac: GOARCH = amd64
