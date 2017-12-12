@@ -51,26 +51,28 @@ run: install
 test:
 	@go test -v
 
+mac: GOOS = darwin
+mac: GOARCH = amd64
 mac:
-	$(eval GOOS := darwin)
-	$(eval GOARCH := amd64)
+	@echo "building for $(GOOS)/$(GOARCH)"
 	@mkdir -p bin/$(GOARCH)/$(GOOS)/ && go build && mv $(TARGET) bin/$(GOARCH)/$(GOOS)/
 
+ubuntu: GOOS = linux
+ubuntu: GOARCH = amd64
 ubuntu:
-	$(eval GOOS := linux)
-	$(eval GOARCH := amd64)
+	@echo "building for $(GOOS)/$(GOARCH)"
 	@mkdir -p bin/$(GOARCH)/$(GOOS)/ && go build && mv $(TARGET) bin/$(GOARCH)/$(GOOS)/
 
 packages: deb pkg
 
+deb: GOOS = linux
+deb: GOARCH = amd64
 deb: ubuntu
-	$(eval GOOS := linux)
-	$(eval GOARCH := amd64)
-	fpm -n $(TARGET) -s dir -t deb --deb-no-default-config-files ./bin/$(GOARCH)/$(GOOS)/$(TARGET)=/usr/local/bin/$(TARGET)
+	fpm -n $(TARGET) -s dir -t deb -p $(TARGET)_VERSION_$(GOARCH).deb --deb-no-default-config-files ./bin/$(GOARCH)/$(GOOS)/$(TARGET)=/usr/local/bin/$(TARGET)
 	@mv $(TARGET)*.deb ./packages
 
+pkg: GOOS = darwin
+pkg: GOARCH = amd64
 pkg: mac
-	$(eval GOOS := darwin)
-	$(eval GOARCH := amd64)
 	@fpm -n $(TARGET) -s dir -t osxpkg ./bin/$(GOARCH)/$(GOOS)/$(TARGET)=/usr/local/bin/$(TARGET)
 	@mv $(TARGET)*.pkg ./packages
