@@ -21,7 +21,7 @@ all: check install
 $(TARGET): $(SRC)
 	@go build $(LDFLAGS) -o $(TARGET)
 
-build: $(TARGET)
+build: deps $(TARGET)
 	@true
 
 clean:
@@ -50,6 +50,9 @@ run: install
 
 test:
 	@go test -v
+
+deps:
+	@go get ./...
 
 mac: GOOS = darwin
 mac: GOARCH = amd64
