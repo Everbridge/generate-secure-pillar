@@ -1,2 +1,3 @@
 generate-secure-pillar
 .vscode
+bin/*
