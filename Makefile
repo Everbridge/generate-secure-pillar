@@ -26,6 +26,7 @@ build: $(TARGET)
 
 clean:
 	@rm -f $(TARGET)
+	$(shell find ./bin -type f -perm +111)
 
 install:
 	@go install $(LDFLAGS)
@@ -46,3 +47,30 @@ check:
 
 run: install
 	@$(TARGET)
+
+test:
+	@go test -v
+
+mac:
+	$(eval GOOS := darwin)
+	$(eval GOARCH := amd64)
+	@mkdir -p bin/$(GOARCH)/$(GOOS)/ && go build && mv $(TARGET) bin/$(GOARCH)/$(GOOS)/
+
+ubuntu:
+	$(eval GOOS := linux)
+	$(eval GOARCH := amd64)
+	@mkdir -p bin/$(GOARCH)/$(GOOS)/ && go build && mv $(TARGET) bin/$(GOARCH)/$(GOOS)/
+
+packages: deb pkg
+
+deb: ubuntu
+	$(eval GOOS := linux)
+	$(eval GOARCH := amd64)
+	fpm -n $(TARGET) -s dir -t deb --deb-no-default-config-files ./bin/$(GOARCH)/$(GOOS)/$(TARGET)=/usr/local/bin/$(TARGET)
+	@mv $(TARGET)*.deb ./packages
+
+pkg: mac
+	$(eval GOOS := darwin)
+	$(eval GOARCH := amd64)
+	@fpm -n $(TARGET) -s dir -t osxpkg ./bin/$(GOARCH)/$(GOOS)/$(TARGET)=/usr/local/bin/$(TARGET)
+	@mv $(TARGET)*.pkg ./packages
