@@ -26,7 +26,7 @@ build: deps $(TARGET)
 
 clean:
 	@rm -f $(TARGET)
-	$(shell find ./bin -type f -perm +111)
+	$(shell find ./bin -type f -perm +111 -delete)
 
 install:
 	@go install $(LDFLAGS)
