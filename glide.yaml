@@ -1,0 +1,14 @@
+package: eb-github.com/ed-silva/generate-secure-pillar
+import:
+- package: github.com/keybase/go-crypto
+  subpackages:
+  - openpgp
+  - openpgp/armor
+- package: github.com/urfave/cli
+  version: ~1.20.0
+- package: gopkg.in/yaml.v2
+testImport:
+- package: github.com/onsi/ginkgo
+  version: ~1.4.0
+- package: github.com/onsi/gomega
+  version: ~1.2.0
