@@ -51,8 +51,7 @@ test:
 	@go test -v
 
 deps:
-	@glide up
-	@glide install
+	@dep ensure -update
 
 mac: GOOS = darwin
 mac: GOARCH = amd64
