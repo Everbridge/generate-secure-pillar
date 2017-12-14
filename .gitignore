@@ -1,5 +1,6 @@
 generate-secure-pillar
 .vscode
 bin/*
-glide.lock
+Gopkg.lock
 vendor/*
+_vendor*
