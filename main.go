@@ -24,6 +24,25 @@ var usr, _ = user.Current()
 var defaultPubRing = filepath.Join(usr.HomeDir, ".gnupg/pubring.gpg")
 var defaultSecRing = filepath.Join(usr.HomeDir, ".gnupg/secring.gpg")
 
+var inputFlag = cli.StringFlag{
+	Name:        "file, f",
+	Value:       os.Stdin.Name(),
+	Usage:       "input file (defaults to STDIN)",
+	Destination: &inputFilePath,
+}
+
+var outputFlag = cli.StringFlag{
+	Name:        "outfile, o",
+	Value:       os.Stdout.Name(),
+	Usage:       "output file (defaults to STDOUT)",
+	Destination: &outputFilePath,
+}
+
+var fileFlags = []cli.Flag{
+	inputFlag,
+	outputFlag,
+}
+
 const pgpHeader = "-----BEGIN PGP MESSAGE-----"
 
 // SecurePillar secure pillar vars
@@ -89,9 +108,9 @@ $ ./generate-secure-pillar -k "Salt Master" encrypt recurse /path/to/pillar/secu
 	}
 
 	app.Commands = []cli.Command{
-		cli.Command{
+		{
 			Name:    "create",
-			Aliases: []string{"e"},
+			Aliases: []string{"c"},
 			Usage:   "create a new sls file",
 			Action: func(c *cli.Context) error {
 				var securePillar SecurePillar
@@ -103,12 +122,7 @@ $ ./generate-secure-pillar -k "Salt Master" encrypt recurse /path/to/pillar/secu
 				return nil
 			},
 			Flags: []cli.Flag{
-				cli.StringFlag{
-					Name:        "outfile, o",
-					Value:       os.Stdout.Name(),
-					Usage:       "path to a file to be written (defaults to STDOUT)",
-					Destination: &outputFilePath,
-				},
+				outputFlag,
 				cli.StringFlag{
 					Name:        "secure_name, n",
 					Usage:       "secure variable name",
@@ -121,9 +135,9 @@ $ ./generate-secure-pillar -k "Salt Master" encrypt recurse /path/to/pillar/secu
 				},
 			},
 		},
-		cli.Command{
+		{
 			Name:    "update",
-			Aliases: []string{"e"},
+			Aliases: []string{"u"},
 			Usage:   "update the value of the given key in the given file",
 			Action: func(c *cli.Context) error {
 				if inputFilePath != os.Stdin.Name() {
@@ -134,12 +148,7 @@ $ ./generate-secure-pillar -k "Salt Master" encrypt recurse /path/to/pillar/secu
 				return nil
 			},
 			Flags: []cli.Flag{
-				cli.StringFlag{
-					Name:        "file, f",
-					Value:       os.Stdin.Name(),
-					Usage:       "encrypt all unencrypted values in the given file (defaults to STDIN)",
-					Destination: &inputFilePath,
-				},
+				inputFlag,
 				cli.StringFlag{
 					Name:        "secure_name, n",
 					Usage:       "secure variable name",
@@ -152,30 +161,17 @@ $ ./generate-secure-pillar -k "Salt Master" encrypt recurse /path/to/pillar/secu
 				},
 			},
 		},
-		cli.Command{
+		{
 			Name:    "encrypt",
 			Aliases: []string{"e"},
 			Usage:   "perform encryption operations",
 			Action: func(c *cli.Context) error {
 				return nil
 			},
-			Subcommands: cli.Commands{
-				cli.Command{
-					Name: "all",
-					Flags: []cli.Flag{
-						cli.StringFlag{
-							Name:        "file, f",
-							Value:       os.Stdin.Name(),
-							Usage:       "encrypt all unencrypted values in the given file (defaults to STDIN)",
-							Destination: &inputFilePath,
-						},
-						cli.StringFlag{
-							Name:        "outfile, o",
-							Value:       os.Stdout.Name(),
-							Usage:       "path to a file to be written (defaults to STDOUT)",
-							Destination: &outputFilePath,
-						},
-					},
+			Subcommands: []cli.Command{
+				{
+					Name:  "all",
+					Flags: fileFlags,
 					Action: func(c *cli.Context) error {
 						if inputFilePath != os.Stdin.Name() && outputFilePath == "" {
 							outputFilePath = inputFilePath
@@ -185,7 +181,7 @@ $ ./generate-secure-pillar -k "Salt Master" encrypt recurse /path/to/pillar/secu
 						return nil
 					},
 				},
-				cli.Command{
+				{
 					Name: "recurse",
 					Flags: []cli.Flag{
 						cli.StringFlag{
@@ -217,24 +213,11 @@ $ ./generate-secure-pillar -k "Salt Master" encrypt recurse /path/to/pillar/secu
 				},
 			},
 		},
-		cli.Command{
+		{
 			Name:    "decrypt",
 			Aliases: []string{"d"},
 			Usage:   "perform decryption operations",
-			Flags: []cli.Flag{
-				cli.StringFlag{
-					Name:        "file, f",
-					Value:       os.Stdin.Name(),
-					Usage:       "decrypt all encrypted values in the given file (defaults to STDIN)",
-					Destination: &inputFilePath,
-				},
-				cli.StringFlag{
-					Name:        "outfile, o",
-					Value:       os.Stdout.Name(),
-					Usage:       "path to a file to be written (defaults to STDOUT)",
-					Destination: &outputFilePath,
-				},
-			},
+			Flags:   fileFlags,
 			Action: func(c *cli.Context) error {
 				buffer := plainTextPillarBuffer(inputFilePath)
 				writeSlsFile(buffer, outputFilePath)
