@@ -11,8 +11,8 @@ AUTHOR:
    Ed Silva <ed.silva@everbridge.com>
 
 COMMANDS:
-     create, e   create a new sls file
-     update, e   update the value of the given key in the given file
+     create, c   create a new sls file
+     update, u   update the value of the given key in the given file
      encrypt, e  perform encryption operations
      decrypt, d  perform decryption operations
      help, h     Shows a list of commands or help for one command
