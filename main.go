@@ -46,7 +46,7 @@ var fileFlags = []cli.Flag{
 const pgpHeader = "-----BEGIN PGP MESSAGE-----"
 
 // SecurePillar secure pillar vars
-type SecurePillar map[string]interface{}
+type SecurePillar map[interface{}]interface{}
 
 func main() {
 	if debug {
