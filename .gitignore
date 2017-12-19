@@ -4,3 +4,5 @@ bin/*
 Gopkg.lock
 vendor/*
 _vendor*
+.DS_Store
+*~
