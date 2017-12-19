@@ -45,8 +45,8 @@ var fileFlags = []cli.Flag{
 
 const pgpHeader = "-----BEGIN PGP MESSAGE-----"
 
-// SecurePillar secure pillar vars
-type SecurePillar map[interface{}]interface{}
+// SlsData salt pillar data
+type SlsData map[interface{}]interface{}
 
 func main() {
 	if debug {
@@ -111,10 +111,10 @@ $ ./generate-secure-pillar -k "Salt Master" encrypt recurse /path/to/pillar/secu
 			Aliases: []string{"c"},
 			Usage:   "create a new sls file",
 			Action: func(c *cli.Context) error {
-				var securePillar SecurePillar
+				var pillar SlsData
 				cipherText := encryptSecret(secretsString)
-				securePillar["secure_vars"].(SecurePillar)[secretName] = cipherText
-				buffer := formatBuffer(securePillar)
+				pillar["secure_vars"].(SlsData)[secretName] = cipherText
+				buffer := formatBuffer(pillar)
 				writeSlsFile(buffer, outputFilePath)
 				return nil
 			},
@@ -196,7 +196,7 @@ $ ./generate-secure-pillar -k "Salt Master" encrypt recurse /path/to/pillar/secu
 							slsFiles := findSlsFiles(recurseDir)
 							for _, file := range slsFiles {
 								pillar := readSlsFile(file)
-								if len(pillar["secure_vars"].(SecurePillar)) > 0 {
+								if len(pillar["secure_vars"].(SlsData)) > 0 {
 									buffer := pillarBuffer(file, true)
 									writeSlsFile(buffer, fmt.Sprintf("%s.new", file))
 								}
