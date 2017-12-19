@@ -29,9 +29,9 @@ func writeSlsFile(buffer bytes.Buffer, outFilePath string) {
 	}
 }
 
-func readSlsFile(slsPath string) SecurePillar {
+func readSlsFile(slsPath string) SlsData {
 	slsPath, _ = filepath.Abs(slsPath)
-	var securePillar SecurePillar
+	var SlsData SlsData
 
 	filename, _ := filepath.Abs(slsPath)
 	if _, err := os.Stat(filename); !os.IsNotExist(err) {
@@ -40,13 +40,13 @@ func readSlsFile(slsPath string) SecurePillar {
 			log.Fatal(err)
 		}
 
-		err = yaml.Unmarshal(yamlData, &securePillar)
+		err = yaml.Unmarshal(yamlData, &SlsData)
 		if err != nil {
 			log.Print(fmt.Sprintf("Skipping %s: %s\n", filename, err))
 		}
 	}
 
-	return securePillar
+	return SlsData
 }
 
 func findSlsFiles(searchDir string) []string {
@@ -69,20 +69,20 @@ func pillarBuffer(filePath string, all bool) bytes.Buffer {
 	filePath, _ = filepath.Abs(filePath)
 	var buffer bytes.Buffer
 	var cipherText string
-	securePillar := readSlsFile(filePath)
+	pillar := readSlsFile(filePath)
 	dataChanged := false
 
 	if all {
-		for k, v := range securePillar["secure_vars"].(SecurePillar) {
+		for k, v := range pillar["secure_vars"].(SlsData) {
 			if !strings.Contains(v.(string), pgpHeader) {
 				cipherText = encryptSecret(v.(string))
-				securePillar["secure_vars"].(SecurePillar)[k] = cipherText
+				pillar["secure_vars"].(SlsData)[k] = cipherText
 				dataChanged = true
 			}
 		}
 	} else {
 		cipherText = encryptSecret(secretsString)
-		securePillar["secure_vars"].(SecurePillar)[secretName] = cipherText
+		pillar["secure_vars"].(SlsData)[secretName] = cipherText
 		dataChanged = true
 	}
 
@@ -90,25 +90,25 @@ func pillarBuffer(filePath string, all bool) bytes.Buffer {
 		return buffer
 	}
 
-	return formatBuffer(securePillar)
+	return formatBuffer(pillar)
 }
 
 func plainTextPillarBuffer(inFile string) bytes.Buffer {
 	inFile, _ = filepath.Abs(inFile)
-	securePillar := readSlsFile(inFile)
-	if securePillar["secure_vars"] != nil {
-		for k, v := range securePillar["secure_vars"].(SecurePillar) {
+	pillar := readSlsFile(inFile)
+	if pillar["secure_vars"] != nil {
+		for k, v := range pillar["secure_vars"].(SlsData) {
 			if strings.Contains(v.(string), pgpHeader) {
 				plainText := decryptSecret(v.(string))
-				securePillar["secure_vars"].(SecurePillar)[k] = plainText
+				pillar["secure_vars"].(SlsData)[k] = plainText
 			}
 		}
 	}
 
-	return formatBuffer(securePillar)
+	return formatBuffer(pillar)
 }
 
-func formatBuffer(pillar SecurePillar) bytes.Buffer {
+func formatBuffer(pillar SlsData) bytes.Buffer {
 	var buffer bytes.Buffer
 
 	yamlBytes, err := yaml.Marshal(pillar)
