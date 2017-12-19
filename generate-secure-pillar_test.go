@@ -17,9 +17,9 @@ func TestFindSlsFiles(t *testing.T) {
 
 func TestReadSlsFile(t *testing.T) {
 	yaml := readSlsFile("./testdata/new.sls")
-	if len(yaml.SecureVars) != 3 {
+	if len(yaml["secure_vars"].(SecurePillar)) != 3 {
 		t.Errorf("YAML content length is incorrect, got: %d, want: %d.",
-			len(yaml.SecureVars), 3)
+			len(yaml["secure_vars"].(SecurePillar)), 3)
 	}
 }
 
@@ -30,15 +30,15 @@ func TestEncryptSecret(t *testing.T) {
 		publicKeyRing = filepath.Join(usr.HomeDir, ".gnupg/pubring.gpg")
 	}
 	yaml := readSlsFile("./testdata/new.sls")
-	if len(yaml.SecureVars) <= 0 {
+	if len(yaml["secure_vars"].(SecurePillar)) <= 0 {
 		t.Errorf("YAML content lenth is incorrect, got: %d, want: %d.",
-			len(yaml.SecureVars), 1)
+			len(yaml["secure_vars"].(SecurePillar)), 1)
 	}
-	for _, v := range yaml.SecureVars {
-		if strings.Contains(v, pgpHeader) {
+	for _, v := range yaml["secure_vars"].(SecurePillar) {
+		if strings.Contains(v.(string), pgpHeader) {
 			t.Errorf("YAML content is already encrypted.")
 		} else {
-			cipherText := encryptSecret(v)
+			cipherText := encryptSecret(v.(string))
 			if !strings.Contains(cipherText, pgpHeader) {
 				t.Errorf("YAML content was not encrypted.")
 			}
@@ -53,12 +53,12 @@ func TestDecryptSecret(t *testing.T) {
 		secureKeyRing = filepath.Join(usr.HomeDir, ".gnupg/secring.gpg")
 	}
 	yaml := readSlsFile("./testdata/new.sls")
-	if len(yaml.SecureVars) <= 0 {
+	if len(yaml["secure_vars"].(SecurePillar)) <= 0 {
 		t.Errorf("YAML content lenth is incorrect, got: %d, want: %d.",
-			len(yaml.SecureVars), 1)
+			len(yaml["secure_vars"].(SecurePillar)), 1)
 	}
-	for _, v := range yaml.SecureVars {
-		cipherText := encryptSecret(v)
+	for _, v := range yaml["secure_vars"].(SecurePillar) {
+		cipherText := encryptSecret(v.(string))
 		plainText := decryptSecret(cipherText)
 		if strings.Contains(plainText, pgpHeader) {
 			t.Errorf("YAML content was not decrypted.")
