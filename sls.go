@@ -29,10 +29,9 @@ func writeSlsFile(buffer bytes.Buffer, outFilePath string) {
 	}
 }
 
-func readSlsFile(slsPath string) SecurePillar {
+func readSlsFile(slsPath string) map[string]interface{} {
 	slsPath, _ = filepath.Abs(slsPath)
 	var securePillar SecurePillar
-	securePillar.SecureVars = make(map[string]string)
 
 	filename, _ := filepath.Abs(slsPath)
 	if _, err := os.Stat(filename); !os.IsNotExist(err) {
@@ -74,16 +73,16 @@ func pillarBuffer(filePath string, all bool) bytes.Buffer {
 	dataChanged := false
 
 	if all {
-		for k, v := range securePillar.SecureVars {
-			if !strings.Contains(v, pgpHeader) {
-				cipherText = encryptSecret(v)
-				securePillar.SecureVars[k] = cipherText
+		for k, v := range securePillar["secure_vars"].(map[interface{}]interface{}) {
+			if !strings.Contains(v.(string), pgpHeader) {
+				cipherText = encryptSecret(v.(string))
+				securePillar["secure_vars"].(map[interface{}]interface{})[k] = cipherText
 				dataChanged = true
 			}
 		}
 	} else {
 		cipherText = encryptSecret(secretsString)
-		securePillar.SecureVars[secretName] = cipherText
+		securePillar["secure_vars"].(map[interface{}]interface{})[secretName] = cipherText
 		dataChanged = true
 	}
 
@@ -97,10 +96,12 @@ func pillarBuffer(filePath string, all bool) bytes.Buffer {
 func plainTextPillarBuffer(inFile string) bytes.Buffer {
 	inFile, _ = filepath.Abs(inFile)
 	securePillar := readSlsFile(inFile)
-	for k, v := range securePillar.SecureVars {
-		if strings.Contains(v, pgpHeader) {
-			plainText := decryptSecret(v)
-			securePillar.SecureVars[k] = plainText
+	if securePillar["secure_vars"] != nil {
+		for k, v := range securePillar["secure_vars"].(map[interface{}]interface{}) {
+			if strings.Contains(v.(string), pgpHeader) {
+				plainText := decryptSecret(v.(string))
+				securePillar["secure_vars"].(map[interface{}]interface{})[k] = plainText
+			}
 		}
 	}
 
