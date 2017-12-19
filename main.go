@@ -113,7 +113,7 @@ $ ./generate-secure-pillar -k "Salt Master" encrypt recurse /path/to/pillar/secu
 			Action: func(c *cli.Context) error {
 				var securePillar SecurePillar
 				cipherText := encryptSecret(secretsString)
-				securePillar["secure_vars"].(map[string]interface{})[secretName] = cipherText
+				securePillar["secure_vars"].(SecurePillar)[secretName] = cipherText
 				buffer := formatBuffer(securePillar)
 				writeSlsFile(buffer, outputFilePath)
 				return nil
@@ -196,7 +196,7 @@ $ ./generate-secure-pillar -k "Salt Master" encrypt recurse /path/to/pillar/secu
 							slsFiles := findSlsFiles(recurseDir)
 							for _, file := range slsFiles {
 								pillar := readSlsFile(file)
-								if len(pillar["secure_vars"].(map[string]interface{})) > 0 {
+								if len(pillar["secure_vars"].(SecurePillar)) > 0 {
 									buffer := pillarBuffer(file, true)
 									writeSlsFile(buffer, fmt.Sprintf("%s.new", file))
 								}
