@@ -193,16 +193,15 @@ $ ./generate-secure-pillar -k "Salt Master" encrypt recurse /path/to/pillar/secu
 							log.Fatal(err)
 						}
 						if info.IsDir() {
-							slsFiles := findSlsFiles(recurseDir)
+							slsFiles, count := findSlsFiles(recurseDir)
+							if count == 0 {
+								log.Fatal(fmt.Sprintf("%s has no sls files", recurseDir))
+							}
 							for _, file := range slsFiles {
-								pillar := readSlsFile(file)
-								if len(pillar["secure_vars"].(SlsData)) > 0 {
-									buffer := pillarBuffer(file, true)
-									writeSlsFile(buffer, fmt.Sprintf("%s.new", file))
-								}
+								writeSlsData(file)
 							}
 						} else {
-							log.Fatal(fmt.Sprintf("%s is not a directory", info.Name()))
+							log.Fatal(fmt.Sprintf("%s is not a directory", recurseDir))
 						}
 
 						return nil
