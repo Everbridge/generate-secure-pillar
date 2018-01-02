@@ -23,9 +23,9 @@ $(TARGET): $(SRC)
 	@go build $(LDFLAGS) -o $(TARGET)
 
 build: deps $(TARGET)
-	@sed 's/\"1.0.*\"/\"1.0.'$(COMMIT)'\"/' main.go
-	@git commit -am 'new build'
+	@cat main.go | sed 's/\"1.0.*\"/\"1.0.'$(COMMIT)'\"/'
 	@make pkg deb
+	@git commit -am 'new build'
 	@git push origin master
 	@true
 
