@@ -91,13 +91,7 @@ func pillarBuffer(filePath string, all bool) bytes.Buffer {
 
 	if all {
 		if keyExists(pillar, "secure_vars") && len(pillar["secure_vars"].(SlsData)) != 0 {
-			for k, v := range pillar["secure_vars"].(SlsData) {
-				if !strings.Contains(v.(string), pgpHeader) {
-					cipherText = encryptSecret(v.(string))
-					pillar["secure_vars"].(SlsData)[k] = cipherText
-					dataChanged = true
-				}
-			}
+			pillar, dataChanged = pillarRange(pillar)
 		} else {
 			log.Infof(fmt.Sprintf("%s has no secure_vars element", filePath))
 		}
@@ -116,6 +110,18 @@ func pillarBuffer(filePath string, all bool) bytes.Buffer {
 	}
 
 	return formatBuffer(pillar)
+}
+
+func pillarRange(pillar SlsData) (SlsData, bool) {
+	var dataChanged = false
+	for k, v := range pillar["secure_vars"].(SlsData) {
+		if !strings.Contains(v.(string), pgpHeader) {
+			cipherText := encryptSecret(v.(string))
+			pillar["secure_vars"].(SlsData)[k] = cipherText
+			dataChanged = true
+		}
+	}
+	return pillar, dataChanged
 }
 
 func plainTextPillarBuffer(inFile string) bytes.Buffer {

@@ -22,7 +22,7 @@ func TestWriteSlsFile(t *testing.T) {
 	if err != nil {
 		t.Errorf("Returned error")
 	}
-	if keyExists(yaml, "secret") == false {
+	if !keyExists(yaml, "secret") {
 		t.Errorf("YAML content is incorrect, missing key")
 	} else if yaml["secret"] != "text" {
 		t.Errorf("YAML content is incorrect, got: %s, want: %s.",
