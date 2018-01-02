@@ -64,19 +64,19 @@ func main() {
 	cli.AppHelpTemplate = fmt.Sprintf(`%s
 EXAMPLES:
 # create a new sls file
-$ ./generate-secure-pillar -k "Salt Master" create --secret_name secret_name --secret_value secret_value --outfile new.sls
+$ generate-secure-pillar -k "Salt Master" create --secret_name secret_name --secret_value secret_value --outfile new.sls
 
 # add to the new file
-$ ./generate-secure-pillar -k "Salt Master" update --secret_name new_secret_name --secret_value new_secret_value --file new.sls
+$ generate-secure-pillar -k "Salt Master" update --secret_name new_secret_name --secret_value new_secret_value --file new.sls
 
 # update an existing value
-$ ./generate-secure-pillar -k "Salt Master" update --secret_name secret_name --secret_value secret_value3 --file new.sls
+$ generate-secure-pillar -k "Salt Master" update --secret_name secret_name --secret_value secret_value3 --file new.sls
 
 # encrypt all plain text values in a file
-$ ./generate-secure-pillar -k "Salt Master" encrypt all --file us1.sls --outfile us1.sls
+$ generate-secure-pillar -k "Salt Master" encrypt all --file us1.sls --outfile us1.sls
 
 # recurse through all sls files, creating new encrypted files with a .new extension
-$ ./generate-secure-pillar -k "Salt Master" encrypt recurse /path/to/pillar/secure/stuff`, cli.AppHelpTemplate)
+$ generate-secure-pillar -k "Salt Master" encrypt recurse /path/to/pillar/secure/stuff`, cli.AppHelpTemplate)
 
 	app.Copyright = "(c) 2017 Everbridge, Inc."
 	app.Usage = "add or update secure salt pillar content"
