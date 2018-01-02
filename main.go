@@ -53,7 +53,7 @@ func main() {
 		log.SetFlags(log.LstdFlags | log.Lshortfile)
 	}
 	app := cli.NewApp()
-	app.Version = "1.0.0"
+	app.Version = "1.0.31"
 	app.Authors = []cli.Author{
 		cli.Author{
 			Name:  "Ed Silva",
