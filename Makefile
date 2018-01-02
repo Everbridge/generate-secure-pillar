@@ -7,6 +7,7 @@ TARGET := $(shell echo $${PWD\#\#*/})
 # These will be provided to the target
 VERSION := 1.0.0
 BUILD := `git rev-parse HEAD`
+COMMIT := `git rev-list HEAD | wc -l | sed 's/^ *//g'`
 
 # Use linker flags to provide version/build settings to the target
 LDFLAGS=-ldflags "-X=main.Version=$(VERSION) -X=main.Build=$(BUILD)"
@@ -22,6 +23,10 @@ $(TARGET): $(SRC)
 	@go build $(LDFLAGS) -o $(TARGET)
 
 build: deps $(TARGET)
+	@sed 's/\"1.0.*\"/\"1.0.'$(COMMIT)'\"/' main.go
+	@git commit -am 'new build'
+	@make pkg deb
+	@git push origin master
 	@true
 
 clean:
