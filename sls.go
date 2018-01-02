@@ -13,14 +13,17 @@ import (
 )
 
 func writeSlsFile(buffer bytes.Buffer, outFilePath string) {
-	outFilePath, _ = filepath.Abs(outFilePath)
+	fullPath, err := filepath.Abs(outFilePath)
+	if err != nil {
+		fullPath = outFilePath
+	}
 
 	stdOut := false
-	if outFilePath == os.Stdout.Name() {
+	if fullPath == os.Stdout.Name() {
 		stdOut = true
 	}
 
-	err := ioutil.WriteFile(outFilePath, buffer.Bytes(), 0644)
+	err = ioutil.WriteFile(fullPath, buffer.Bytes(), 0644)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -34,7 +37,7 @@ func readSlsFile(slsPath string) (SlsData, error) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	var slsData SlsData
+	var slsData = make(SlsData)
 	var yamlData []byte
 
 	if _, err = os.Stat(filename); !os.IsNotExist(err) {
@@ -100,7 +103,11 @@ func pillarBuffer(filePath string, all bool) bytes.Buffer {
 		}
 	} else {
 		cipherText = encryptSecret(secretsString)
-		pillar["secure_vars"].(SlsData)[secretName] = cipherText
+		if keyExists(pillar, "secure_vars") {
+			pillar["secure_vars"].(SlsData)[secretName] = cipherText
+		} else {
+			pillar[secretName] = cipherText
+		}
 		dataChanged = true
 	}
 
@@ -151,7 +158,6 @@ func checkForFile(filePath string) error {
 	}
 	switch mode := fi.Mode(); {
 	case mode.IsRegular():
-		fmt.Printf("%#v", fi)
 		return nil
 	case mode.IsDir():
 		log.Fatal(fmt.Sprintf("%s is a directory", filePath))

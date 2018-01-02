@@ -7,6 +7,30 @@ import (
 	"testing"
 )
 
+func TestWriteSlsFile(t *testing.T) {
+	var pillar = make(SlsData)
+	publicKeyRing = defaultPubRing
+
+	slsFile := "./testdata/foo.sls"
+	pillar["secret"] = "text"
+	buffer := formatBuffer(pillar)
+	writeSlsFile(buffer, slsFile)
+	if _, err := os.Stat(slsFile); os.IsNotExist(err) {
+		t.Errorf("%s file was not written", slsFile)
+	}
+	yaml, err := readSlsFile(slsFile)
+	if err != nil {
+		t.Errorf("Returned error")
+	}
+	if keyExists(yaml, "secret") == false {
+		t.Errorf("YAML content is incorrect, missing key")
+	} else if yaml["secret"] != "text" {
+		t.Errorf("YAML content is incorrect, got: %s, want: %s.",
+			yaml["secret"], "text")
+	}
+	os.Remove(slsFile)
+}
+
 func TestFindSlsFiles(t *testing.T) {
 	slsFiles, count := findSlsFiles("./testdata")
 	if count != 1 {

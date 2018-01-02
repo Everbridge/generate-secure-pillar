@@ -18,7 +18,7 @@ func encryptSecret(plainText string) (cipherText string) {
 
 	pubringFile, err := os.Open(publicKeyRing)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("cannot read public key ring: ", err)
 	}
 	pubring, err := openpgp.ReadKeyRing(pubringFile)
 	if err != nil {
