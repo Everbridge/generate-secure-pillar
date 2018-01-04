@@ -2,11 +2,11 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"os/user"
 	"path/filepath"
 
+	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
 
@@ -50,7 +50,7 @@ type SlsData map[interface{}]interface{}
 
 func main() {
 	if debug {
-		log.SetFlags(log.LstdFlags | log.Lshortfile)
+		logger.Level = logrus.DebugLevel
 	}
 	app := cli.NewApp()
 	app.Version = "1.0.31"
@@ -190,18 +190,18 @@ $ generate-secure-pillar -k "Salt Master" encrypt recurse /path/to/pillar/secure
 					Action: func(c *cli.Context) error {
 						info, err := os.Stat(recurseDir)
 						if err != nil {
-							log.Fatal(err)
+							logger.Fatalf("cannot stat %s: %s", recurseDir, err)
 						}
 						if info.IsDir() {
 							slsFiles, count := findSlsFiles(recurseDir)
 							if count == 0 {
-								log.Fatal(fmt.Sprintf("%s has no sls files", recurseDir))
+								logger.Fatalf("%s has no sls files", recurseDir)
 							}
 							for _, file := range slsFiles {
 								writeSlsData(file)
 							}
 						} else {
-							log.Fatal(fmt.Sprintf("%s is not a directory", recurseDir))
+							logger.Fatalf("%s is not a directory", recurseDir)
 						}
 
 						return nil
@@ -224,6 +224,6 @@ $ generate-secure-pillar -k "Salt Master" encrypt recurse /path/to/pillar/secure
 
 	err := app.Run(os.Args)
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal(err)
 	}
 }

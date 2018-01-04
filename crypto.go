@@ -5,24 +5,26 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"time"
 
-	"github.com/keybase/go-crypto/openpgp"
-	"github.com/keybase/go-crypto/openpgp/armor"
+	"github.com/sirupsen/logrus"
+	"golang.org/x/crypto/openpgp"
+	"golang.org/x/crypto/openpgp/armor"
 )
+
+var logger = logrus.New()
 
 func encryptSecret(plainText string) (cipherText string) {
 	var memBuffer bytes.Buffer
 
 	pubringFile, err := os.Open(publicKeyRing)
 	if err != nil {
-		log.Fatal("cannot read public key ring: ", err)
+		logger.Fatal("cannot read public key ring: ", err)
 	}
 	pubring, err := openpgp.ReadKeyRing(pubringFile)
 	if err != nil {
-		log.Fatal("cannot read public keys: ", err)
+		logger.Fatal("cannot read public keys: ", err)
 	}
 	publicKey := getKeyByID(pubring, pgpKeyName)
 
@@ -32,16 +34,16 @@ func encryptSecret(plainText string) (cipherText string) {
 	plainFile, _ := openpgp.Encrypt(w, []*openpgp.Entity{publicKey}, nil, &hints, nil)
 	fmt.Fprintf(plainFile, plainText)
 	if err := plainFile.Close(); err != nil {
-		log.Fatal(err)
+		logger.Fatal("unable to close file: ", err)
 	}
 	if err := w.Close(); err != nil {
-		log.Fatal(err)
+		logger.Fatal(err)
 	}
 	if err := writer.Flush(); err != nil {
-		log.Fatal(err)
+		logger.Fatal("error flusing writer: ", err)
 	}
 	if err := pubringFile.Close(); err != nil {
-		log.Fatal(err)
+		logger.Fatal("error closing pubring: ", err)
 	}
 
 	return memBuffer.String()
@@ -50,29 +52,29 @@ func encryptSecret(plainText string) (cipherText string) {
 func decryptSecret(cipherText string) (plainText string) {
 	privringFile, err := os.Open(secureKeyRing)
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal("unable to open secring: ", err)
 	}
 	privring, err := openpgp.ReadKeyRing(privringFile)
 	if err != nil {
-		log.Fatal("cannot read private keys: ", err)
+		logger.Fatal("cannot read private keys: ", err)
 	} else if privring == nil {
-		log.Fatal(fmt.Sprintf("%s is empty!", secureKeyRing))
+		logger.Fatal(fmt.Sprintf("%s is empty!", secureKeyRing))
 	}
 
 	decbuf := bytes.NewBuffer([]byte(cipherText))
 	block, err := armor.Decode(decbuf)
 	if block.Type != "PGP MESSAGE" {
-		log.Fatal(err)
+		logger.Fatal("block type is not PGP MESSAGE: ", err)
 	}
 
 	md, err := openpgp.ReadMessage(block.Body, privring, nil, nil)
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal("unadle to read PGP message: ", err)
 	}
 
 	bytes, err := ioutil.ReadAll(md.UnverifiedBody)
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal("unable to read message body: ", err)
 	}
 
 	return string(bytes)
