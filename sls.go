@@ -11,6 +11,20 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
+func newSlsData(key string, value string) SlsData {
+	var pillar = make(SlsData)
+	yamlString := fmt.Sprintf("\"secure_vars\":\n  \"%s\": \"%s\"", key, value)
+	y := []byte(yamlString)
+	err := yaml.Unmarshal(y, &pillar)
+	if err != nil {
+		logger.Fatalf("Error creating YAML: %s", err)
+	}
+	cipherText := encryptSecret(value)
+	pillar["secure_vars"].(SlsData)[key] = cipherText
+
+	return pillar
+}
+
 func writeSlsFile(buffer bytes.Buffer, outFilePath string) {
 	fullPath, err := filepath.Abs(outFilePath)
 	if err != nil {

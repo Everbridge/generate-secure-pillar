@@ -30,9 +30,18 @@ func encryptSecret(plainText string) (cipherText string) {
 
 	hints := openpgp.FileHints{IsBinary: false, ModTime: time.Time{}}
 	writer := bufio.NewWriter(&memBuffer)
-	w, _ := armor.Encode(writer, "PGP MESSAGE", nil)
-	plainFile, _ := openpgp.Encrypt(w, []*openpgp.Entity{publicKey}, nil, &hints, nil)
+	w, err := armor.Encode(writer, "PGP MESSAGE", nil)
+	if err != nil {
+		logger.Fatal("Encode error: ", err)
+	}
+
+	plainFile, err := openpgp.Encrypt(w, []*openpgp.Entity{publicKey}, nil, &hints, nil)
+	if err != nil {
+		logger.Fatal("Encryption error: ", err)
+	}
+
 	fmt.Fprintf(plainFile, plainText)
+
 	if err := plainFile.Close(); err != nil {
 		logger.Fatal("unable to close file: ", err)
 	}

@@ -7,6 +7,17 @@ import (
 	"testing"
 )
 
+func TestNewSlsData(t *testing.T) {
+	publicKeyRing = defaultPubRing
+	var pillar = newSlsData("foo", "bar")
+
+	if !keyExists(pillar, "secure_vars") {
+		t.Errorf("pillar content is incorrect, missing key")
+	} else if !keyExists(pillar["secure_vars"].(SlsData), "foo") {
+		t.Errorf("YAML content is incorrect, missing sub key")
+	}
+}
+
 func TestWriteSlsFile(t *testing.T) {
 	var pillar = make(SlsData)
 	publicKeyRing = defaultPubRing
