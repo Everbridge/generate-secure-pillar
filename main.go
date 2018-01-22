@@ -111,9 +111,7 @@ $ generate-secure-pillar -k "Salt Master" encrypt recurse /path/to/pillar/secure
 			Aliases: []string{"c"},
 			Usage:   "create a new sls file",
 			Action: func(c *cli.Context) error {
-				var pillar SlsData
-				cipherText := encryptSecret(secretsString)
-				pillar["secure_vars"].(SlsData)[secretName] = cipherText
+				pillar := newSlsData(secretName, secretsString)
 				buffer := formatBuffer(pillar)
 				writeSlsFile(buffer, outputFilePath)
 				return nil
