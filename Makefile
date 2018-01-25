@@ -15,6 +15,10 @@ LDFLAGS=-ldflags "-X=main.Version=$(VERSION) -X=main.Build=$(BUILD)"
 # go source files, ignore vendor directory
 SRC = $(shell find . -type f -name '*.go' -not -path "./vendor/*")
 
+METALINT := $(shell command -v gometalinter 2> /dev/null)
+DEP := $(shell command -v dep 2> /dev/null)
+FPM := $(shell command -v fpm 2> /dev/null)
+
 .PHONY: all build clean install uninstall fmt simplify check run
 
 all: check build install
@@ -50,7 +54,13 @@ simplify:
 
 check:
 	@test -z $(shell gofmt -l main.go | tee /dev/stderr) || echo "[WARN] Fix formatting issues with 'make fmt'"
+ifndef METALINT
+	@echo "running 'go lint .'"
+	@golint .
+else
+	@echo "running 'gometalinter ./...'"
 	@gometalinter --vendor ./...
+endif
 
 run: install
 	@$(TARGET)
@@ -59,7 +69,11 @@ test:
 	@go test -v
 
 deps:
+ifndef DEP
+	@echo "'dep' is not installed, cannot ensure dependencies are installed"
+else
 	@dep ensure -update
+endif
 
 mac: GOOS = darwin
 mac: GOARCH = amd64
@@ -78,11 +92,19 @@ packages: deb pkg
 deb: GOOS = linux
 deb: GOARCH = amd64
 deb: ubuntu
-	fpm -n $(TARGET) -s dir -t deb -p $(TARGET)_VERSION_$(GOARCH).deb --deb-no-default-config-files ./bin/$(GOARCH)/$(GOOS)/$(TARGET)=/usr/local/bin/$(TARGET)
+ifndef DEP
+	@echo "'fpm' is not installed, cannot make packages"
+else
+	@fpm -n $(TARGET) -s dir -t deb -p $(TARGET)_VERSION_$(GOARCH).deb --deb-no-default-config-files ./bin/$(GOARCH)/$(GOOS)/$(TARGET)=/usr/local/bin/$(TARGET)
 	@mv $(TARGET)*.deb ./packages
+endif
 
 pkg: GOOS = darwin
 pkg: GOARCH = amd64
 pkg: mac
+ifndef DEP
+	@echo "'fpm' is not installed, cannot make packages"
+else
 	@fpm -n $(TARGET) -s dir -t osxpkg ./bin/$(GOARCH)/$(GOOS)/$(TARGET)=/usr/local/bin/$(TARGET)
 	@mv $(TARGET)*.pkg ./packages
+endif
