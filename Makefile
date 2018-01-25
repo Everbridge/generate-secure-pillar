@@ -5,9 +5,9 @@ TARGET := $(shell echo $${PWD\#\#*/})
 .DEFAULT_GOAL: $(TARGET)
 
 # These will be provided to the target
-VERSION := 1.0.0
 BUILD := `git rev-parse HEAD`
 COMMIT := `git rev-list HEAD | wc -l | sed 's/^ *//g'`
+VERSION := 1.0.$(COMMIT)
 
 # Use linker flags to provide version/build settings to the target
 LDFLAGS=-ldflags "-X=main.Version=$(VERSION) -X=main.Build=$(BUILD)"
@@ -95,7 +95,7 @@ deb: ubuntu
 ifndef DEP
 	@echo "'fpm' is not installed, cannot make packages"
 else
-	@fpm -n $(TARGET) -s dir -t deb -p $(TARGET)_VERSION_$(GOARCH).deb --deb-no-default-config-files ./bin/$(GOARCH)/$(GOOS)/$(TARGET)=/usr/local/bin/$(TARGET)
+	@fpm -n $(TARGET) -s dir -t deb -a $(GOARCH) -p $(TARGET)_VERSION_$(GOARCH).deb --deb-no-default-config-files ./bin/$(GOARCH)/$(GOOS)/$(TARGET)=/usr/local/bin/$(TARGET)
 	@mv $(TARGET)*.deb ./packages
 endif
 
@@ -105,6 +105,6 @@ pkg: mac
 ifndef DEP
 	@echo "'fpm' is not installed, cannot make packages"
 else
-	@fpm -n $(TARGET) -s dir -t osxpkg ./bin/$(GOARCH)/$(GOOS)/$(TARGET)=/usr/local/bin/$(TARGET)
+	@fpm -n $(TARGET) -s dir -t osxpkg -a $(GOARCH) ./bin/$(GOARCH)/$(GOOS)/$(TARGET)=/usr/local/bin/$(TARGET)
 	@mv $(TARGET)*.pkg ./packages
 endif
