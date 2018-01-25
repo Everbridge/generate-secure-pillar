@@ -81,13 +81,13 @@ mac: GOOS = darwin
 mac: GOARCH = amd64
 mac:
 	@echo "building for $(GOOS)/$(GOARCH)"
-	@mkdir -p bin/$(GOARCH)/$(GOOS)/ && go build && mv $(TARGET) bin/$(GOARCH)/$(GOOS)/
+	@mkdir -p bin/$(GOARCH)/$(GOOS)/ && GOOS=$(GOOS) GOARCH=$(GOARCH) go build && mv $(TARGET) bin/$(GOARCH)/$(GOOS)/
 
 ubuntu: GOOS = linux
 ubuntu: GOARCH = amd64
 ubuntu:
 	@echo "building for $(GOOS)/$(GOARCH)"
-	@mkdir -p bin/$(GOARCH)/$(GOOS)/ && go build && mv $(TARGET) bin/$(GOARCH)/$(GOOS)/
+	@mkdir -p bin/$(GOARCH)/$(GOOS)/ && GOOS=$(GOOS) GOARCH=$(GOARCH) go build && mv $(TARGET) bin/$(GOARCH)/$(GOOS)/
 
 packages: deb pkg
 
