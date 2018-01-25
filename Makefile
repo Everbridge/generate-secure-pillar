@@ -17,13 +17,16 @@ SRC = $(shell find . -type f -name '*.go' -not -path "./vendor/*")
 
 .PHONY: all build clean install uninstall fmt simplify check run
 
-all: check install
+all: check build install
 
 $(TARGET): $(SRC)
 	@go build $(LDFLAGS) -o $(TARGET)
 
 build: deps $(TARGET)
 	@cat main.go | sed 's/\"1.0.*\"/\"1.0.'$(COMMIT)'\"/' > main.go
+	@go build
+	./generate-secure-pillar -h > README.txt
+	@rm generate-secure-pillar
 	@make pkg deb
 	@git commit -am 'new build'
 	@git push origin master
