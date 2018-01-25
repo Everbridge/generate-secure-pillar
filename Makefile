@@ -95,7 +95,7 @@ deb: ubuntu
 ifndef DEP
 	@echo "'fpm' is not installed, cannot make packages"
 else
-	@fpm -n $(TARGET) -s dir -t deb -a $(GOARCH) -p $(TARGET)_VERSION_$(GOARCH).deb --deb-no-default-config-files ./bin/$(GOARCH)/$(GOOS)/$(TARGET)=/usr/local/bin/$(TARGET)
+	@fpm -n $(TARGET) -s dir -t deb -a $(GOARCH) -p $(TARGET)_$(VERSION)_$(GOARCH).deb --deb-no-default-config-files ./bin/$(GOARCH)/$(GOOS)/$(TARGET)=/usr/local/bin/$(TARGET)
 	@mv $(TARGET)*.deb ./packages
 endif
 
@@ -105,6 +105,6 @@ pkg: mac
 ifndef DEP
 	@echo "'fpm' is not installed, cannot make packages"
 else
-	@fpm -n $(TARGET) -s dir -t osxpkg -a $(GOARCH) ./bin/$(GOARCH)/$(GOOS)/$(TARGET)=/usr/local/bin/$(TARGET)
+	@fpm -n $(TARGET) -s dir -t osxpkg -a $(GOARCH) -p $(TARGET)-$(VERSION)-$(GOARCH).pkg ./bin/$(GOARCH)/$(GOOS)/$(TARGET)=/usr/local/bin/$(TARGET)
 	@mv $(TARGET)*.pkg ./packages
 endif
