@@ -31,7 +31,9 @@ build: deps $(TARGET)
 	@go build
 	./generate-secure-pillar -h > README.txt
 	@rm generate-secure-pillar
+	@rm packages/generate-secure-pillar*
 	@make pkg deb
+	@git add packages
 	@git commit -am 'new build'
 	@git push origin master
 	@true
