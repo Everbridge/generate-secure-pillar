@@ -5,7 +5,7 @@ USAGE:
    generate-secure-pillar [global options] command [command options] [arguments...]
 
 VERSION:
-   0.1
+   1.0.43
 
 AUTHOR:
    Ed Silva <ed.silva@everbridge.com>
@@ -18,8 +18,8 @@ COMMANDS:
      help, h     Shows a list of commands or help for one command
 
 GLOBAL OPTIONS:
-   --pubring value, --pub value  PGP public keyring (default: "~/.gnupg/pubring.gpg")
-   --secring value, --sec value  PGP private keyring (default: "~/.gnupg/secring.gpg")
+   --pubring value, --pub value  PGP public keyring (default: "/Users/ed.silva/.gnupg/pubring.gpg")
+   --secring value, --sec value  PGP private keyring (default: "/Users/ed.silva/.gnupg/secring.gpg")
    --pgp_key value, -k value     PGP key name, email, or ID to use for encryption
    --debug                       adds line number info to log output
    --help, -h                    show help
@@ -30,16 +30,16 @@ COPYRIGHT:
 
 EXAMPLES:
 # create a new sls file
-$ ./generate-secure-pillar -k "Salt Master" create --secret_name secret_name --secret_value secret_value --outfile new.sls
+$ generate-secure-pillar -k "Salt Master" create --name secret_name1 --value secret_value1 --name secret_name2 --value secret_value2 --outfile new.sls
 
 # add to the new file
-$ ./generate-secure-pillar -k "Salt Master" update --secret_name new_secret_name --secret_value new_secret_value --file new.sls
+$ generate-secure-pillar -k "Salt Master" update --name new_secret_name --value new_secret_value --file new.sls --outfile new.sls
 
 # update an existing value
-$ ./generate-secure-pillar -k "Salt Master" update --secret_name secret_name --secret_value secret_value3 --file new.sls
+$ generate-secure-pillar -k "Salt Master" update --name secret_name --value secret_value3 --file new.sls --outfile new.sls
 
 # encrypt all plain text values in a file
-$ ./generate-secure-pillar -k "Salt Master" encrypt all --file us1.sls --outfile us1.sls
+$ generate-secure-pillar -k "Salt Master" encrypt all --file us1.sls --outfile us1.sls
 
 # recurse through all sls files, creating new encrypted files with a .new extension
-$ ./generate-secure-pillar -k "Salt Master" encrypt recurse /path/to/pillar/secure/stuff
+$ generate-secure-pillar -k "Salt Master" encrypt recurse /path/to/pillar/secure/stuff

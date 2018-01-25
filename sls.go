@@ -11,16 +11,14 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
-func newSlsData(key string, value string) SlsData {
+func newSlsData() SlsData {
 	var pillar = make(SlsData)
-	yamlString := fmt.Sprintf("\"secure_vars\":\n  \"%s\": \"%s\"", key, value)
+	yamlString := fmt.Sprintf("\"secure_vars\":\n  {}\n")
 	y := []byte(yamlString)
 	err := yaml.Unmarshal(y, &pillar)
 	if err != nil {
 		logger.Fatalf("Error creating YAML: %s", err)
 	}
-	cipherText := encryptSecret(value)
-	pillar["secure_vars"].(SlsData)[key] = cipherText
 
 	return pillar
 }
@@ -94,8 +92,6 @@ func pillarBuffer(filePath string, all bool) bytes.Buffer {
 		logger.Fatal(err)
 	}
 
-	var buffer bytes.Buffer
-	var cipherText string
 	pillar, err := readSlsFile(filePath)
 	if err != nil {
 		logger.Fatal(err)
@@ -109,20 +105,32 @@ func pillarBuffer(filePath string, all bool) bytes.Buffer {
 			logger.Infof(fmt.Sprintf("%s has no secure_vars element", filePath))
 		}
 	} else {
-		cipherText = encryptSecret(secretsString)
-		if keyExists(pillar, "secure_vars") {
-			pillar["secure_vars"].(SlsData)[secretName] = cipherText
-		} else {
-			pillar[secretName] = cipherText
-		}
+		pillar = processPillar(pillar)
 		dataChanged = true
 	}
 
 	if !dataChanged {
+		var buffer bytes.Buffer
 		return buffer
 	}
 
 	return formatBuffer(pillar)
+}
+
+func processPillar(pillar SlsData) SlsData {
+	for index := 0; index < len(secretNames); index++ {
+		cipherText := ""
+		if index >= 0 && index < len(secretValues) {
+			cipherText = encryptSecret(secretValues[index])
+		}
+		if keyExists(pillar, "secure_vars") {
+			pillar["secure_vars"].(SlsData)[secretNames[index]] = cipherText
+		} else {
+			pillar[secretNames[index]] = cipherText
+		}
+	}
+
+	return pillar
 }
 
 func pillarRange(pillar SlsData) (SlsData, bool) {

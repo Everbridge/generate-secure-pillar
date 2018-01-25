@@ -10,7 +10,7 @@ import (
 	"github.com/urfave/cli"
 )
 
-var secretsString string
+var secretValue string
 var inputFilePath string
 var outputFilePath = os.Stdout.Name()
 var pgpKeyName string
@@ -19,6 +19,8 @@ var publicKeyRing string
 var secureKeyRing string
 var debug bool
 var recurseDir string
+var secretNames cli.StringSlice
+var secretValues cli.StringSlice
 
 var usr, _ = user.Current()
 var defaultPubRing = filepath.Join(usr.HomeDir, ".gnupg/pubring.gpg")
@@ -53,7 +55,7 @@ func main() {
 		logger.Level = logrus.DebugLevel
 	}
 	app := cli.NewApp()
-	app.Version = "1.0.42"
+	app.Version = "1.0.43"
 	app.Authors = []cli.Author{
 		cli.Author{
 			Name:  "Ed Silva",
@@ -64,13 +66,13 @@ func main() {
 	cli.AppHelpTemplate = fmt.Sprintf(`%s
 EXAMPLES:
 # create a new sls file
-$ generate-secure-pillar -k "Salt Master" create --secret_name secret_name --secret_value secret_value --outfile new.sls
+$ generate-secure-pillar -k "Salt Master" create --name secret_name1 --value secret_value1 --name secret_name2 --value secret_value2 --outfile new.sls
 
 # add to the new file
-$ generate-secure-pillar -k "Salt Master" update --secret_name new_secret_name --secret_value new_secret_value --file new.sls
+$ generate-secure-pillar -k "Salt Master" update --name new_secret_name --value new_secret_value --file new.sls --outfile new.sls
 
 # update an existing value
-$ generate-secure-pillar -k "Salt Master" update --secret_name secret_name --secret_value secret_value3 --file new.sls
+$ generate-secure-pillar -k "Salt Master" update --name secret_name --value secret_value3 --file new.sls --outfile new.sls
 
 # encrypt all plain text values in a file
 $ generate-secure-pillar -k "Salt Master" encrypt all --file us1.sls --outfile us1.sls
@@ -111,22 +113,23 @@ $ generate-secure-pillar -k "Salt Master" encrypt recurse /path/to/pillar/secure
 			Aliases: []string{"c"},
 			Usage:   "create a new sls file",
 			Action: func(c *cli.Context) error {
-				pillar := newSlsData(secretName, secretsString)
+				pillar := newSlsData()
+				pillar = processPillar(pillar)
 				buffer := formatBuffer(pillar)
 				writeSlsFile(buffer, outputFilePath)
 				return nil
 			},
 			Flags: []cli.Flag{
 				outputFlag,
-				cli.StringFlag{
-					Name:        "secure_name, n",
-					Usage:       "secure variable name",
-					Destination: &secretName,
+				cli.StringSliceFlag{
+					Name:  "name, n",
+					Usage: "secret name(s)",
+					Value: &secretNames,
 				},
-				cli.StringFlag{
-					Name:        "secret_value, s",
-					Usage:       "secret string value to be encrypted",
-					Destination: &secretsString,
+				cli.StringSliceFlag{
+					Name:  "secret, s",
+					Usage: "secret value(s)",
+					Value: &secretValues,
 				},
 			},
 		},
@@ -145,14 +148,14 @@ $ generate-secure-pillar -k "Salt Master" encrypt recurse /path/to/pillar/secure
 			Flags: []cli.Flag{
 				inputFlag,
 				cli.StringFlag{
-					Name:        "secure_name, n",
-					Usage:       "secure variable name",
+					Name:        "name, n",
+					Usage:       "secret name",
 					Destination: &secretName,
 				},
 				cli.StringFlag{
-					Name:        "secret_value, s",
-					Usage:       "secret string value to be encrypted",
-					Destination: &secretsString,
+					Name:        "value, s",
+					Usage:       "secret value",
+					Destination: &secretValue,
 				},
 			},
 		},
