@@ -8,12 +8,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/sirupsen/logrus"
-	"golang.org/x/crypto/openpgp"
-	"golang.org/x/crypto/openpgp/armor"
+	"github.com/keybase/go-crypto/openpgp"
+	"github.com/keybase/go-crypto/openpgp/armor"
 )
-
-var logger = logrus.New()
 
 func encryptSecret(plainText string) (cipherText string) {
 	var memBuffer bytes.Buffer
