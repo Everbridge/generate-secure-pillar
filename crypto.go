@@ -8,9 +8,9 @@ import (
 	"os"
 	"time"
 
+	"github.com/keybase/go-crypto/openpgp"
+	"github.com/keybase/go-crypto/openpgp/armor"
 	"github.com/sirupsen/logrus"
-	"golang.org/x/crypto/openpgp"
-	"golang.org/x/crypto/openpgp/armor"
 )
 
 var logger = logrus.New()
