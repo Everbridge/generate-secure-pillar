@@ -10,10 +10,7 @@ import (
 
 	"github.com/keybase/go-crypto/openpgp"
 	"github.com/keybase/go-crypto/openpgp/armor"
-	"github.com/sirupsen/logrus"
 )
-
-var logger = logrus.New()
 
 func encryptSecret(plainText string) (cipherText string) {
 	var memBuffer bytes.Buffer

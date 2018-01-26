@@ -10,6 +10,8 @@ import (
 	"github.com/urfave/cli"
 )
 
+var logger = logrus.New()
+
 var secretValue string
 var inputFilePath string
 var outputFilePath = os.Stdout.Name()
@@ -55,7 +57,7 @@ func main() {
 		logger.Level = logrus.DebugLevel
 	}
 	app := cli.NewApp()
-	app.Version = "1.0.48"
+	app.Version = "1.0.56"
 	app.Authors = []cli.Author{
 		cli.Author{
 			Name:  "Ed Silva",
