@@ -8,7 +8,6 @@ TARGET := $(shell echo $${PWD\#\#*/})
 BUILD := `git rev-parse HEAD`
 COMMIT := `git rev-list HEAD | wc -l | sed 's/^ *//g'`
 VERSION := 1.0.$(COMMIT)
-BRANCH := `git branch | grep '^*' | awk '{print $2}'`
 
 # Use linker flags to provide version/build settings to the target
 LDFLAGS=-ldflags "-X=main.Version=$(VERSION) -X=main.Build=$(BUILD)"
@@ -19,6 +18,8 @@ SRC = $(shell find . -type f -name '*.go' -not -path "./vendor/*")
 METALINT := $(shell command -v gometalinter 2> /dev/null)
 DEP := $(shell command -v dep 2> /dev/null)
 FPM := $(shell command -v fpm 2> /dev/null)
+
+BRANCH := `git branch | grep '^*' | awk '{print $2}'`
 
 .PHONY: all build clean install uninstall fmt simplify check run
 
