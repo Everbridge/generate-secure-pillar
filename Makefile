@@ -36,6 +36,7 @@ build: deps $(TARGET)
 	@make pkg deb
 	@git add packages
 	@git commit -am 'new build'
+	@echo pushing to branch $(BRANCH)
 	@git push origin $(BRANCH)
 	@true
 
