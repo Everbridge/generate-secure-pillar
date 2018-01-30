@@ -5,37 +5,30 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	yaml "menteslibres.net/gosexy/yaml"
 )
 
-func TestNewSlsData(t *testing.T) {
-	publicKeyRing = defaultPubRing
-	var pillar = newSlsData()
-
-	if !keyExists(pillar, "secure_vars") {
-		t.Errorf("pillar content is incorrect, missing key")
-	}
-}
-
 func TestWriteSlsFile(t *testing.T) {
-	var pillar = make(SlsData)
+	var pillar = yaml.New()
 	publicKeyRing = defaultPubRing
 
 	slsFile := "./testdata/foo.sls"
-	pillar["secret"] = "text"
+	pillar.Set("secret", "text")
 	buffer := formatBuffer(pillar)
 	writeSlsFile(buffer, slsFile)
 	if _, err := os.Stat(slsFile); os.IsNotExist(err) {
 		t.Errorf("%s file was not written", slsFile)
 	}
-	yaml, err := readSlsFile(slsFile)
+	yaml, err := yaml.Open(slsFile)
 	if err != nil {
 		t.Errorf("Returned error")
 	}
-	if !keyExists(yaml, "secret") {
+	if yaml.Get("secret") == nil {
 		t.Errorf("YAML content is incorrect, missing key")
-	} else if yaml["secret"] != "text" {
+	} else if yaml.Get("secret") != "text" {
 		t.Errorf("YAML content is incorrect, got: %s, want: %s.",
-			yaml["secret"], "text")
+			yaml.Get("secret"), "text")
 	}
 	os.Remove(slsFile)
 }
@@ -57,22 +50,22 @@ func TestEmptyDir(t *testing.T) {
 }
 
 func TestReadSlsFile(t *testing.T) {
-	yaml, err := readSlsFile("./testdata/new.sls")
+	yaml, err := yaml.Open("./testdata/new.sls")
 	if err != nil {
 		t.Errorf("Returned error")
 	}
-	if len(yaml["secure_vars"].(SlsData)) != 3 {
+	if len(yaml.Get("secure_vars").(map[interface{}]interface{})) != 3 {
 		t.Errorf("YAML content length is incorrect, got: %d, want: %d.",
-			len(yaml["secure_vars"].(SlsData)), 3)
+			len(yaml.Get("secure_vars").(map[interface{}]interface{})), 3)
 	}
 }
 
 func TestReadBadFile(t *testing.T) {
-	yaml, err := readSlsFile("/dev/null")
+	yaml, err := yaml.Open("/dev/null")
 	if err != nil {
 		t.Errorf("Returned error")
 	}
-	if keyExists(yaml, "secure_vars") {
+	if yaml.Get("secure_vars") != nil {
 		t.Errorf("got YAML from /dev/nul???")
 	}
 }
@@ -83,15 +76,16 @@ func TestEncryptSecret(t *testing.T) {
 	} else {
 		publicKeyRing = filepath.Join(usr.HomeDir, ".gnupg/pubring.gpg")
 	}
-	yaml, err := readSlsFile("./testdata/new.sls")
+	yaml, err := yaml.Open("./testdata/new.sls")
 	if err != nil {
 		t.Errorf("Returned error")
 	}
-	if len(yaml["secure_vars"].(SlsData)) <= 0 {
+	if len(yaml.Get("secure_vars").(map[interface{}]interface{})) <= 0 {
 		t.Errorf("YAML content lenth is incorrect, got: %d, want: %d.",
-			len(yaml["secure_vars"].(SlsData)), 1)
+			len(yaml.Get("secure_vars").(map[interface{}]interface{})), 1)
 	}
-	for _, v := range yaml["secure_vars"].(SlsData) {
+	secureVars := yaml.Get("secure_vars")
+	for _, v := range secureVars.(map[interface{}]interface{}) {
 		if strings.Contains(v.(string), pgpHeader) {
 			t.Errorf("YAML content is already encrypted.")
 		} else {
@@ -109,15 +103,15 @@ func TestDecryptSecret(t *testing.T) {
 	} else {
 		secureKeyRing = filepath.Join(usr.HomeDir, ".gnupg/secring.gpg")
 	}
-	yaml, err := readSlsFile("./testdata/new.sls")
+	yaml, err := yaml.Open("./testdata/new.sls")
 	if err != nil {
 		t.Errorf("Returned error")
 	}
-	if len(yaml["secure_vars"].(SlsData)) <= 0 {
+	if len(yaml.Get("secure_vars").(map[interface{}]interface{})) <= 0 {
 		t.Errorf("YAML content lenth is incorrect, got: %d, want: %d.",
-			len(yaml["secure_vars"].(SlsData)), 1)
+			len(yaml.Get("secure_vars").(map[interface{}]interface{})), 1)
 	}
-	for _, v := range yaml["secure_vars"].(SlsData) {
+	for _, v := range yaml.Get("secure_vars").(map[interface{}]interface{}) {
 		cipherText := encryptSecret(v.(string))
 		plainText := decryptSecret(cipherText)
 		if strings.Contains(plainText, pgpHeader) {

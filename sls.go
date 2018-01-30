@@ -8,20 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	yaml "gopkg.in/yaml.v2"
+	yaml "menteslibres.net/gosexy/yaml"
 )
-
-func newSlsData() SlsData {
-	var pillar = make(SlsData)
-	yamlString := fmt.Sprintf("\"secure_vars\":\n  {}\n")
-	y := []byte(yamlString)
-	err := yaml.Unmarshal(y, &pillar)
-	if err != nil {
-		logger.Fatalf("Error creating YAML: %s", err)
-	}
-
-	return pillar
-}
 
 func writeSlsFile(buffer bytes.Buffer, outFilePath string) {
 	fullPath, err := filepath.Abs(outFilePath)
@@ -41,29 +29,6 @@ func writeSlsFile(buffer bytes.Buffer, outFilePath string) {
 	if !stdOut {
 		logger.Printf("Wrote out to file: '%s'\n", outFilePath)
 	}
-}
-
-func readSlsFile(slsPath string) (SlsData, error) {
-	filename, err := filepath.Abs(slsPath)
-	if err != nil {
-		logger.Fatal(err)
-	}
-	var slsData = make(SlsData)
-	var yamlData []byte
-
-	if _, err = os.Stat(filename); !os.IsNotExist(err) {
-		yamlData, err = ioutil.ReadFile(filename)
-		if err != nil {
-			logger.Fatal("error reading YAML file: ", err)
-		}
-
-		err = yaml.Unmarshal(yamlData, &slsData)
-		if err != nil {
-			logger.Printf(fmt.Sprintf("Skipping %s: %s\n", filename, err))
-		}
-	}
-
-	return slsData, err
 }
 
 func findSlsFiles(searchDir string) ([]string, int) {
@@ -92,14 +57,14 @@ func pillarBuffer(filePath string, all bool) bytes.Buffer {
 		logger.Fatal(err)
 	}
 
-	pillar, err := readSlsFile(filePath)
+	pillar, err := yaml.Open(filePath)
 	if err != nil {
 		logger.Fatal(err)
 	}
 	dataChanged := false
 
 	if all {
-		if keyExists(pillar, "secure_vars") && len(pillar["secure_vars"].(SlsData)) != 0 {
+		if pillar.Get("secure_vars") != nil {
 			pillar, dataChanged = pillarRange(pillar)
 		} else {
 			logger.Infof(fmt.Sprintf("%s has no secure_vars element", filePath))
@@ -117,28 +82,38 @@ func pillarBuffer(filePath string, all bool) bytes.Buffer {
 	return formatBuffer(pillar)
 }
 
-func processPillar(pillar SlsData) SlsData {
+func processPillar(pillar *yaml.Yaml) *yaml.Yaml {
 	for index := 0; index < len(secretNames); index++ {
 		cipherText := ""
 		if index >= 0 && index < len(secretValues) {
 			cipherText = encryptSecret(secretValues[index])
 		}
-		if keyExists(pillar, "secure_vars") {
-			pillar["secure_vars"].(SlsData)[secretNames[index]] = cipherText
+		if pillar.Get("secure_vars") != nil {
+			err := pillar.Set("secure_vars", secretNames[index], cipherText)
+			if err != nil {
+				logger.Fatalf("error setting value: %s", err)
+			}
 		} else {
-			pillar[secretNames[index]] = cipherText
+			err := pillar.Set(secretNames[index], cipherText)
+			if err != nil {
+				logger.Fatalf("error setting value: %s", err)
+			}
 		}
 	}
 
 	return pillar
 }
 
-func pillarRange(pillar SlsData) (SlsData, bool) {
+func pillarRange(pillar *yaml.Yaml) (*yaml.Yaml, bool) {
 	var dataChanged = false
-	for k, v := range pillar["secure_vars"].(SlsData) {
+	secureVars := pillar.Get("secure_vars")
+	for k, v := range secureVars.(map[interface{}]interface{}) {
 		if !strings.Contains(v.(string), pgpHeader) {
 			cipherText := encryptSecret(v.(string))
-			pillar["secure_vars"].(SlsData)[k] = cipherText
+			err := pillar.Set("secure_vars", k, cipherText)
+			if err != nil {
+				logger.Fatalf("error setting value: %s", err)
+			}
 			dataChanged = true
 		}
 	}
@@ -147,33 +122,53 @@ func pillarRange(pillar SlsData) (SlsData, bool) {
 
 func plainTextPillarBuffer(inFile string) bytes.Buffer {
 	inFile, _ = filepath.Abs(inFile)
-	pillar, err := readSlsFile(inFile)
+	pillar, err := yaml.Open(inFile)
 	if err != nil {
 		logger.Fatal(err)
 	}
 
-	if pillar["secure_vars"] != nil {
-		for k, v := range pillar["secure_vars"].(SlsData) {
+	if pillar.Get("secure_vars") != nil {
+		for k, v := range pillar.Get("secure_vars").(map[interface{}]interface{}) {
 			if strings.Contains(v.(string), pgpHeader) {
 				plainText := decryptSecret(v.(string))
-				pillar["secure_vars"].(SlsData)[k] = plainText
+				err := pillar.Set("secure_vars", k, plainText)
+				if err != nil {
+					logger.Fatalf("error setting value: %s", err)
+				}
 			}
 		}
+	} else {
+		logger.Fatal("WTF")
 	}
 
 	return formatBuffer(pillar)
 }
 
-func formatBuffer(pillar SlsData) bytes.Buffer {
+func formatBuffer(pillar *yaml.Yaml) bytes.Buffer {
 	var buffer bytes.Buffer
 
-	yamlBytes, err := yaml.Marshal(pillar)
+	tmpfile, err := ioutil.TempFile("", "gsp_")
 	if err != nil {
-		logger.Fatalf("error marshalling YAML: %s", err)
+		logger.Fatal(err)
+	}
+
+	err = pillar.Write(tmpfile.Name())
+	if err != nil {
+		logger.Fatal(err)
+	}
+
+	yamlData, err := ioutil.ReadFile(tmpfile.Name())
+	if err != nil {
+		logger.Fatal("error reading YAML file: ", err)
 	}
 
 	buffer.WriteString("#!yaml|gpg\n\n")
-	buffer.WriteString(string(yamlBytes))
+	buffer.WriteString(string(yamlData))
+
+	err = os.Remove(tmpfile.Name())
+	if err != nil {
+		logger.Fatal(err)
+	}
 
 	return buffer
 }
@@ -194,17 +189,6 @@ func checkForFile(filePath string) error {
 }
 
 func writeSlsData(file string) {
-	pillar, err := readSlsFile(file)
-	if err != nil {
-		logger.Fatalf("error reading sls file: %s", err)
-	}
-	if len(pillar["secure_vars"].(SlsData)) > 0 {
-		buffer := pillarBuffer(file, true)
-		writeSlsFile(buffer, fmt.Sprintf("%s.new", file))
-	}
-}
-
-func keyExists(decoded map[interface{}]interface{}, key string) bool {
-	val, ok := decoded[key]
-	return ok && val != nil
+	buffer := pillarBuffer(file, true)
+	writeSlsFile(buffer, fmt.Sprintf("%s.new", file))
 }

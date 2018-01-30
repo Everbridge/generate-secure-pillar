@@ -8,6 +8,7 @@ TARGET := $(shell echo $${PWD\#\#*/})
 BUILD := `git rev-parse HEAD`
 COMMIT := `git rev-list HEAD | wc -l | sed 's/^ *//g'`
 VERSION := 1.0.$(COMMIT)
+BRANCH := `git branch | grep '^*' | awk '{print $2}'`
 
 # Use linker flags to provide version/build settings to the target
 LDFLAGS=-ldflags "-X=main.Version=$(VERSION) -X=main.Build=$(BUILD)"
@@ -35,7 +36,7 @@ build: deps $(TARGET)
 	@make pkg deb
 	@git add packages
 	@git commit -am 'new build'
-	@git push origin master
+	@git push origin $(BRANCH)
 	@true
 
 clean:

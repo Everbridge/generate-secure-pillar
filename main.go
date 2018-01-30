@@ -8,6 +8,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
+	"menteslibres.net/gosexy/yaml"
 )
 
 var logger = logrus.New()
@@ -49,15 +50,12 @@ var fileFlags = []cli.Flag{
 
 const pgpHeader = "-----BEGIN PGP MESSAGE-----"
 
-// SlsData salt pillar data
-type SlsData map[interface{}]interface{}
-
 func main() {
 	if debug {
 		logger.Level = logrus.DebugLevel
 	}
 	app := cli.NewApp()
-	app.Version = "1.0.56"
+	app.Version = "1.0.57"
 	app.Authors = []cli.Author{
 		cli.Author{
 			Name:  "Ed Silva",
@@ -115,7 +113,7 @@ $ generate-secure-pillar -k "Salt Master" encrypt recurse /path/to/pillar/secure
 			Aliases: []string{"c"},
 			Usage:   "create a new sls file",
 			Action: func(c *cli.Context) error {
-				pillar := newSlsData()
+				pillar := yaml.New()
 				pillar = processPillar(pillar)
 				buffer := formatBuffer(pillar)
 				writeSlsFile(buffer, outputFilePath)
