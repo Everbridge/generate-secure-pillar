@@ -50,15 +50,12 @@ var fileFlags = []cli.Flag{
 
 const pgpHeader = "-----BEGIN PGP MESSAGE-----"
 
-// SlsData salt pillar data
-type SlsData map[interface{}]interface{}
-
 func main() {
 	if debug {
 		logger.Level = logrus.DebugLevel
 	}
 	app := cli.NewApp()
-	app.Version = "1.0.64"
+	app.Version = "1.0.65"
 	app.Authors = []cli.Author{
 		cli.Author{
 			Name:  "Ed Silva",
