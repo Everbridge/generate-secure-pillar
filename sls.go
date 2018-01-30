@@ -107,7 +107,7 @@ func processPillar(pillar *yaml.Yaml) *yaml.Yaml {
 func pillarRange(pillar *yaml.Yaml) (*yaml.Yaml, bool) {
 	var dataChanged = false
 	secureVars := pillar.Get("secure_vars")
-	for k, v := range secureVars.(map[interface{}]interface{}) {
+	for k, v := range secureVars.(SlsData) {
 		if !strings.Contains(v.(string), pgpHeader) {
 			cipherText := encryptSecret(v.(string))
 			err := pillar.Set("secure_vars", k, cipherText)
@@ -128,7 +128,7 @@ func plainTextPillarBuffer(inFile string) bytes.Buffer {
 	}
 
 	if pillar.Get("secure_vars") != nil {
-		for k, v := range pillar.Get("secure_vars").(map[interface{}]interface{}) {
+		for k, v := range pillar.Get("secure_vars").(SlsData) {
 			if strings.Contains(v.(string), pgpHeader) {
 				plainText := decryptSecret(v.(string))
 				err := pillar.Set("secure_vars", k, plainText)
