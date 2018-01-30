@@ -13,11 +13,9 @@ import (
 
 var logger = logrus.New()
 
-var secretValue string
 var inputFilePath string
 var outputFilePath = os.Stdout.Name()
 var pgpKeyName string
-var secretName string
 var publicKeyRing string
 var secureKeyRing string
 var debug bool
@@ -147,15 +145,15 @@ $ generate-secure-pillar -k "Salt Master" encrypt recurse /path/to/pillar/secure
 			},
 			Flags: []cli.Flag{
 				inputFlag,
-				cli.StringFlag{
-					Name:        "name, n",
-					Usage:       "secret name",
-					Destination: &secretName,
+				cli.StringSliceFlag{
+					Name:  "name, n",
+					Usage: "secret name",
+					Value: &secretNames,
 				},
-				cli.StringFlag{
-					Name:        "value, s",
-					Usage:       "secret value",
-					Destination: &secretValue,
+				cli.StringSliceFlag{
+					Name:  "value, s",
+					Usage: "secret value",
+					Value: &secretValues,
 				},
 			},
 		},
