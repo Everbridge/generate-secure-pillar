@@ -37,10 +37,10 @@
   name = "github.com/urfave/cli"
   version = "1.20.0"
 
-[prune]
-  go-tests = true
-  unused-packages = true
-
 [[constraint]]
   branch = "master"
   name = "menteslibres.net/gosexy/yaml"
+
+[prune]
+  go-tests = true
+  unused-packages = true
