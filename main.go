@@ -8,15 +8,14 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
+	"menteslibres.net/gosexy/yaml"
 )
 
 var logger = logrus.New()
 
-var secretValue string
 var inputFilePath string
 var outputFilePath = os.Stdout.Name()
 var pgpKeyName string
-var secretName string
 var publicKeyRing string
 var secureKeyRing string
 var debug bool
@@ -49,15 +48,12 @@ var fileFlags = []cli.Flag{
 
 const pgpHeader = "-----BEGIN PGP MESSAGE-----"
 
-// SlsData salt pillar data
-type SlsData map[interface{}]interface{}
-
 func main() {
 	if debug {
 		logger.Level = logrus.DebugLevel
 	}
 	app := cli.NewApp()
-	app.Version = "1.0.56"
+	app.Version = "1.0.67"
 	app.Authors = []cli.Author{
 		cli.Author{
 			Name:  "Ed Silva",
@@ -115,7 +111,7 @@ $ generate-secure-pillar -k "Salt Master" encrypt recurse /path/to/pillar/secure
 			Aliases: []string{"c"},
 			Usage:   "create a new sls file",
 			Action: func(c *cli.Context) error {
-				pillar := newSlsData()
+				pillar := yaml.New()
 				pillar = processPillar(pillar)
 				buffer := formatBuffer(pillar)
 				writeSlsFile(buffer, outputFilePath)
@@ -149,15 +145,15 @@ $ generate-secure-pillar -k "Salt Master" encrypt recurse /path/to/pillar/secure
 			},
 			Flags: []cli.Flag{
 				inputFlag,
-				cli.StringFlag{
-					Name:        "name, n",
-					Usage:       "secret name",
-					Destination: &secretName,
+				cli.StringSliceFlag{
+					Name:  "name, n",
+					Usage: "secret name",
+					Value: &secretNames,
 				},
-				cli.StringFlag{
-					Name:        "value, s",
-					Usage:       "secret value",
-					Destination: &secretValue,
+				cli.StringSliceFlag{
+					Name:  "value, s",
+					Usage: "secret value",
+					Value: &secretValues,
 				},
 			},
 		},

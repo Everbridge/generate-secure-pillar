@@ -38,8 +38,8 @@
   version = "1.20.0"
 
 [[constraint]]
-  branch = "v2"
-  name = "gopkg.in/yaml.v2"
+  branch = "master"
+  name = "menteslibres.net/gosexy/yaml"
 
 [prune]
   go-tests = true

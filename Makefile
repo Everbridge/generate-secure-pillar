@@ -19,6 +19,8 @@ METALINT := $(shell command -v gometalinter 2> /dev/null)
 DEP := $(shell command -v dep 2> /dev/null)
 FPM := $(shell command -v fpm 2> /dev/null)
 
+BRANCH := `git rev-parse --abbrev-ref HEAD`
+
 .PHONY: all build clean install uninstall fmt simplify check run
 
 all: check build install
@@ -35,7 +37,8 @@ build: deps $(TARGET)
 	@make pkg deb
 	@git add packages
 	@git commit -am 'new build'
-	@git push origin master
+	@echo pushing to branch $(BRANCH)
+	@git push origin $(BRANCH)
 	@true
 
 clean:

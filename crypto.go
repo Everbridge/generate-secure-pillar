@@ -75,7 +75,7 @@ func decryptSecret(cipherText string) (plainText string) {
 
 	md, err := openpgp.ReadMessage(block.Body, privring, nil, nil)
 	if err != nil {
-		logger.Fatal("unadle to read PGP message: ", err)
+		logger.Fatal("unable to read PGP message: ", err)
 	}
 
 	bytes, err := ioutil.ReadAll(md.UnverifiedBody)
