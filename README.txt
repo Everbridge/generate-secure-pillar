@@ -5,7 +5,7 @@ USAGE:
    generate-secure-pillar [global options] command [command options] [arguments...]
 
 VERSION:
-   1.0.67
+   1.0.70
 
 AUTHOR:
    Ed Silva <ed.silva@everbridge.com>
@@ -41,5 +41,8 @@ $ generate-secure-pillar -k "Salt Master" update --name secret_name --value secr
 # encrypt all plain text values in a file
 $ generate-secure-pillar -k "Salt Master" encrypt all --file us1.sls --outfile us1.sls
 
-# recurse through all sls files, creating new encrypted files with a .new extension
-$ generate-secure-pillar -k "Salt Master" encrypt recurse /path/to/pillar/secure/stuff
+# recurse through all sls files, encrypting all key/value pairs under top level secure_vars element
+$ generate-secure-pillar -k "Salt Master" encrypt recurse -d /path/to/pillar/secure/stuff
+
+# recurse through all sls files, decrypting all key/value pairs under top level secure_vars element
+$ generate-secure-pillar -k "Salt Master" decrypt recurse -d /path/to/pillar/secure/stuff

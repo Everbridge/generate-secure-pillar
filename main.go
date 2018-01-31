@@ -53,7 +53,7 @@ func main() {
 		logger.Level = logrus.DebugLevel
 	}
 	app := cli.NewApp()
-	app.Version = "1.0.67"
+	app.Version = "1.0.70"
 	app.Authors = []cli.Author{
 		cli.Author{
 			Name:  "Ed Silva",
@@ -75,8 +75,11 @@ $ generate-secure-pillar -k "Salt Master" update --name secret_name --value secr
 # encrypt all plain text values in a file
 $ generate-secure-pillar -k "Salt Master" encrypt all --file us1.sls --outfile us1.sls
 
-# recurse through all sls files, creating new encrypted files with a .new extension
-$ generate-secure-pillar -k "Salt Master" encrypt recurse /path/to/pillar/secure/stuff`, cli.AppHelpTemplate)
+# recurse through all sls files, encrypting all key/value pairs under top level secure_vars element
+$ generate-secure-pillar -k "Salt Master" encrypt recurse -d /path/to/pillar/secure/stuff
+
+# recurse through all sls files, decrypting all key/value pairs under top level secure_vars element
+$ generate-secure-pillar -k "Salt Master" decrypt recurse -d /path/to/pillar/secure/stuff`, cli.AppHelpTemplate)
 
 	app.Copyright = "(c) 2017 Everbridge, Inc."
 	app.Usage = "add or update secure salt pillar content"
@@ -187,22 +190,7 @@ $ generate-secure-pillar -k "Salt Master" encrypt recurse /path/to/pillar/secure
 						},
 					},
 					Action: func(c *cli.Context) error {
-						info, err := os.Stat(recurseDir)
-						if err != nil {
-							logger.Fatalf("cannot stat %s: %s", recurseDir, err)
-						}
-						if info.IsDir() {
-							slsFiles, count := findSlsFiles(recurseDir)
-							if count == 0 {
-								logger.Fatalf("%s has no sls files", recurseDir)
-							}
-							for _, file := range slsFiles {
-								writeSlsData(file)
-							}
-						} else {
-							logger.Fatalf("%s is not a directory", recurseDir)
-						}
-
+						processDir(recurseDir, "encrypt")
 						return nil
 					},
 				},
@@ -217,6 +205,22 @@ $ generate-secure-pillar -k "Salt Master" encrypt recurse /path/to/pillar/secure
 				buffer := plainTextPillarBuffer(inputFilePath)
 				writeSlsFile(buffer, outputFilePath)
 				return nil
+			},
+			Subcommands: []cli.Command{
+				{
+					Name: "recurse",
+					Flags: []cli.Flag{
+						cli.StringFlag{
+							Name:        "dir, d",
+							Usage:       "recurse over all .sls files in the given directory",
+							Destination: &recurseDir,
+						},
+					},
+					Action: func(c *cli.Context) error {
+						processDir(recurseDir, "decrypt")
+						return nil
+					},
+				},
 			},
 		},
 	}
