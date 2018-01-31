@@ -62,6 +62,24 @@ func main() {
 	}
 
 	cli.AppHelpTemplate = fmt.Sprintf(`%s
+SLS FORMAT:
+This tool assumes a top level element in .sls files named 'secure_vars'
+under which are the key/value pairs meant to be secured. The reson for this
+is so that the files in question can easily have a mix of plain text and
+secured/encrypted values in an organized way, allowing for the bulk encryption
+or decryption of just those values (useful for automation).
+
+SAMPLE SLS FILE FORMAT:
+
+$ cat example.sls
+#!yaml|gpg
+
+key: value
+secure_vars:
+  password: secret
+  api_key: key_value
+
+
 EXAMPLES:
 # create a new sls file
 $ generate-secure-pillar -k "Salt Master" create --name secret_name1 --value secret_value1 --name secret_name2 --value secret_value2 --outfile new.sls
@@ -79,7 +97,9 @@ $ generate-secure-pillar -k "Salt Master" encrypt all --file us1.sls --outfile u
 $ generate-secure-pillar -k "Salt Master" encrypt recurse -d /path/to/pillar/secure/stuff
 
 # recurse through all sls files, decrypting all key/value pairs under top level secure_vars element
-$ generate-secure-pillar -k "Salt Master" decrypt recurse -d /path/to/pillar/secure/stuff`, cli.AppHelpTemplate)
+$ generate-secure-pillar -k "Salt Master" decrypt recurse -d /path/to/pillar/secure/stuff
+
+`, cli.AppHelpTemplate)
 
 	app.Copyright = "(c) 2017 Everbridge, Inc."
 	app.Usage = "add or update secure salt pillar content"
