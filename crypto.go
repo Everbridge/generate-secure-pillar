@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/user"
+	"path/filepath"
 	"time"
 
 	"github.com/keybase/go-crypto/openpgp"
@@ -15,6 +17,10 @@ import (
 func encryptSecret(plainText string) (cipherText string) {
 	var memBuffer bytes.Buffer
 
+	publicKeyRing, err := expandTilde(publicKeyRing)
+	if err != nil {
+		logger.Fatal("cannot expand public key ring path: ", err)
+	}
 	pubringFile, err := os.Open(publicKeyRing)
 	if err != nil {
 		logger.Fatal("cannot read public key ring: ", err)
@@ -56,6 +62,10 @@ func encryptSecret(plainText string) (cipherText string) {
 }
 
 func decryptSecret(cipherText string) (plainText string) {
+	secureKeyRing, err := expandTilde(secureKeyRing)
+	if err != nil {
+		logger.Fatal("cannot expand secret key ring path: ", err)
+	}
 	privringFile, err := os.Open(secureKeyRing)
 	if err != nil {
 		logger.Fatal("unable to open secring: ", err)
@@ -102,4 +112,16 @@ func getKeyByID(keyring openpgp.EntityList, id string) *openpgp.Entity {
 	}
 
 	return nil
+}
+
+func expandTilde(path string) (string, error) {
+	if len(path) == 0 || path[0] != '~' {
+		return path, nil
+	}
+
+	usr, err := user.Current()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(usr.HomeDir, path[1:]), nil
 }

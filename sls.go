@@ -188,7 +188,28 @@ func checkForFile(filePath string) error {
 	return err
 }
 
-func writeSlsData(file string) {
-	buffer := pillarBuffer(file, true)
-	writeSlsFile(buffer, fmt.Sprintf("%s.new", file))
+func processDir(recurseDir string, action string) {
+	info, err := os.Stat(recurseDir)
+	if err != nil {
+		logger.Fatalf("cannot stat %s: %s", recurseDir, err)
+	}
+	if info.IsDir() {
+		slsFiles, count := findSlsFiles(recurseDir)
+		if count == 0 {
+			logger.Fatalf("%s has no sls files", recurseDir)
+		}
+		for _, file := range slsFiles {
+			var buffer bytes.Buffer
+			if action == "encrypt" {
+				buffer = pillarBuffer(file, true)
+			} else if action == "decrypt" {
+				buffer = plainTextPillarBuffer(file)
+			} else {
+				logger.Fatalf("unknown action: %s", action)
+			}
+			writeSlsFile(buffer, file)
+		}
+	} else {
+		logger.Fatalf("%s is not a directory", recurseDir)
+	}
 }

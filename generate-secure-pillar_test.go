@@ -35,9 +35,9 @@ func TestWriteSlsFile(t *testing.T) {
 
 func TestFindSlsFiles(t *testing.T) {
 	slsFiles, count := findSlsFiles("./testdata")
-	if count != 1 {
+	if count != 4 {
 		t.Errorf("File count was incorrect, got: %d, want: %d.",
-			len(slsFiles), 1)
+			len(slsFiles), 4)
 	}
 }
 
@@ -74,7 +74,7 @@ func TestEncryptSecret(t *testing.T) {
 	if os.Getenv("SALT_SEC_KEYRING") != "" {
 		publicKeyRing, _ = filepath.Abs(os.Getenv("SALT_PUB_KEYRING"))
 	} else {
-		publicKeyRing = filepath.Join(usr.HomeDir, ".gnupg/pubring.gpg")
+		publicKeyRing = "~/.gnupg/pubring.gpg"
 	}
 	yaml, err := yaml.Open("./testdata/new.sls")
 	if err != nil {
@@ -97,11 +97,41 @@ func TestEncryptSecret(t *testing.T) {
 	}
 }
 
+func TestRecurseEncryptSecret(t *testing.T) {
+	if os.Getenv("SALT_SEC_KEYRING") != "" {
+		publicKeyRing, _ = filepath.Abs(os.Getenv("SALT_PUB_KEYRING"))
+	} else {
+		publicKeyRing = "~/.gnupg/pubring.gpg"
+	}
+	recurseDir := "./testdata/test"
+	processDir(recurseDir, "encrypt")
+	slsFiles, count := findSlsFiles(recurseDir)
+	if count == 0 {
+		t.Errorf("%s has no sls files", recurseDir)
+	}
+	for _, file := range slsFiles {
+		yaml, err := yaml.Open(file)
+		if err != nil {
+			t.Errorf("Returned error")
+		}
+		if len(yaml.Get("secure_vars").(map[interface{}]interface{})) <= 0 {
+			t.Errorf("YAML content lenth is incorrect, got: %d, want: %d.",
+				len(yaml.Get("secure_vars").(map[interface{}]interface{})), 2)
+		}
+		secureVars := yaml.Get("secure_vars")
+		for _, v := range secureVars.(map[interface{}]interface{}) {
+			if !strings.Contains(v.(string), pgpHeader) {
+				t.Errorf("YAML content was not encrypted.")
+			}
+		}
+	}
+}
+
 func TestDecryptSecret(t *testing.T) {
 	if os.Getenv("SALT_SEC_KEYRING") != "" {
 		secureKeyRing, _ = filepath.Abs(os.Getenv("SALT_SEC_KEYRING"))
 	} else {
-		secureKeyRing = filepath.Join(usr.HomeDir, ".gnupg/secring.gpg")
+		secureKeyRing = "~/.gnupg/secring.gpg"
 	}
 	yaml, err := yaml.Open("./testdata/new.sls")
 	if err != nil {
@@ -116,6 +146,36 @@ func TestDecryptSecret(t *testing.T) {
 		plainText := decryptSecret(cipherText)
 		if strings.Contains(plainText, pgpHeader) {
 			t.Errorf("YAML content was not decrypted.")
+		}
+	}
+}
+
+func TestRecurseDecryptSecret(t *testing.T) {
+	if os.Getenv("SALT_SEC_KEYRING") != "" {
+		secureKeyRing, _ = filepath.Abs(os.Getenv("SALT_SEC_KEYRING"))
+	} else {
+		secureKeyRing = "~/.gnupg/secring.gpg"
+	}
+	recurseDir := "./testdata/test"
+	processDir(recurseDir, "decrypt")
+	slsFiles, count := findSlsFiles(recurseDir)
+	if count == 0 {
+		t.Errorf("%s has no sls files", recurseDir)
+	}
+	for _, file := range slsFiles {
+		yaml, err := yaml.Open(file)
+		if err != nil {
+			t.Errorf("Returned error")
+		}
+		if len(yaml.Get("secure_vars").(map[interface{}]interface{})) <= 0 {
+			t.Errorf("YAML content lenth is incorrect, got: %d, want: %d.",
+				len(yaml.Get("secure_vars").(map[interface{}]interface{})), 2)
+		}
+		secureVars := yaml.Get("secure_vars")
+		for _, v := range secureVars.(map[interface{}]interface{}) {
+			if strings.Contains(v.(string), pgpHeader) {
+				t.Errorf("YAML content is still encrypted.")
+			}
 		}
 	}
 }

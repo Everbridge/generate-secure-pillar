@@ -3,8 +3,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"os/user"
-	"path/filepath"
 
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
@@ -23,9 +21,8 @@ var recurseDir string
 var secretNames cli.StringSlice
 var secretValues cli.StringSlice
 
-var usr, _ = user.Current()
-var defaultPubRing = filepath.Join(usr.HomeDir, ".gnupg/pubring.gpg")
-var defaultSecRing = filepath.Join(usr.HomeDir, ".gnupg/secring.gpg")
+var defaultPubRing = "~/.gnupg/pubring.gpg"
+var defaultSecRing = "~/.gnupg/secring.gpg"
 
 var inputFlag = cli.StringFlag{
 	Name:        "file, f",
@@ -53,7 +50,7 @@ func main() {
 		logger.Level = logrus.DebugLevel
 	}
 	app := cli.NewApp()
-	app.Version = "1.0.67"
+	app.Version = "1.0.73"
 	app.Authors = []cli.Author{
 		cli.Author{
 			Name:  "Ed Silva",
@@ -62,6 +59,24 @@ func main() {
 	}
 
 	cli.AppHelpTemplate = fmt.Sprintf(`%s
+SLS FORMAT:
+This tool assumes a top level element in .sls files named 'secure_vars'
+under which are the key/value pairs meant to be secured. The reson for this
+is so that the files in question can easily have a mix of plain text and
+secured/encrypted values in an organized way, allowing for the bulk encryption
+or decryption of just those values (useful for automation).
+
+SAMPLE SLS FILE FORMAT:
+
+$ cat example.sls
+#!yaml|gpg
+
+key: value
+secure_vars:
+  password: secret
+  api_key: key_value
+
+
 EXAMPLES:
 # create a new sls file
 $ generate-secure-pillar -k "Salt Master" create --name secret_name1 --value secret_value1 --name secret_name2 --value secret_value2 --outfile new.sls
@@ -75,8 +90,13 @@ $ generate-secure-pillar -k "Salt Master" update --name secret_name --value secr
 # encrypt all plain text values in a file
 $ generate-secure-pillar -k "Salt Master" encrypt all --file us1.sls --outfile us1.sls
 
-# recurse through all sls files, creating new encrypted files with a .new extension
-$ generate-secure-pillar -k "Salt Master" encrypt recurse /path/to/pillar/secure/stuff`, cli.AppHelpTemplate)
+# recurse through all sls files, encrypting all key/value pairs under top level secure_vars element
+$ generate-secure-pillar -k "Salt Master" encrypt recurse -d /path/to/pillar/secure/stuff
+
+# recurse through all sls files, decrypting all key/value pairs under top level secure_vars element
+$ generate-secure-pillar -k "Salt Master" decrypt recurse -d /path/to/pillar/secure/stuff
+
+`, cli.AppHelpTemplate)
 
 	app.Copyright = "(c) 2017 Everbridge, Inc."
 	app.Usage = "add or update secure salt pillar content"
@@ -187,22 +207,7 @@ $ generate-secure-pillar -k "Salt Master" encrypt recurse /path/to/pillar/secure
 						},
 					},
 					Action: func(c *cli.Context) error {
-						info, err := os.Stat(recurseDir)
-						if err != nil {
-							logger.Fatalf("cannot stat %s: %s", recurseDir, err)
-						}
-						if info.IsDir() {
-							slsFiles, count := findSlsFiles(recurseDir)
-							if count == 0 {
-								logger.Fatalf("%s has no sls files", recurseDir)
-							}
-							for _, file := range slsFiles {
-								writeSlsData(file)
-							}
-						} else {
-							logger.Fatalf("%s is not a directory", recurseDir)
-						}
-
+						processDir(recurseDir, "encrypt")
 						return nil
 					},
 				},
@@ -217,6 +222,22 @@ $ generate-secure-pillar -k "Salt Master" encrypt recurse /path/to/pillar/secure
 				buffer := plainTextPillarBuffer(inputFilePath)
 				writeSlsFile(buffer, outputFilePath)
 				return nil
+			},
+			Subcommands: []cli.Command{
+				{
+					Name: "recurse",
+					Flags: []cli.Flag{
+						cli.StringFlag{
+							Name:        "dir, d",
+							Usage:       "recurse over all .sls files in the given directory",
+							Destination: &recurseDir,
+						},
+					},
+					Action: func(c *cli.Context) error {
+						processDir(recurseDir, "decrypt")
+						return nil
+					},
+				},
 			},
 		},
 	}
