@@ -5,7 +5,7 @@ USAGE:
    generate-secure-pillar [global options] command [command options] [arguments...]
 
 VERSION:
-   1.0.72
+   1.0.73
 
 AUTHOR:
    Ed Silva <ed.silva@everbridge.com>
@@ -18,8 +18,8 @@ COMMANDS:
      help, h     Shows a list of commands or help for one command
 
 GLOBAL OPTIONS:
-   --pubring value, --pub value  PGP public keyring (default: "/Users/ed.silva/.gnupg/pubring.gpg")
-   --secring value, --sec value  PGP private keyring (default: "/Users/ed.silva/.gnupg/secring.gpg")
+   --pubring value, --pub value  PGP public keyring (default: "~/.gnupg/pubring.gpg")
+   --secring value, --sec value  PGP private keyring (default: "~/.gnupg/secring.gpg")
    --pgp_key value, -k value     PGP key name, email, or ID to use for encryption
    --debug                       adds line number info to log output
    --help, -h                    show help

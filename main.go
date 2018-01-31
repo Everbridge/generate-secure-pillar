@@ -3,8 +3,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"os/user"
-	"path/filepath"
 
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
@@ -23,9 +21,8 @@ var recurseDir string
 var secretNames cli.StringSlice
 var secretValues cli.StringSlice
 
-var usr, _ = user.Current()
-var defaultPubRing = filepath.Join(usr.HomeDir, ".gnupg/pubring.gpg")
-var defaultSecRing = filepath.Join(usr.HomeDir, ".gnupg/secring.gpg")
+var defaultPubRing = "~/.gnupg/pubring.gpg"
+var defaultSecRing = "~/.gnupg/secring.gpg"
 
 var inputFlag = cli.StringFlag{
 	Name:        "file, f",
@@ -53,7 +50,7 @@ func main() {
 		logger.Level = logrus.DebugLevel
 	}
 	app := cli.NewApp()
-	app.Version = "1.0.72"
+	app.Version = "1.0.73"
 	app.Authors = []cli.Author{
 		cli.Author{
 			Name:  "Ed Silva",

@@ -74,7 +74,7 @@ func TestEncryptSecret(t *testing.T) {
 	if os.Getenv("SALT_SEC_KEYRING") != "" {
 		publicKeyRing, _ = filepath.Abs(os.Getenv("SALT_PUB_KEYRING"))
 	} else {
-		publicKeyRing = filepath.Join(usr.HomeDir, ".gnupg/pubring.gpg")
+		publicKeyRing = "~/.gnupg/pubring.gpg"
 	}
 	yaml, err := yaml.Open("./testdata/new.sls")
 	if err != nil {
@@ -101,7 +101,7 @@ func TestRecurseEncryptSecret(t *testing.T) {
 	if os.Getenv("SALT_SEC_KEYRING") != "" {
 		publicKeyRing, _ = filepath.Abs(os.Getenv("SALT_PUB_KEYRING"))
 	} else {
-		publicKeyRing = filepath.Join(usr.HomeDir, ".gnupg/pubring.gpg")
+		publicKeyRing = "~/.gnupg/pubring.gpg"
 	}
 	recurseDir := "./testdata/test"
 	processDir(recurseDir, "encrypt")
@@ -131,7 +131,7 @@ func TestDecryptSecret(t *testing.T) {
 	if os.Getenv("SALT_SEC_KEYRING") != "" {
 		secureKeyRing, _ = filepath.Abs(os.Getenv("SALT_SEC_KEYRING"))
 	} else {
-		secureKeyRing = filepath.Join(usr.HomeDir, ".gnupg/secring.gpg")
+		secureKeyRing = "~/.gnupg/secring.gpg"
 	}
 	yaml, err := yaml.Open("./testdata/new.sls")
 	if err != nil {
@@ -154,7 +154,7 @@ func TestRecurseDecryptSecret(t *testing.T) {
 	if os.Getenv("SALT_SEC_KEYRING") != "" {
 		secureKeyRing, _ = filepath.Abs(os.Getenv("SALT_SEC_KEYRING"))
 	} else {
-		secureKeyRing = filepath.Join(usr.HomeDir, ".gnupg/secring.gpg")
+		secureKeyRing = "~/.gnupg/secring.gpg"
 	}
 	recurseDir := "./testdata/test"
 	processDir(recurseDir, "decrypt")
