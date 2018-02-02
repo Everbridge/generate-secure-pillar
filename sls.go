@@ -11,6 +11,8 @@ import (
 	yaml "menteslibres.net/gosexy/yaml"
 )
 
+// writeSlsFile writes a buffer to the specified file
+// If the outFilePath is not stdout an INFO string will be printed to stdout
 func writeSlsFile(buffer bytes.Buffer, outFilePath string) {
 	fullPath, err := filepath.Abs(outFilePath)
 	if err != nil {
@@ -31,6 +33,7 @@ func writeSlsFile(buffer bytes.Buffer, outFilePath string) {
 	}
 }
 
+// fileSlsFiles recurses through the given searchDir returning a list of .sls files and it's length
 func findSlsFiles(searchDir string) ([]string, int) {
 	searchDir, _ = filepath.Abs(searchDir)
 	fileList := []string{}
@@ -47,6 +50,8 @@ func findSlsFiles(searchDir string) ([]string, int) {
 	return fileList, len(fileList)
 }
 
+// pillarBuffer returns a buffer with encrypted and formatted yaml text
+// If the 'all' flag is set all values under the designated top level element are encrypted
 func pillarBuffer(filePath string, all bool) bytes.Buffer {
 	err := checkForFile(filePath)
 	if err != nil {
@@ -64,10 +69,10 @@ func pillarBuffer(filePath string, all bool) bytes.Buffer {
 	dataChanged := false
 
 	if all {
-		if pillar.Get("secure_vars") != nil {
+		if pillar.Get(topLevelElement) != nil {
 			pillar, dataChanged = pillarRange(pillar)
 		} else {
-			logger.Infof(fmt.Sprintf("%s has no secure_vars element", filePath))
+			logger.Infof(fmt.Sprintf("%s has no %s element", filePath, topLevelElement))
 		}
 	} else {
 		pillar = processPillar(pillar)
@@ -82,14 +87,15 @@ func pillarBuffer(filePath string, all bool) bytes.Buffer {
 	return formatBuffer(pillar)
 }
 
+// processPillar encrypts elements matching keys specified on the command line
 func processPillar(pillar *yaml.Yaml) *yaml.Yaml {
 	for index := 0; index < len(secretNames); index++ {
 		cipherText := ""
 		if index >= 0 && index < len(secretValues) {
 			cipherText = encryptSecret(secretValues[index])
 		}
-		if pillar.Get("secure_vars") != nil {
-			err := pillar.Set("secure_vars", secretNames[index], cipherText)
+		if pillar.Get(topLevelElement) != nil {
+			err := pillar.Set(topLevelElement, secretNames[index], cipherText)
 			if err != nil {
 				logger.Fatalf("error setting value: %s", err)
 			}
@@ -104,13 +110,14 @@ func processPillar(pillar *yaml.Yaml) *yaml.Yaml {
 	return pillar
 }
 
+// pillarRange encrypts any plain text values in the top level element
 func pillarRange(pillar *yaml.Yaml) (*yaml.Yaml, bool) {
 	var dataChanged = false
-	secureVars := pillar.Get("secure_vars")
+	secureVars := pillar.Get(topLevelElement)
 	for k, v := range secureVars.(map[interface{}]interface{}) {
 		if !strings.Contains(v.(string), pgpHeader) {
 			cipherText := encryptSecret(v.(string))
-			err := pillar.Set("secure_vars", k, cipherText)
+			err := pillar.Set(topLevelElement, k, cipherText)
 			if err != nil {
 				logger.Fatalf("error setting value: %s", err)
 			}
@@ -120,18 +127,27 @@ func pillarRange(pillar *yaml.Yaml) (*yaml.Yaml, bool) {
 	return pillar, dataChanged
 }
 
-func plainTextPillarBuffer(inFile string) bytes.Buffer {
-	inFile, _ = filepath.Abs(inFile)
-	pillar, err := yaml.Open(inFile)
+// plainTextPillarBuffer decrypts all values under the top level element and returns a formatted buffer
+func plainTextPillarBuffer(filePath string) bytes.Buffer {
+	err := checkForFile(filePath)
+	if err != nil {
+		logger.Fatal(err)
+	}
+	filePath, err = filepath.Abs(filePath)
 	if err != nil {
 		logger.Fatal(err)
 	}
 
-	if pillar.Get("secure_vars") != nil {
-		for k, v := range pillar.Get("secure_vars").(map[interface{}]interface{}) {
+	pillar, err := yaml.Open(filePath)
+	if err != nil {
+		logger.Fatal(err)
+	}
+
+	if pillar.Get(topLevelElement) != nil {
+		for k, v := range pillar.Get(topLevelElement).(map[interface{}]interface{}) {
 			if strings.Contains(v.(string), pgpHeader) {
 				plainText := decryptSecret(v.(string))
-				err := pillar.Set("secure_vars", k, plainText)
+				err := pillar.Set(topLevelElement, k, plainText)
 				if err != nil {
 					logger.Fatalf("error setting value: %s", err)
 				}
@@ -144,6 +160,7 @@ func plainTextPillarBuffer(inFile string) bytes.Buffer {
 	return formatBuffer(pillar)
 }
 
+// formatBuffer returns a formatted .sls buffer with the gpg renderer line
 func formatBuffer(pillar *yaml.Yaml) bytes.Buffer {
 	var buffer bytes.Buffer
 
@@ -173,6 +190,7 @@ func formatBuffer(pillar *yaml.Yaml) bytes.Buffer {
 	return buffer
 }
 
+// checkForFile does exactly what it says on the tin
 func checkForFile(filePath string) error {
 	fi, err := os.Stat(filePath)
 	if err != nil {
@@ -188,6 +206,9 @@ func checkForFile(filePath string) error {
 	return err
 }
 
+// processDir will recursively apply fileSlsFiles
+// It will either encrypt or decrypt, as specified by the action flag
+// It writes replaces the files found
 func processDir(recurseDir string, action string) {
 	info, err := os.Stat(recurseDir)
 	if err != nil {
