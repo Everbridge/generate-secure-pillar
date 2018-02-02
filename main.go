@@ -52,7 +52,7 @@ func main() {
 		logger.Level = logrus.DebugLevel
 	}
 	app := cli.NewApp()
-	app.Version = "1.0.78"
+	app.Version = "1.0.79"
 	app.Authors = []cli.Author{
 		cli.Author{
 			Name:  "Ed Silva",
@@ -93,6 +93,9 @@ $ generate-secure-pillar -k "Salt Master" update --name secret_name --value secr
 
 # encrypt all plain text values in a file
 $ generate-secure-pillar -k "Salt Master" encrypt all --file us1.sls --outfile us1.sls
+
+# encrypt all plain text values in a file under the element 'secret_stuff'
+$ generate-secure-pillar -k "Salt Master" --element secret_stuff encrypt all --file us1.sls --outfile us1.sls
 
 # recurse through all sls files, encrypting all key/value pairs under top level secure_vars element
 $ generate-secure-pillar -k "Salt Master" encrypt recurse -d /path/to/pillar/secure/stuff
