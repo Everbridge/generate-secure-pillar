@@ -20,9 +20,11 @@ var debug bool
 var recurseDir string
 var secretNames cli.StringSlice
 var secretValues cli.StringSlice
+var topLevelElement string
 
 var defaultPubRing = "~/.gnupg/pubring.gpg"
 var defaultSecRing = "~/.gnupg/secring.gpg"
+var defaultElement = "secure_vars"
 
 var inputFlag = cli.StringFlag{
 	Name:        "file, f",
@@ -50,7 +52,7 @@ func main() {
 		logger.Level = logrus.DebugLevel
 	}
 	app := cli.NewApp()
-	app.Version = "1.0.73"
+	app.Version = "1.0.79"
 	app.Authors = []cli.Author{
 		cli.Author{
 			Name:  "Ed Silva",
@@ -60,11 +62,13 @@ func main() {
 
 	cli.AppHelpTemplate = fmt.Sprintf(`%s
 SLS FORMAT:
-This tool assumes a top level element in .sls files named 'secure_vars'
+This tool assumes a top level element in .sls files (named 'secure_vars' by default)
 under which are the key/value pairs meant to be secured. The reson for this
 is so that the files in question can easily have a mix of plain text and
 secured/encrypted values in an organized way, allowing for the bulk encryption
 or decryption of just those values (useful for automation).
+
+The name of the top level element can be specified using the --element flag.
 
 SAMPLE SLS FILE FORMAT:
 
@@ -90,6 +94,9 @@ $ generate-secure-pillar -k "Salt Master" update --name secret_name --value secr
 # encrypt all plain text values in a file
 $ generate-secure-pillar -k "Salt Master" encrypt all --file us1.sls --outfile us1.sls
 
+# encrypt all plain text values in a file under the element 'secret_stuff'
+$ generate-secure-pillar -k "Salt Master" --element secret_stuff encrypt all --file us1.sls --outfile us1.sls
+
 # recurse through all sls files, encrypting all key/value pairs under top level secure_vars element
 $ generate-secure-pillar -k "Salt Master" encrypt recurse -d /path/to/pillar/secure/stuff
 
@@ -98,8 +105,8 @@ $ generate-secure-pillar -k "Salt Master" decrypt recurse -d /path/to/pillar/sec
 
 `, cli.AppHelpTemplate)
 
-	app.Copyright = "(c) 2017 Everbridge, Inc."
-	app.Usage = "add or update secure salt pillar content"
+	app.Copyright = "(c) 2018 Everbridge, Inc."
+	app.Usage = "Create and update encrypted content or decrypt encrypted content."
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
 			Name:        "pubring, pub",
@@ -122,6 +129,12 @@ $ generate-secure-pillar -k "Salt Master" decrypt recurse -d /path/to/pillar/sec
 			Name:        "debug",
 			Usage:       "adds line number info to log output",
 			Destination: &debug,
+		},
+		cli.StringFlag{
+			Name:        "element, e",
+			Value:       defaultElement,
+			Usage:       "Name of the top level element under which encrypted key/value pairs are kept",
+			Destination: &topLevelElement,
 		},
 	}
 

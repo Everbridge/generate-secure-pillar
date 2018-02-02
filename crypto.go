@@ -14,6 +14,7 @@ import (
 	"github.com/keybase/go-crypto/openpgp/armor"
 )
 
+// encryptSecret returns encrypted plainText
 func encryptSecret(plainText string) (cipherText string) {
 	var memBuffer bytes.Buffer
 
@@ -61,6 +62,7 @@ func encryptSecret(plainText string) (cipherText string) {
 	return memBuffer.String()
 }
 
+// decryptSecret returns decrypted cipherText
 func decryptSecret(cipherText string) (plainText string) {
 	secureKeyRing, err := expandTilde(secureKeyRing)
 	if err != nil {
@@ -96,6 +98,7 @@ func decryptSecret(cipherText string) (plainText string) {
 	return string(bytes)
 }
 
+// getKeyByID returns a keyring by the given ID
 func getKeyByID(keyring openpgp.EntityList, id string) *openpgp.Entity {
 	for _, entity := range keyring {
 		for _, ident := range entity.Identities {
@@ -114,6 +117,7 @@ func getKeyByID(keyring openpgp.EntityList, id string) *openpgp.Entity {
 	return nil
 }
 
+// expandTilde does exactly what it says on the tin
 func expandTilde(path string) (string, error) {
 	if len(path) == 0 || path[0] != '~' {
 		return path, nil

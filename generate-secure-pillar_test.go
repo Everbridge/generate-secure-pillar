@@ -50,27 +50,30 @@ func TestEmptyDir(t *testing.T) {
 }
 
 func TestReadSlsFile(t *testing.T) {
+	topLevelElement = defaultElement
 	yaml, err := yaml.Open("./testdata/new.sls")
 	if err != nil {
 		t.Errorf("Returned error")
 	}
-	if len(yaml.Get("secure_vars").(map[interface{}]interface{})) != 3 {
+	if len(yaml.Get(topLevelElement).(map[interface{}]interface{})) != 3 {
 		t.Errorf("YAML content length is incorrect, got: %d, want: %d.",
-			len(yaml.Get("secure_vars").(map[interface{}]interface{})), 3)
+			len(yaml.Get(topLevelElement).(map[interface{}]interface{})), 3)
 	}
 }
 
 func TestReadBadFile(t *testing.T) {
+	topLevelElement = defaultElement
 	yaml, err := yaml.Open("/dev/null")
 	if err != nil {
 		t.Errorf("Returned error")
 	}
-	if yaml.Get("secure_vars") != nil {
+	if yaml.Get(topLevelElement) != nil {
 		t.Errorf("got YAML from /dev/nul???")
 	}
 }
 
 func TestEncryptSecret(t *testing.T) {
+	topLevelElement = defaultElement
 	if os.Getenv("SALT_SEC_KEYRING") != "" {
 		publicKeyRing, _ = filepath.Abs(os.Getenv("SALT_PUB_KEYRING"))
 	} else {
@@ -80,11 +83,11 @@ func TestEncryptSecret(t *testing.T) {
 	if err != nil {
 		t.Errorf("Returned error")
 	}
-	if len(yaml.Get("secure_vars").(map[interface{}]interface{})) <= 0 {
+	if len(yaml.Get(topLevelElement).(map[interface{}]interface{})) <= 0 {
 		t.Errorf("YAML content lenth is incorrect, got: %d, want: %d.",
-			len(yaml.Get("secure_vars").(map[interface{}]interface{})), 1)
+			len(yaml.Get(topLevelElement).(map[interface{}]interface{})), 1)
 	}
-	secureVars := yaml.Get("secure_vars")
+	secureVars := yaml.Get(topLevelElement)
 	for _, v := range secureVars.(map[interface{}]interface{}) {
 		if strings.Contains(v.(string), pgpHeader) {
 			t.Errorf("YAML content is already encrypted.")
@@ -98,6 +101,7 @@ func TestEncryptSecret(t *testing.T) {
 }
 
 func TestRecurseEncryptSecret(t *testing.T) {
+	topLevelElement = defaultElement
 	if os.Getenv("SALT_SEC_KEYRING") != "" {
 		publicKeyRing, _ = filepath.Abs(os.Getenv("SALT_PUB_KEYRING"))
 	} else {
@@ -114,11 +118,11 @@ func TestRecurseEncryptSecret(t *testing.T) {
 		if err != nil {
 			t.Errorf("Returned error")
 		}
-		if len(yaml.Get("secure_vars").(map[interface{}]interface{})) <= 0 {
+		if len(yaml.Get(topLevelElement).(map[interface{}]interface{})) <= 0 {
 			t.Errorf("YAML content lenth is incorrect, got: %d, want: %d.",
-				len(yaml.Get("secure_vars").(map[interface{}]interface{})), 2)
+				len(yaml.Get(topLevelElement).(map[interface{}]interface{})), 2)
 		}
-		secureVars := yaml.Get("secure_vars")
+		secureVars := yaml.Get(topLevelElement)
 		for _, v := range secureVars.(map[interface{}]interface{}) {
 			if !strings.Contains(v.(string), pgpHeader) {
 				t.Errorf("YAML content was not encrypted.")
@@ -128,6 +132,7 @@ func TestRecurseEncryptSecret(t *testing.T) {
 }
 
 func TestDecryptSecret(t *testing.T) {
+	topLevelElement = defaultElement
 	if os.Getenv("SALT_SEC_KEYRING") != "" {
 		secureKeyRing, _ = filepath.Abs(os.Getenv("SALT_SEC_KEYRING"))
 	} else {
@@ -137,11 +142,11 @@ func TestDecryptSecret(t *testing.T) {
 	if err != nil {
 		t.Errorf("Returned error")
 	}
-	if len(yaml.Get("secure_vars").(map[interface{}]interface{})) <= 0 {
+	if len(yaml.Get(topLevelElement).(map[interface{}]interface{})) <= 0 {
 		t.Errorf("YAML content lenth is incorrect, got: %d, want: %d.",
-			len(yaml.Get("secure_vars").(map[interface{}]interface{})), 1)
+			len(yaml.Get(topLevelElement).(map[interface{}]interface{})), 1)
 	}
-	for _, v := range yaml.Get("secure_vars").(map[interface{}]interface{}) {
+	for _, v := range yaml.Get(topLevelElement).(map[interface{}]interface{}) {
 		cipherText := encryptSecret(v.(string))
 		plainText := decryptSecret(cipherText)
 		if strings.Contains(plainText, pgpHeader) {
@@ -151,6 +156,7 @@ func TestDecryptSecret(t *testing.T) {
 }
 
 func TestRecurseDecryptSecret(t *testing.T) {
+	topLevelElement = defaultElement
 	if os.Getenv("SALT_SEC_KEYRING") != "" {
 		secureKeyRing, _ = filepath.Abs(os.Getenv("SALT_SEC_KEYRING"))
 	} else {
@@ -167,11 +173,11 @@ func TestRecurseDecryptSecret(t *testing.T) {
 		if err != nil {
 			t.Errorf("Returned error")
 		}
-		if len(yaml.Get("secure_vars").(map[interface{}]interface{})) <= 0 {
+		if len(yaml.Get(topLevelElement).(map[interface{}]interface{})) <= 0 {
 			t.Errorf("YAML content lenth is incorrect, got: %d, want: %d.",
-				len(yaml.Get("secure_vars").(map[interface{}]interface{})), 2)
+				len(yaml.Get(topLevelElement).(map[interface{}]interface{})), 2)
 		}
-		secureVars := yaml.Get("secure_vars")
+		secureVars := yaml.Get(topLevelElement)
 		for _, v := range secureVars.(map[interface{}]interface{}) {
 			if strings.Contains(v.(string), pgpHeader) {
 				t.Errorf("YAML content is still encrypted.")

@@ -1,11 +1,11 @@
 NAME:
-   generate-secure-pillar - add or update secure salt pillar content
+   generate-secure-pillar - Create and update encrypted content or decrypt encrypted content.
 
 USAGE:
    generate-secure-pillar [global options] command [command options] [arguments...]
 
 VERSION:
-   1.0.73
+   1.0.79
 
 AUTHOR:
    Ed Silva <ed.silva@everbridge.com>
@@ -22,18 +22,21 @@ GLOBAL OPTIONS:
    --secring value, --sec value  PGP private keyring (default: "~/.gnupg/secring.gpg")
    --pgp_key value, -k value     PGP key name, email, or ID to use for encryption
    --debug                       adds line number info to log output
+   --element value, -e value     Name of the top level element under which encrypted key/value pairs are kept (default: "secure_vars")
    --help, -h                    show help
    --version, -v                 print the version
 
 COPYRIGHT:
-   (c) 2017 Everbridge, Inc.
+   (c) 2018 Everbridge, Inc.
 
 SLS FORMAT:
-This tool assumes a top level element in .sls files named 'secure_vars'
+This tool assumes a top level element in .sls files (named 'secure_vars' by default)
 under which are the key/value pairs meant to be secured. The reson for this
 is so that the files in question can easily have a mix of plain text and
 secured/encrypted values in an organized way, allowing for the bulk encryption
 or decryption of just those values (useful for automation).
+
+The name of the top level element can be specified using the --element flag.
 
 SAMPLE SLS FILE FORMAT:
 
@@ -58,6 +61,9 @@ $ generate-secure-pillar -k "Salt Master" update --name secret_name --value secr
 
 # encrypt all plain text values in a file
 $ generate-secure-pillar -k "Salt Master" encrypt all --file us1.sls --outfile us1.sls
+
+# encrypt all plain text values in a file under the element 'secret_stuff'
+$ generate-secure-pillar -k "Salt Master" --element secret_stuff encrypt all --file us1.sls --outfile us1.sls
 
 # recurse through all sls files, encrypting all key/value pairs under top level secure_vars element
 $ generate-secure-pillar -k "Salt Master" encrypt recurse -d /path/to/pillar/secure/stuff

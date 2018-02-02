@@ -36,7 +36,7 @@ build: deps $(TARGET)
 	@rm packages/generate-secure-pillar*
 	@make pkg deb
 	@git add packages
-	@git commit -am 'new build'
+	@git commit -am "new build: $(VERSION)"
 	@echo pushing to branch $(BRANCH)
 	@git push origin $(BRANCH)
 	@true
