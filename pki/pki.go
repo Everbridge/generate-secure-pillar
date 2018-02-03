@@ -1,4 +1,4 @@
-package main
+package pki
 
 import (
 	"bufio"
@@ -12,17 +12,42 @@ import (
 
 	"github.com/keybase/go-crypto/openpgp"
 	"github.com/keybase/go-crypto/openpgp/armor"
+	"github.com/sirupsen/logrus"
 )
 
-// encryptSecret returns encrypted plainText
-func encryptSecret(plainText string) (cipherText string) {
-	var memBuffer bytes.Buffer
+var logger = logrus.New()
 
-	publicKeyRing, err := expandTilde(publicKeyRing)
+// Pki pki info
+type Pki struct {
+	PublicKeyRing string
+	SecretKeyRing string
+	PgpKeyName    string
+}
+
+// New returns a pki struct
+func New(pgpKeyName string, publicKeyRing string, secretKeyRing string) Pki {
+	var err error
+	p := Pki{publicKeyRing, secretKeyRing, pgpKeyName}
+	publicKeyRing, err = p.ExpandTilde(p.PublicKeyRing)
 	if err != nil {
 		logger.Fatal("cannot expand public key ring path: ", err)
 	}
-	pubringFile, err := os.Open(publicKeyRing)
+	p.PublicKeyRing = publicKeyRing
+	secretKeyRing, err = p.ExpandTilde(p.SecretKeyRing)
+	if err != nil {
+		logger.Fatal("cannot expand secret key ring path: ", err)
+	}
+	p.PublicKeyRing = publicKeyRing
+	p.SecretKeyRing = secretKeyRing
+
+	return p
+}
+
+// EncryptSecret returns encrypted plainText
+func (p *Pki) EncryptSecret(plainText string) (cipherText string) {
+	var memBuffer bytes.Buffer
+
+	pubringFile, err := os.Open(p.PublicKeyRing)
 	if err != nil {
 		logger.Fatal("cannot read public key ring: ", err)
 	}
@@ -30,7 +55,7 @@ func encryptSecret(plainText string) (cipherText string) {
 	if err != nil {
 		logger.Fatal("cannot read public keys: ", err)
 	}
-	publicKey := getKeyByID(pubring, pgpKeyName)
+	publicKey := p.GetKeyByID(pubring, p.PgpKeyName)
 
 	hints := openpgp.FileHints{IsBinary: false, ModTime: time.Time{}}
 	writer := bufio.NewWriter(&memBuffer)
@@ -44,31 +69,29 @@ func encryptSecret(plainText string) (cipherText string) {
 		logger.Fatal("Encryption error: ", err)
 	}
 
-	fmt.Fprintf(plainFile, plainText)
-
-	if err := plainFile.Close(); err != nil {
-		logger.Fatal("unable to close file: ", err)
-	}
-	if err := w.Close(); err != nil {
+	if _, err = fmt.Fprintf(plainFile, "%s", plainText); err != nil {
 		logger.Fatal(err)
 	}
-	if err := writer.Flush(); err != nil {
+
+	if err = plainFile.Close(); err != nil {
+		logger.Fatal("unable to close file: ", err)
+	}
+	if err = w.Close(); err != nil {
+		logger.Fatal(err)
+	}
+	if err = writer.Flush(); err != nil {
 		logger.Fatal("error flusing writer: ", err)
 	}
-	if err := pubringFile.Close(); err != nil {
+	if err = pubringFile.Close(); err != nil {
 		logger.Fatal("error closing pubring: ", err)
 	}
 
 	return memBuffer.String()
 }
 
-// decryptSecret returns decrypted cipherText
-func decryptSecret(cipherText string) (plainText string) {
-	secureKeyRing, err := expandTilde(secureKeyRing)
-	if err != nil {
-		logger.Fatal("cannot expand secret key ring path: ", err)
-	}
-	privringFile, err := os.Open(secureKeyRing)
+// DecryptSecret returns decrypted cipherText
+func (p *Pki) DecryptSecret(cipherText string) (plainText string) {
+	privringFile, err := os.Open(p.SecretKeyRing)
 	if err != nil {
 		logger.Fatal("unable to open secring: ", err)
 	}
@@ -76,7 +99,7 @@ func decryptSecret(cipherText string) (plainText string) {
 	if err != nil {
 		logger.Fatal("cannot read private keys: ", err)
 	} else if privring == nil {
-		logger.Fatal(fmt.Sprintf("%s is empty!", secureKeyRing))
+		logger.Fatal(fmt.Sprintf("%s is empty!", p.SecretKeyRing))
 	}
 
 	decbuf := bytes.NewBuffer([]byte(cipherText))
@@ -98,8 +121,8 @@ func decryptSecret(cipherText string) (plainText string) {
 	return string(bytes)
 }
 
-// getKeyByID returns a keyring by the given ID
-func getKeyByID(keyring openpgp.EntityList, id string) *openpgp.Entity {
+// GetKeyByID returns a keyring by the given ID
+func (p *Pki) GetKeyByID(keyring openpgp.EntityList, id string) *openpgp.Entity {
 	for _, entity := range keyring {
 		for _, ident := range entity.Identities {
 			if ident.Name == id {
@@ -117,8 +140,8 @@ func getKeyByID(keyring openpgp.EntityList, id string) *openpgp.Entity {
 	return nil
 }
 
-// expandTilde does exactly what it says on the tin
-func expandTilde(path string) (string, error) {
+// ExpandTilde does exactly what it says on the tin
+func (p *Pki) ExpandTilde(path string) (string, error) {
 	if len(path) == 0 || path[0] != '~' {
 		return path, nil
 	}

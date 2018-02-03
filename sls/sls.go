@@ -1,4 +1,4 @@
-package main
+package sls
 
 import (
 	"bytes"
@@ -8,12 +8,37 @@ import (
 	"path/filepath"
 	"strings"
 
+	"eb-github.com/ed-silva/generate-secure-pillar/pki"
+	"github.com/sirupsen/logrus"
 	yaml "menteslibres.net/gosexy/yaml"
 )
 
-// writeSlsFile writes a buffer to the specified file
+// pgpHeader header const
+const pgpHeader = "-----BEGIN PGP MESSAGE-----"
+
+var logger = logrus.New()
+var p pki.Pki
+
+// Sls sls data
+type Sls struct {
+	SecretNames     []string
+	SecretValues    []string
+	TopLevelElement string
+	PublicKeyRing   string
+	SecretKeyRing   string
+	PgpKeyName      string
+}
+
+// New return Sls struct
+func New(secretNames []string, secretValues []string, topLevelElement string, publicKeyRing string, secretKeyRing string, pgpKeyName string) Sls {
+	s := Sls{secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName}
+	p = pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
+	return s
+}
+
+// WriteSlsFile writes a buffer to the specified file
 // If the outFilePath is not stdout an INFO string will be printed to stdout
-func writeSlsFile(buffer bytes.Buffer, outFilePath string) {
+func (s *Sls) WriteSlsFile(buffer bytes.Buffer, outFilePath string) {
 	fullPath, err := filepath.Abs(outFilePath)
 	if err != nil {
 		fullPath = outFilePath
@@ -33,11 +58,14 @@ func writeSlsFile(buffer bytes.Buffer, outFilePath string) {
 	}
 }
 
-// fileSlsFiles recurses through the given searchDir returning a list of .sls files and it's length
-func findSlsFiles(searchDir string) ([]string, int) {
-	searchDir, _ = filepath.Abs(searchDir)
+// FindSlsFiles recurses through the given searchDir returning a list of .sls files and it's length
+func (s *Sls) FindSlsFiles(searchDir string) ([]string, int) {
+	searchDir, err := filepath.Abs(searchDir)
+	if err != nil {
+		logger.Fatal(err)
+	}
 	fileList := []string{}
-	err := filepath.Walk(searchDir, func(path string, f os.FileInfo, err error) error {
+	err = filepath.Walk(searchDir, func(path string, f os.FileInfo, err error) error {
 		if !f.IsDir() && strings.Contains(f.Name(), ".sls") {
 			fileList = append(fileList, path)
 		}
@@ -50,10 +78,10 @@ func findSlsFiles(searchDir string) ([]string, int) {
 	return fileList, len(fileList)
 }
 
-// pillarBuffer returns a buffer with encrypted and formatted yaml text
+// PillarBuffer returns a buffer with encrypted and formatted yaml text
 // If the 'all' flag is set all values under the designated top level element are encrypted
-func pillarBuffer(filePath string, all bool) bytes.Buffer {
-	err := checkForFile(filePath)
+func (s *Sls) PillarBuffer(filePath string, all bool) bytes.Buffer {
+	err := s.CheckForFile(filePath)
 	if err != nil {
 		logger.Fatal(err)
 	}
@@ -69,13 +97,13 @@ func pillarBuffer(filePath string, all bool) bytes.Buffer {
 	dataChanged := false
 
 	if all {
-		if pillar.Get(topLevelElement) != nil {
-			pillar, dataChanged = pillarRange(pillar)
+		if pillar.Get(s.TopLevelElement) != nil {
+			pillar, dataChanged = s.PillarRange(pillar)
 		} else {
-			logger.Infof(fmt.Sprintf("%s has no %s element", filePath, topLevelElement))
+			logger.Infof(fmt.Sprintf("%s has no %s element", filePath, s.TopLevelElement))
 		}
 	} else {
-		pillar = processPillar(pillar)
+		pillar = s.ProcessPillar(pillar)
 		dataChanged = true
 	}
 
@@ -84,23 +112,23 @@ func pillarBuffer(filePath string, all bool) bytes.Buffer {
 		return buffer
 	}
 
-	return formatBuffer(pillar)
+	return s.FormatBuffer(pillar)
 }
 
-// processPillar encrypts elements matching keys specified on the command line
-func processPillar(pillar *yaml.Yaml) *yaml.Yaml {
-	for index := 0; index < len(secretNames); index++ {
+// ProcessPillar encrypts elements matching keys specified on the command line
+func (s *Sls) ProcessPillar(pillar *yaml.Yaml) *yaml.Yaml {
+	for index := 0; index < len(s.SecretNames); index++ {
 		cipherText := ""
-		if index >= 0 && index < len(secretValues) {
-			cipherText = encryptSecret(secretValues[index])
+		if index >= 0 && index < len(s.SecretValues) {
+			cipherText = p.EncryptSecret(s.SecretValues[index])
 		}
-		if pillar.Get(topLevelElement) != nil {
-			err := pillar.Set(topLevelElement, secretNames[index], cipherText)
+		if pillar.Get(s.TopLevelElement) != nil {
+			err := pillar.Set(s.TopLevelElement, s.SecretNames[index], cipherText)
 			if err != nil {
 				logger.Fatalf("error setting value: %s", err)
 			}
 		} else {
-			err := pillar.Set(secretNames[index], cipherText)
+			err := pillar.Set(s.SecretNames[index], cipherText)
 			if err != nil {
 				logger.Fatalf("error setting value: %s", err)
 			}
@@ -110,14 +138,14 @@ func processPillar(pillar *yaml.Yaml) *yaml.Yaml {
 	return pillar
 }
 
-// pillarRange encrypts any plain text values in the top level element
-func pillarRange(pillar *yaml.Yaml) (*yaml.Yaml, bool) {
+// PillarRange encrypts any plain text values in the top level element
+func (s *Sls) PillarRange(pillar *yaml.Yaml) (*yaml.Yaml, bool) {
 	var dataChanged = false
-	secureVars := pillar.Get(topLevelElement)
+	secureVars := pillar.Get(s.TopLevelElement)
 	for k, v := range secureVars.(map[interface{}]interface{}) {
 		if !strings.Contains(v.(string), pgpHeader) {
-			cipherText := encryptSecret(v.(string))
-			err := pillar.Set(topLevelElement, k, cipherText)
+			cipherText := p.EncryptSecret(v.(string))
+			err := pillar.Set(s.TopLevelElement, k, cipherText)
 			if err != nil {
 				logger.Fatalf("error setting value: %s", err)
 			}
@@ -127,9 +155,9 @@ func pillarRange(pillar *yaml.Yaml) (*yaml.Yaml, bool) {
 	return pillar, dataChanged
 }
 
-// plainTextPillarBuffer decrypts all values under the top level element and returns a formatted buffer
-func plainTextPillarBuffer(filePath string) bytes.Buffer {
-	err := checkForFile(filePath)
+// PlainTextPillarBuffer decrypts all values under the top level element and returns a formatted buffer
+func (s *Sls) PlainTextPillarBuffer(filePath string) bytes.Buffer {
+	err := s.CheckForFile(filePath)
 	if err != nil {
 		logger.Fatal(err)
 	}
@@ -143,11 +171,11 @@ func plainTextPillarBuffer(filePath string) bytes.Buffer {
 		logger.Fatal(err)
 	}
 
-	if pillar.Get(topLevelElement) != nil {
-		for k, v := range pillar.Get(topLevelElement).(map[interface{}]interface{}) {
+	if pillar.Get(s.TopLevelElement) != nil {
+		for k, v := range pillar.Get(s.TopLevelElement).(map[interface{}]interface{}) {
 			if strings.Contains(v.(string), pgpHeader) {
-				plainText := decryptSecret(v.(string))
-				err := pillar.Set(topLevelElement, k, plainText)
+				plainText := p.DecryptSecret(v.(string))
+				err := pillar.Set(s.TopLevelElement, k, plainText)
 				if err != nil {
 					logger.Fatalf("error setting value: %s", err)
 				}
@@ -157,11 +185,11 @@ func plainTextPillarBuffer(filePath string) bytes.Buffer {
 		logger.Fatal("WTF")
 	}
 
-	return formatBuffer(pillar)
+	return s.FormatBuffer(pillar)
 }
 
-// formatBuffer returns a formatted .sls buffer with the gpg renderer line
-func formatBuffer(pillar *yaml.Yaml) bytes.Buffer {
+// FormatBuffer returns a formatted .sls buffer with the gpg renderer line
+func (s *Sls) FormatBuffer(pillar *yaml.Yaml) bytes.Buffer {
 	var buffer bytes.Buffer
 
 	tmpfile, err := ioutil.TempFile("", "gsp_")
@@ -190,8 +218,8 @@ func formatBuffer(pillar *yaml.Yaml) bytes.Buffer {
 	return buffer
 }
 
-// checkForFile does exactly what it says on the tin
-func checkForFile(filePath string) error {
+// CheckForFile does exactly what it says on the tin
+func (s *Sls) CheckForFile(filePath string) error {
 	fi, err := os.Stat(filePath)
 	if err != nil {
 		logger.Fatalf("cannot stat %s: %s", filePath, err)
@@ -206,29 +234,29 @@ func checkForFile(filePath string) error {
 	return err
 }
 
-// processDir will recursively apply fileSlsFiles
+// ProcessDir will recursively apply fileSlsFiles
 // It will either encrypt or decrypt, as specified by the action flag
 // It writes replaces the files found
-func processDir(recurseDir string, action string) {
+func (s *Sls) ProcessDir(recurseDir string, action string) {
 	info, err := os.Stat(recurseDir)
 	if err != nil {
 		logger.Fatalf("cannot stat %s: %s", recurseDir, err)
 	}
 	if info.IsDir() {
-		slsFiles, count := findSlsFiles(recurseDir)
+		slsFiles, count := s.FindSlsFiles(recurseDir)
 		if count == 0 {
 			logger.Fatalf("%s has no sls files", recurseDir)
 		}
 		for _, file := range slsFiles {
 			var buffer bytes.Buffer
 			if action == "encrypt" {
-				buffer = pillarBuffer(file, true)
+				buffer = s.PillarBuffer(file, true)
 			} else if action == "decrypt" {
-				buffer = plainTextPillarBuffer(file)
+				buffer = s.PlainTextPillarBuffer(file)
 			} else {
 				logger.Fatalf("unknown action: %s", action)
 			}
-			writeSlsFile(buffer, file)
+			s.WriteSlsFile(buffer, file)
 		}
 	} else {
 		logger.Fatalf("%s is not a directory", recurseDir)
