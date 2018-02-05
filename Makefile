@@ -18,6 +18,7 @@ SRC = $(shell find . -type f -name '*.go' -not -path "./vendor/*")
 METALINT := $(shell command -v gometalinter 2> /dev/null)
 DEP := $(shell command -v dep 2> /dev/null)
 FPM := $(shell command -v fpm 2> /dev/null)
+DEP_INIT := $(shell test -d ./vendor 2> /dev/null)
 
 BRANCH := `git rev-parse --abbrev-ref HEAD`
 
@@ -36,7 +37,7 @@ build: deps $(TARGET)
 	@rm packages/generate-secure-pillar*
 	@make pkg deb
 	@git add packages
-	@git commit -am "new build: $(VERSION)"
+	@git commit -am "new $(BRANCH) build: $(VERSION)"
 	@echo pushing to branch $(BRANCH)
 	@git push origin $(BRANCH)
 	@true
@@ -77,6 +78,9 @@ deps:
 ifndef DEP
 	@echo "'dep' is not installed, cannot ensure dependencies are installed"
 else
+ifdef DEP_INIT
+	@dep init
+endif
 	@dep ensure -update
 endif
 
