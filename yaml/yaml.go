@@ -40,23 +40,17 @@ type Yaml struct {
 	Values map[string]interface{}
 }
 
-/*
-	true by default, for now.
-*/
+// Compat true by default, for now.
 var Compat = false
 
-/*
-	Creates and returns a YAML struct.
-*/
+// New creates and returns a YAML struct.
 func New() *Yaml {
 	self := &Yaml{}
 	self.Values = map[string]interface{}{}
 	return self
 }
 
-/*
-	Creates and returns a YAML struct, from a file.
-*/
+// Open creates and returns a YAML struct, from a file.
 func Open(file string) (*Yaml, error) {
 	var err error
 
@@ -79,9 +73,7 @@ func Open(file string) (*Yaml, error) {
 	return self, nil
 }
 
-/*
-	Sets a YAML setting
-*/
+// Set sets a YAML setting
 func (y *Yaml) Set(params ...interface{}) error {
 
 	l := len(params)
@@ -90,24 +82,27 @@ func (y *Yaml) Set(params ...interface{}) error {
 		return fmt.Errorf("missing value")
 	}
 
-	if Compat == true {
+	if Compat {
 		if len(params) == 2 {
 			if reflect.TypeOf(params[0]).Kind() == reflect.String {
 				p := params[0].(string)
 
-				if strings.Contains(p, "/") == true {
+				if strings.Contains(p, "/") {
 					p := strings.Split(p, "/")
 
 					value := params[1]
 					route := make([]interface{}, len(p))
 
-					for i, _ := range p {
+					for i := range p {
 						route[i] = p[i]
 					}
 
 					log.Printf(`Using a route separated by "/" is deprecated, please use yaml.*Yaml.Get("%s") instead.`, strings.Join(p, `", "`))
 
-					dig.Dig(&y.Values, route...)
+					err := dig.Dig(&y.Values, route...)
+					if err != nil {
+						return err
+					}
 					return dig.Set(&y.Values, value, route...)
 				}
 			}
@@ -117,57 +112,60 @@ func (y *Yaml) Set(params ...interface{}) error {
 	route := params[0 : l-1]
 	value := params[l-1]
 
-	dig.Dig(&y.Values, route...)
+	err := dig.Dig(&y.Values, route...)
+	if err != nil {
+		return err
+	}
 	return dig.Set(&y.Values, value, route...)
 }
 
-/*
-	Returns a YAML setting
-*/
+// Get returns a YAML setting
 func (y *Yaml) Get(route ...interface{}) interface{} {
 	var i interface{}
 
-	if Compat == true {
+	if Compat {
 		// Compatibility should be removed soon.
 		if len(route) == 1 {
 			p := route[0].(string)
 
-			if strings.Contains(p, "/") == true {
+			if strings.Contains(p, "/") {
 				p := strings.Split(p, "/")
 
-				route := make([]interface{}, len(p))
+				route = make([]interface{}, len(p))
 
-				for i, _ := range p {
+				for i := range p {
 					route[i] = p[i]
 				}
 
 				log.Printf(`Using a route separated by "/" is deprecated, please use yaml.*Yaml.Get("%s") instead.`, strings.Join(p, `", "`))
 
-				dig.Get(&y.Values, &i, route...)
+				err := dig.Get(&y.Values, &i, route...)
+				if err != nil {
+					log.Fatal(err)
+				}
 				return i
 			}
 		}
 	}
 
-	dig.Get(&y.Values, &i, route...)
+	err := dig.Get(&y.Values, &i, route...)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	return i
 }
 
-/*
-	Writes changes to the currently opened YAML file.
-*/
+// Save writes changes to the currently opened YAML file.
 func (y *Yaml) Save() error {
 	if y.File != "" {
 		return y.Write(y.File)
-	} else {
-		return fmt.Errorf("No file specified.")
 	}
-	return nil
+
+	return fmt.Errorf("no file specified")
 }
 
-/*
-	Writes the current YAML struct to disk.
-*/
+// Write writes the current YAML struct to disk.
 func (y *Yaml) Write(filename string) error {
 
 	out, err := yaml.Marshal(y.Values)
@@ -182,16 +180,15 @@ func (y *Yaml) Write(filename string) error {
 		return err
 	}
 
-	defer fp.Close()
-
 	_, err = fp.Write(out)
+	if err != nil {
+		return err
+	}
 
-	return err
+	return fp.Close()
 }
 
-/*
-	Loads a YAML file from disk.
-*/
+// Read loads a YAML file from disk.
 func (y *Yaml) Read(filename string) error {
 	var err error
 
@@ -209,16 +206,16 @@ func (y *Yaml) Read(filename string) error {
 		return err
 	}
 
-	defer fp.Close()
-
 	buf := make([]byte, filesize)
-	fp.Read(buf)
-
-	err = yaml.Unmarshal(buf, &y.Values)
-
+	_, err = fp.Read(buf)
 	if err != nil {
 		return err
 	}
 
-	return nil
+	err = fp.Close()
+	if err != nil {
+		return err
+	}
+
+	return yaml.Unmarshal(buf, &y.Values)
 }
