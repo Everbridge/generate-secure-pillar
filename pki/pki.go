@@ -15,7 +15,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var logger = logrus.New()
+var logger *logrus.Logger
 
 // Pki pki info
 type Pki struct {
@@ -25,8 +25,14 @@ type Pki struct {
 }
 
 // New returns a pki struct
-func New(pgpKeyName string, publicKeyRing string, secretKeyRing string) Pki {
+func New(pgpKeyName string, publicKeyRing string, secretKeyRing string, log *logrus.Logger) Pki {
 	var err error
+	if log != nil {
+		logger = log
+	} else {
+		logger = logrus.New()
+	}
+
 	p := Pki{publicKeyRing, secretKeyRing, pgpKeyName}
 	publicKeyRing, err = p.ExpandTilde(p.PublicKeyRing)
 	if err != nil {

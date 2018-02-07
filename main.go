@@ -7,7 +7,6 @@ import (
 	"eb-github.com/ed-silva/generate-secure-pillar/sls"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
-	"menteslibres.net/gosexy/yaml"
 )
 
 var logger = logrus.New()
@@ -51,7 +50,7 @@ func main() {
 		logger.Level = logrus.DebugLevel
 	}
 	app := cli.NewApp()
-	app.Version = "1.0.80"
+	app.Version = "1.0.85"
 	app.Authors = []cli.Author{
 		cli.Author{
 			Name:  "Ed Silva",
@@ -143,10 +142,9 @@ $ generate-secure-pillar -k "Salt Master" decrypt recurse -d /path/to/pillar/sec
 			Aliases: []string{"c"},
 			Usage:   "create a new sls file",
 			Action: func(c *cli.Context) error {
-				s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName)
-				pillar := yaml.New()
-				pillar = s.ProcessPillar(pillar)
-				buffer := s.FormatBuffer(pillar)
+				s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, logger)
+				s.ProcessPillar()
+				buffer := s.FormatBuffer()
 				s.WriteSlsFile(buffer, outputFilePath)
 				return nil
 			},
@@ -172,7 +170,7 @@ $ generate-secure-pillar -k "Salt Master" decrypt recurse -d /path/to/pillar/sec
 				if inputFilePath != os.Stdin.Name() {
 					outputFilePath = inputFilePath
 				}
-				s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName)
+				s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, logger)
 				buffer := s.PillarBuffer(inputFilePath, false)
 				s.WriteSlsFile(buffer, outputFilePath)
 				return nil
@@ -203,7 +201,7 @@ $ generate-secure-pillar -k "Salt Master" decrypt recurse -d /path/to/pillar/sec
 					Name:  "all",
 					Flags: fileFlags,
 					Action: func(c *cli.Context) error {
-						s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName)
+						s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, logger)
 						if inputFilePath != os.Stdin.Name() && outputFilePath == "" {
 							outputFilePath = inputFilePath
 						}
@@ -222,7 +220,7 @@ $ generate-secure-pillar -k "Salt Master" decrypt recurse -d /path/to/pillar/sec
 						},
 					},
 					Action: func(c *cli.Context) error {
-						s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName)
+						s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, logger)
 						s.ProcessDir(recurseDir, "encrypt")
 						return nil
 					},
@@ -235,7 +233,7 @@ $ generate-secure-pillar -k "Salt Master" decrypt recurse -d /path/to/pillar/sec
 			Usage:   "perform decryption operations",
 			Flags:   fileFlags,
 			Action: func(c *cli.Context) error {
-				s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName)
+				s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, logger)
 				buffer := s.PlainTextPillarBuffer(inputFilePath)
 				s.WriteSlsFile(buffer, outputFilePath)
 				return nil
@@ -251,7 +249,7 @@ $ generate-secure-pillar -k "Salt Master" decrypt recurse -d /path/to/pillar/sec
 						},
 					},
 					Action: func(c *cli.Context) error {
-						s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName)
+						s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, logger)
 						s.ProcessDir(recurseDir, "decrypt")
 						return nil
 					},
