@@ -15,13 +15,12 @@ import (
 const pgpHeader = "-----BEGIN PGP MESSAGE-----"
 
 func TestWriteSlsFile(t *testing.T) {
-	var pillar = yaml.New()
 	publicKeyRing = defaultPubRing
-	s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName)
+	s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, nil)
 
 	slsFile := "./testdata/foo.sls"
-	pillar.Set("secret", "text")
-	buffer := s.FormatBuffer(pillar)
+	s.Pillar.Set("secret", "text")
+	buffer := s.FormatBuffer()
 	s.WriteSlsFile(buffer, slsFile)
 	if _, err := os.Stat(slsFile); os.IsNotExist(err) {
 		t.Errorf("%s file was not written", slsFile)
@@ -40,7 +39,7 @@ func TestWriteSlsFile(t *testing.T) {
 }
 
 func TestFindSlsFiles(t *testing.T) {
-	s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName)
+	s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, nil)
 	slsFiles, count := s.FindSlsFiles("./testdata")
 	if count != 4 {
 		t.Errorf("File count was incorrect, got: %d, want: %d.",
@@ -49,7 +48,7 @@ func TestFindSlsFiles(t *testing.T) {
 }
 
 func TestEmptyDir(t *testing.T) {
-	s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName)
+	s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, nil)
 	slsFiles, count := s.FindSlsFiles("./testdata/empty")
 	if count != 0 {
 		t.Errorf("File count was incorrect, got: %d, want: %d.",
@@ -87,7 +86,7 @@ func TestEncryptSecret(t *testing.T) {
 	} else {
 		publicKeyRing = "~/.gnupg/pubring.gpg"
 	}
-	p := pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
+	p := pki.New(pgpKeyName, publicKeyRing, secretKeyRing, nil)
 
 	yaml, err := yaml.Open("./testdata/new.sls")
 	if err != nil {
@@ -117,7 +116,7 @@ func TestRecurseEncryptSecret(t *testing.T) {
 	} else {
 		publicKeyRing = "~/.gnupg/pubring.gpg"
 	}
-	s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName)
+	s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, nil)
 
 	recurseDir := "./testdata/test"
 	s.ProcessDir(recurseDir, "encrypt")
@@ -153,7 +152,7 @@ func TestDecryptSecret(t *testing.T) {
 	} else {
 		secretKeyRing = "~/.gnupg/secring.gpg"
 	}
-	p := pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
+	p := pki.New(pgpKeyName, publicKeyRing, secretKeyRing, nil)
 
 	yaml, err := yaml.Open("./testdata/new.sls")
 	if err != nil {
@@ -179,7 +178,7 @@ func TestRecurseDecryptSecret(t *testing.T) {
 	} else {
 		secretKeyRing = "~/.gnupg/secring.gpg"
 	}
-	s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName)
+	s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, nil)
 
 	recurseDir := "./testdata/test"
 	s.ProcessDir(recurseDir, "decrypt")
