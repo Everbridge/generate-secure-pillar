@@ -9,8 +9,9 @@ import (
 	"strings"
 
 	"eb-github.com/ed-silva/generate-secure-pillar/pki"
+	yaml "eb-github.com/ed-silva/generate-secure-pillar/yaml"
 	"github.com/sirupsen/logrus"
-	yaml "menteslibres.net/gosexy/yaml"
+	yamlv1 "gopkg.in/yaml.v1"
 )
 
 // pgpHeader header const
@@ -27,7 +28,7 @@ type Sls struct {
 	PublicKeyRing   string
 	SecretKeyRing   string
 	PgpKeyName      string
-	Pillar          *yaml.Yaml
+	Yaml            *yaml.Yaml
 }
 
 // New return Sls struct
@@ -86,9 +87,9 @@ func (s *Sls) FindSlsFiles(searchDir string) ([]string, int) {
 	return fileList, len(fileList)
 }
 
-// PillarBuffer returns a buffer with encrypted and formatted yaml text
+// YamlBuffer returns a buffer with encrypted and formatted yaml text
 // If the 'all' flag is set all values under the designated top level element are encrypted
-func (s *Sls) PillarBuffer(filePath string, all bool) bytes.Buffer {
+func (s *Sls) YamlBuffer(filePath string, all bool) bytes.Buffer {
 	err := s.CheckForFile(filePath)
 	if err != nil {
 		logger.Fatal(err)
@@ -98,20 +99,20 @@ func (s *Sls) PillarBuffer(filePath string, all bool) bytes.Buffer {
 		logger.Fatal(err)
 	}
 
-	err = s.Pillar.Read(filePath)
+	err = s.Yaml.Read(filePath)
 	if err != nil {
 		logger.Fatal(err)
 	}
 	dataChanged := false
 
 	if all {
-		if s.Pillar.Get(s.TopLevelElement) != nil {
-			dataChanged = s.PillarRange()
+		if s.Yaml.Get(s.TopLevelElement) != nil {
+			dataChanged = s.YamlRange()
 		} else {
 			logger.Infof(fmt.Sprintf("%s has no %s element", filePath, s.TopLevelElement))
 		}
 	} else {
-		s.ProcessPillar()
+		s.ProcessYaml()
 		dataChanged = true
 	}
 
@@ -123,20 +124,20 @@ func (s *Sls) PillarBuffer(filePath string, all bool) bytes.Buffer {
 	return s.FormatBuffer()
 }
 
-// ProcessPillar encrypts elements matching keys specified on the command line
-func (s *Sls) ProcessPillar() {
+// ProcessYaml encrypts elements matching keys specified on the command line
+func (s *Sls) ProcessYaml() {
 	for index := 0; index < len(s.SecretNames); index++ {
 		cipherText := ""
 		if index >= 0 && index < len(s.SecretValues) {
 			cipherText = p.EncryptSecret(s.SecretValues[index])
 		}
-		if s.Pillar.Get(s.TopLevelElement) != nil {
-			err := s.Pillar.Set(s.TopLevelElement, s.SecretNames[index], cipherText)
+		if s.Yaml.Get(s.TopLevelElement) != nil {
+			err := s.Yaml.Set(s.TopLevelElement, s.SecretNames[index], cipherText)
 			if err != nil {
 				logger.Fatalf("error setting value: %s", err)
 			}
 		} else {
-			err := s.Pillar.Set(s.SecretNames[index], cipherText)
+			err := s.Yaml.Set(s.SecretNames[index], cipherText)
 			if err != nil {
 				logger.Fatalf("error setting value: %s", err)
 			}
@@ -144,14 +145,14 @@ func (s *Sls) ProcessPillar() {
 	}
 }
 
-// PillarRange encrypts any plain text values in the top level element
-func (s *Sls) PillarRange() bool {
+// YamlRange encrypts any plain text values in the top level element
+func (s *Sls) YamlRange() bool {
 	var dataChanged = false
-	secureVars := s.Pillar.Get(s.TopLevelElement)
+	secureVars := s.Yaml.Get(s.TopLevelElement)
 	for k, v := range secureVars.(map[interface{}]interface{}) {
 		if !strings.Contains(v.(string), pgpHeader) {
 			cipherText := p.EncryptSecret(v.(string))
-			err := s.Pillar.Set(s.TopLevelElement, k, cipherText)
+			err := s.Yaml.Set(s.TopLevelElement, k, cipherText)
 			if err != nil {
 				logger.Fatalf("error setting value: %s", err)
 			}
@@ -161,8 +162,8 @@ func (s *Sls) PillarRange() bool {
 	return dataChanged
 }
 
-// PlainTextPillarBuffer decrypts all values under the top level element and returns a formatted buffer
-func (s *Sls) PlainTextPillarBuffer(filePath string) bytes.Buffer {
+// PlainTextYamlBuffer decrypts all values under the top level element and returns a formatted buffer
+func (s *Sls) PlainTextYamlBuffer(filePath string) bytes.Buffer {
 	err := s.CheckForFile(filePath)
 	if err != nil {
 		logger.Fatal(err)
@@ -172,16 +173,16 @@ func (s *Sls) PlainTextPillarBuffer(filePath string) bytes.Buffer {
 		logger.Fatal(err)
 	}
 
-	err = s.Pillar.Read(filePath)
+	err = s.Yaml.Read(filePath)
 	if err != nil {
 		logger.Fatal(err)
 	}
 
-	if s.Pillar.Get(s.TopLevelElement) != nil {
-		for k, v := range s.Pillar.Get(s.TopLevelElement).(map[interface{}]interface{}) {
+	if s.Yaml.Get(s.TopLevelElement) != nil {
+		for k, v := range s.Yaml.Get(s.TopLevelElement).(map[interface{}]interface{}) {
 			if strings.Contains(v.(string), pgpHeader) {
 				plainText := p.DecryptSecret(v.(string))
-				err := s.Pillar.Set(s.TopLevelElement, k, plainText)
+				err := s.Yaml.Set(s.TopLevelElement, k, plainText)
 				if err != nil {
 					logger.Fatalf("error setting value: %s", err)
 				}
@@ -198,28 +199,13 @@ func (s *Sls) PlainTextPillarBuffer(filePath string) bytes.Buffer {
 func (s *Sls) FormatBuffer() bytes.Buffer {
 	var buffer bytes.Buffer
 
-	tmpfile, err := ioutil.TempFile("", "gsp_")
+	out, err := yamlv1.Marshal(s.Yaml.Values)
 	if err != nil {
 		logger.Fatal(err)
-	}
-
-	err = s.Pillar.Write(tmpfile.Name())
-	if err != nil {
-		logger.Fatal(err)
-	}
-
-	yamlData, err := ioutil.ReadFile(tmpfile.Name())
-	if err != nil {
-		logger.Fatal("error reading YAML file: ", err)
 	}
 
 	buffer.WriteString("#!yaml|gpg\n\n")
-	buffer.WriteString(string(yamlData))
-
-	err = os.Remove(tmpfile.Name())
-	if err != nil {
-		logger.Fatal(err)
-	}
+	buffer.WriteString(string(out))
 
 	return buffer
 }
@@ -256,9 +242,9 @@ func (s *Sls) ProcessDir(recurseDir string, action string) {
 		for _, file := range slsFiles {
 			var buffer bytes.Buffer
 			if action == "encrypt" {
-				buffer = s.PillarBuffer(file, true)
+				buffer = s.YamlBuffer(file, true)
 			} else if action == "decrypt" {
-				buffer = s.PlainTextPillarBuffer(file)
+				buffer = s.PlainTextYamlBuffer(file)
 			} else {
 				logger.Fatalf("unknown action: %s", action)
 			}
