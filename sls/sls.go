@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"eb-github.com/ed-silva/generate-secure-pillar/pki"
-	yaml "eb-github.com/ed-silva/generate-secure-pillar/yaml"
+	yaml "github.com/esilva-everbridge/yaml"
 	"github.com/sirupsen/logrus"
 	yamlv1 "gopkg.in/yaml.v1"
 )
