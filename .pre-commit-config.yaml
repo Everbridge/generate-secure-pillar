@@ -2,8 +2,5 @@
   sha: HEAD
   hooks:
     - id: go-fmt
-    - id: go-vet
     - id: go-lint
-    - id: validate-toml
-    - id: no-go-testing
     - id: gometalinter
