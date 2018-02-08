@@ -44,3 +44,11 @@
 [prune]
   go-tests = true
   unused-packages = true
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/esilva-everbridge/yaml"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/esilva-everbridge/dig"

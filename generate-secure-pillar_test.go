@@ -19,7 +19,7 @@ func TestWriteSlsFile(t *testing.T) {
 	s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, nil)
 
 	slsFile := "./testdata/foo.sls"
-	s.Pillar.Set("secret", "text")
+	s.Yaml.Set("secret", "text")
 	buffer := s.FormatBuffer()
 	s.WriteSlsFile(buffer, slsFile)
 	if _, err := os.Stat(slsFile); os.IsNotExist(err) {
