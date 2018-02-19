@@ -2,16 +2,19 @@ package sls
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 
 	"eb-github.com/ed-silva/generate-secure-pillar/pki"
 	yaml "github.com/esilva-everbridge/yaml"
 	"github.com/sirupsen/logrus"
 	yamlv1 "gopkg.in/yaml.v1"
+	"menteslibres.net/gosexy/to"
 )
 
 // pgpHeader header const
@@ -106,11 +109,11 @@ func (s *Sls) YamlBuffer(filePath string, all bool) bytes.Buffer {
 	dataChanged := false
 
 	if all {
-		if s.Yaml.Get(s.TopLevelElement) != nil {
-			dataChanged = s.YamlRange()
-		} else {
-			logger.Infof(fmt.Sprintf("%s has no %s element", filePath, s.TopLevelElement))
-		}
+		// if s.Yaml.Get(s.TopLevelElement) != nil {
+		dataChanged = s.YamlRange()
+		// } else {
+		// 	logger.Infof(fmt.Sprintf("%s has no %s element", filePath, s.TopLevelElement))
+		// }
 	} else {
 		s.ProcessYaml()
 		dataChanged = true
@@ -150,6 +153,8 @@ func (s *Sls) YamlRange() bool {
 	var dataChanged = false
 	secureVars := s.Yaml.Get(s.TopLevelElement)
 	for k, v := range secureVars.(map[interface{}]interface{}) {
+		// fmt.Printf("k: %s\n", k)
+		// fmt.Printf("v: %#v\n", v)
 		if !strings.Contains(v.(string), pgpHeader) {
 			cipherText := p.EncryptSecret(v.(string))
 			err := s.Yaml.Set(s.TopLevelElement, k, cipherText)
@@ -178,19 +183,23 @@ func (s *Sls) PlainTextYamlBuffer(filePath string) bytes.Buffer {
 		logger.Fatal(err)
 	}
 
-	if s.Yaml.Get(s.TopLevelElement) != nil {
-		for k, v := range s.Yaml.Get(s.TopLevelElement).(map[interface{}]interface{}) {
-			if strings.Contains(v.(string), pgpHeader) {
-				plainText := p.DecryptSecret(v.(string))
-				err := s.Yaml.Set(s.TopLevelElement, k, plainText)
-				if err != nil {
-					logger.Fatalf("error setting value: %s", err)
-				}
+	s.Stuff()
+
+	// if s.Yaml.Get(s.TopLevelElement) != nil {
+	for k, v := range s.Yaml.Get(s.TopLevelElement).(map[interface{}]interface{}) {
+		// fmt.Printf("k: %s\n", k)
+		// fmt.Printf("v: %#v\n", v)
+		if strings.Contains(v.(string), pgpHeader) {
+			plainText := p.DecryptSecret(v.(string))
+			err := s.Yaml.Set(s.TopLevelElement, k, plainText)
+			if err != nil {
+				logger.Fatalf("error setting value: %s", err)
 			}
 		}
-	} else {
-		logger.Fatal("WTF")
 	}
+	// } else {
+	// 	logger.Fatal("WTF")
+	// }
 
 	return s.FormatBuffer()
 }
@@ -253,4 +262,108 @@ func (s *Sls) ProcessDir(recurseDir string, action string) {
 	} else {
 		logger.Fatalf("%s is not a directory", recurseDir)
 	}
+}
+
+// Stuff does stuff
+func (s *Sls) Stuff() {
+	vals := make(map[interface{}]interface{}, len(s.Yaml.Values))
+
+	for k := range s.Yaml.Values {
+		vals[k] = s.Yaml.Get(k)
+	}
+
+	path, isEnc := recurse("", vals)
+	fmt.Printf("final path: %s\n", path)
+	fmt.Printf("end point is encrypted: %s\n", to.String(isEnc))
+
+	parts := strings.Split(path, ":")
+	fmt.Printf("PARTS: %#v\n", parts)
+	// v := s.Yaml.Get("top", "fred", "wilma")
+	// fmt.Printf("GET: %#v\n", v)
+
+	fnValue := reflect.ValueOf(s.Yaml.Get)
+	args := make([]reflect.Value, len(parts))
+
+	for i := 0; i < len(parts); i++ {
+		object := parts[i]
+		fmt.Println(i, "->", object)
+		args[i] = reflect.ValueOf(object)
+	}
+	fmt.Printf("ARGS: %#v\n", args)
+	fnResults := fnValue.Call(args)
+	_ = json.NewEncoder(os.Stdout).Encode(fnResults)
+	fmt.Printf("RESULTS: %#v\n", reflect.ValueOf(fnResults[0].IsValid()))
+
+}
+
+func recurse(parentKey string, vals map[interface{}]interface{}) (string, bool) {
+	var path string
+	var matches bool
+
+	for k, v := range vals {
+		matches = false
+		var buffer bytes.Buffer
+		buffer.WriteString(parentKey)
+
+		vtype := reflect.TypeOf(v).Kind()
+		fmt.Printf("k: %q, type: %q, v: %q\n", k, vtype, v)
+		if vtype == reflect.Map {
+			if buffer.Len() > 0 {
+				buffer.WriteString(":")
+			}
+			buffer.WriteString(to.String(k))
+			path, matches = recurse(buffer.String(), v.(map[interface{}]interface{}))
+			buffer.Reset()
+			buffer.WriteString(path)
+		} else if vtype == reflect.Slice {
+			if buffer.Len() > 0 {
+				buffer.WriteString(":")
+			}
+			buffer.WriteString(to.String(k))
+			path, matches = processSlice(buffer.String(), v.([]interface{}))
+			buffer.Reset()
+			buffer.WriteString(path)
+		} else if vtype == reflect.String {
+			if strings.Contains(v.(string), pgpHeader) {
+				if buffer.Len() > 0 {
+					buffer.WriteString(":")
+				}
+				buffer.WriteString(to.String(k))
+				matches = true
+			}
+		}
+		path = buffer.String()
+	}
+
+	return path, matches
+}
+
+func processSlice(parentKey string, vals []interface{}) (string, bool) {
+	var path string
+	var matches bool
+
+	for v := range vals {
+		matches = false
+		var buffer bytes.Buffer
+		buffer.WriteString(parentKey)
+
+		vtype := reflect.TypeOf(vals[v]).Kind()
+		fmt.Printf("type: %q, v: %v\n", vtype, vals[v])
+		if vtype == reflect.Map {
+			path, matches = recurse(buffer.String(), vals[v].(map[interface{}]interface{}))
+			buffer.Reset()
+			buffer.WriteString(path)
+		} else if vtype == reflect.Slice {
+			path, matches = processSlice(buffer.String(), vals[v].([]interface{}))
+			buffer.Reset()
+			buffer.WriteString(path)
+		} else if vtype == reflect.String {
+			if strings.Contains(vals[v].(string), pgpHeader) {
+				matches = true
+			}
+		}
+		path = buffer.String()
+	}
+
+	return path, matches
 }

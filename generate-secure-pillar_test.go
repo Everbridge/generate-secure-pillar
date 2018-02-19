@@ -20,8 +20,10 @@ func TestWriteSlsFile(t *testing.T) {
 
 	slsFile := "./testdata/foo.sls"
 	s.Yaml.Set("secret", "text")
+
 	buffer := s.FormatBuffer()
 	s.WriteSlsFile(buffer, slsFile)
+
 	if _, err := os.Stat(slsFile); os.IsNotExist(err) {
 		t.Errorf("%s file was not written", slsFile)
 	}
