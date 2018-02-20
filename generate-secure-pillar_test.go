@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -203,5 +204,21 @@ func TestRecurseDecryptSecret(t *testing.T) {
 				t.Errorf("YAML content is still encrypted.")
 			}
 		}
+	}
+}
+
+func TestGetValueFromPath(t *testing.T) {
+	s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, nil)
+	filePath := "./testdata/new.sls"
+	err := s.Yaml.Read(filePath)
+	if err != nil {
+		t.Errorf("Error getting test file: %s", err)
+	}
+	results := s.GetValueFromPath("bar:baz")
+	val := results[0].Interface()
+	fmt.Printf("TYPE: %s, %T\n", val, val)
+
+	if val != "qux" {
+		t.Errorf("Content from path '%s' is wrong: %#v", filePath, val)
 	}
 }

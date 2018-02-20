@@ -2,7 +2,6 @@ package sls
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -93,6 +92,8 @@ func (s *Sls) FindSlsFiles(searchDir string) ([]string, int) {
 // YamlBuffer returns a buffer with encrypted and formatted yaml text
 // If the 'all' flag is set all values under the designated top level element are encrypted
 func (s *Sls) YamlBuffer(filePath string, all bool) bytes.Buffer {
+	var dataChanged bool
+
 	err := s.CheckForFile(filePath)
 	if err != nil {
 		logger.Fatal(err)
@@ -106,7 +107,6 @@ func (s *Sls) YamlBuffer(filePath string, all bool) bytes.Buffer {
 	if err != nil {
 		logger.Fatal(err)
 	}
-	dataChanged := false
 
 	if all {
 		// if s.Yaml.Get(s.TopLevelElement) != nil {
@@ -153,8 +153,6 @@ func (s *Sls) YamlRange() bool {
 	var dataChanged = false
 	secureVars := s.Yaml.Get(s.TopLevelElement)
 	for k, v := range secureVars.(map[interface{}]interface{}) {
-		// fmt.Printf("k: %s\n", k)
-		// fmt.Printf("v: %#v\n", v)
 		if !strings.Contains(v.(string), pgpHeader) {
 			cipherText := p.EncryptSecret(v.(string))
 			err := s.Yaml.Set(s.TopLevelElement, k, cipherText)
@@ -272,47 +270,57 @@ func (s *Sls) Stuff() {
 		vals[k] = s.Yaml.Get(k)
 	}
 
-	path, isEnc := recurse("", vals)
+	path, isEnc := processMap("", vals)
 	fmt.Printf("final path: %s\n", path)
 	fmt.Printf("end point is encrypted: %s\n", to.String(isEnc))
 
+	results := s.GetValueFromPath(path)
+	for i, res := range results {
+		fmt.Printf("RESULT %d: %#v\n", i+1, res.Interface())
+	}
+}
+
+// GetValueFromPath returns the value from a path string
+func (s *Sls) GetValueFromPath(path string) []reflect.Value {
 	parts := strings.Split(path, ":")
-	fmt.Printf("PARTS: %#v\n", parts)
-	// v := s.Yaml.Get("top", "fred", "wilma")
-	// fmt.Printf("GET: %#v\n", v)
 
 	fnValue := reflect.ValueOf(s.Yaml.Get)
 	args := make([]reflect.Value, len(parts))
-
 	for i := 0; i < len(parts); i++ {
-		object := parts[i]
-		fmt.Println(i, "->", object)
-		args[i] = reflect.ValueOf(object)
+		args[i] = reflect.ValueOf(parts[i])
 	}
-	fmt.Printf("ARGS: %#v\n", args)
-	fnResults := fnValue.Call(args)
-	_ = json.NewEncoder(os.Stdout).Encode(fnResults)
-	fmt.Printf("RESULTS: %#v\n", reflect.ValueOf(fnResults[0].IsValid()))
-
+	return fnValue.Call(args)
 }
 
-func recurse(parentKey string, vals map[interface{}]interface{}) (string, bool) {
+// SetValueFromPath returns the value from a path string
+func (s *Sls) SetValueFromPath(path string) []reflect.Value {
+	parts := strings.Split(path, ":")
+
+	fnValue := reflect.ValueOf(s.Yaml.Set)
+	args := make([]reflect.Value, len(parts))
+	for i := 0; i < len(parts); i++ {
+		args[i] = reflect.ValueOf(parts[i])
+	}
+	return fnValue.Call(args)
+}
+
+func processMap(parentKey string, vals map[interface{}]interface{}) (string, bool) {
 	var path string
 	var matches bool
 
+	// the top level of the YAML will be a map, after that we aren't sure
 	for k, v := range vals {
 		matches = false
 		var buffer bytes.Buffer
 		buffer.WriteString(parentKey)
 
 		vtype := reflect.TypeOf(v).Kind()
-		fmt.Printf("k: %q, type: %q, v: %q\n", k, vtype, v)
 		if vtype == reflect.Map {
 			if buffer.Len() > 0 {
 				buffer.WriteString(":")
 			}
 			buffer.WriteString(to.String(k))
-			path, matches = recurse(buffer.String(), v.(map[interface{}]interface{}))
+			path, matches = processMap(buffer.String(), v.(map[interface{}]interface{}))
 			buffer.Reset()
 			buffer.WriteString(path)
 		} else if vtype == reflect.Slice {
@@ -332,6 +340,11 @@ func recurse(parentKey string, vals map[interface{}]interface{}) (string, bool) 
 				matches = true
 			}
 		}
+
+		// if nothing was processed the value wasn't encrypted or traversable
+		if buffer.Len() == 0 {
+			buffer.WriteString(to.String(k))
+		}
 		path = buffer.String()
 	}
 
@@ -348,9 +361,8 @@ func processSlice(parentKey string, vals []interface{}) (string, bool) {
 		buffer.WriteString(parentKey)
 
 		vtype := reflect.TypeOf(vals[v]).Kind()
-		fmt.Printf("type: %q, v: %v\n", vtype, vals[v])
 		if vtype == reflect.Map {
-			path, matches = recurse(buffer.String(), vals[v].(map[interface{}]interface{}))
+			path, matches = processMap(buffer.String(), vals[v].(map[interface{}]interface{}))
 			buffer.Reset()
 			buffer.WriteString(path)
 		} else if vtype == reflect.Slice {
