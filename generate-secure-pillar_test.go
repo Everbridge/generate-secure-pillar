@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -216,9 +215,25 @@ func TestGetValueFromPath(t *testing.T) {
 	}
 	results := s.GetValueFromPath("bar:baz")
 	val := results[0].Interface()
-	fmt.Printf("TYPE: %s, %T\n", val, val)
-
 	if val != "qux" {
+		t.Errorf("Content from path '%s' is wrong: %#v", filePath, val)
+	}
+}
+
+func TestSetValueFromPath(t *testing.T) {
+	s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, nil)
+	filePath := "./testdata/new.sls"
+	err := s.Yaml.Read(filePath)
+	if err != nil {
+		t.Errorf("Error getting test file: %s", err)
+	}
+	err = s.SetValueFromPath("bar:baz", "foo")
+	if err != nil {
+		t.Errorf("Error setting value from path: %s", err)
+	}
+	results := s.GetValueFromPath("bar:baz")
+	val := results[0].Interface()
+	if val != "foo" {
 		t.Errorf("Content from path '%s' is wrong: %#v", filePath, val)
 	}
 }

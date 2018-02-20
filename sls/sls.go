@@ -293,15 +293,21 @@ func (s *Sls) GetValueFromPath(path string) []reflect.Value {
 }
 
 // SetValueFromPath returns the value from a path string
-func (s *Sls) SetValueFromPath(path string) []reflect.Value {
+func (s *Sls) SetValueFromPath(path string, value string) error {
 	parts := strings.Split(path, ":")
 
 	fnValue := reflect.ValueOf(s.Yaml.Set)
-	args := make([]reflect.Value, len(parts))
+	args := make([]reflect.Value, len(parts)+1)
 	for i := 0; i < len(parts); i++ {
 		args[i] = reflect.ValueOf(parts[i])
 	}
-	return fnValue.Call(args)
+	args[len(parts)] = reflect.ValueOf(value)
+	results := fnValue.Call(args)
+	err := results[0].Interface()
+	if err == nil {
+		return nil
+	}
+	return fmt.Errorf("%s", err.(string))
 }
 
 func processMap(parentKey string, vals map[interface{}]interface{}) (string, bool) {
