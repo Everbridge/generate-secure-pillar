@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"os"
 
+	"eb-github.com/ed-silva/generate-secure-pillar/pki"
 	"eb-github.com/ed-silva/generate-secure-pillar/sls"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
+	"menteslibres.net/gosexy/to"
 )
 
 var logger = logrus.New()
@@ -251,6 +253,49 @@ $ generate-secure-pillar -k "Salt Master" decrypt recurse -d /path/to/pillar/sec
 					Action: func(c *cli.Context) error {
 						s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, logger)
 						s.ProcessDir(recurseDir, "decrypt")
+						return nil
+					},
+				},
+				{
+					Name: "test",
+					Flags: []cli.Flag{
+						inputFlag,
+						cli.StringSliceFlag{
+							Name:  "name, n",
+							Usage: "secret name",
+							Value: &secretNames,
+						},
+						cli.StringSliceFlag{
+							Name:  "value, s",
+							Usage: "secret value",
+							Value: &secretValues,
+						},
+					},
+					Action: func(c *cli.Context) error {
+						s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, logger)
+						err := s.Yaml.Read(inputFilePath)
+						if err != nil {
+							logger.Fatal(err)
+						}
+						// s.Stuff()
+
+						p := pki.New(pgpKeyName, publicKeyRing, secretKeyRing, logger)
+						for index := 0; index < len(s.SecretNames); index++ {
+							vals := s.GetValueFromPath(s.SecretNames[index])
+							for _, val := range vals {
+								plainText := p.DecryptSecret(to.String(val))
+								fmt.Printf("PLAIN TEXT: %s\n", plainText)
+							}
+							cipherText := ""
+							if index >= 0 && index < len(s.SecretValues) {
+								cipherText = p.EncryptSecret(s.SecretValues[index])
+							}
+							fmt.Printf("CIPHER TEXT: %s\n", cipherText)
+							err = s.SetValueFromPath(s.SecretNames[index], cipherText)
+							if err != nil {
+								logger.Fatalf("error setting value: %s", err)
+							}
+						}
 						return nil
 					},
 				},

@@ -140,7 +140,7 @@ func (s *Sls) ProcessYaml() {
 				logger.Fatalf("error setting value: %s", err)
 			}
 		} else {
-			err := s.Yaml.Set(s.SecretNames[index], cipherText)
+			err := s.SetValueFromPath(s.SecretNames[index], cipherText)
 			if err != nil {
 				logger.Fatalf("error setting value: %s", err)
 			}
@@ -181,13 +181,11 @@ func (s *Sls) PlainTextYamlBuffer(filePath string) bytes.Buffer {
 		logger.Fatal(err)
 	}
 
-	s.Stuff()
-
 	// if s.Yaml.Get(s.TopLevelElement) != nil {
 	for k, v := range s.Yaml.Get(s.TopLevelElement).(map[interface{}]interface{}) {
 		// fmt.Printf("k: %s\n", k)
 		// fmt.Printf("v: %#v\n", v)
-		if strings.Contains(v.(string), pgpHeader) {
+		if isEncrypted(v.(string)) {
 			plainText := p.DecryptSecret(v.(string))
 			err := s.Yaml.Set(s.TopLevelElement, k, plainText)
 			if err != nil {
@@ -264,19 +262,35 @@ func (s *Sls) ProcessDir(recurseDir string, action string) {
 
 // Stuff does stuff
 func (s *Sls) Stuff() {
-	vals := make(map[interface{}]interface{}, len(s.Yaml.Values))
+	for key := range s.Yaml.Values {
+		vals := s.Yaml.Get(key)
+		fmt.Printf("KEY: %#v\n", key)
+		fmt.Printf("VALS: %#v\n", vals)
 
-	for k := range s.Yaml.Values {
-		vals[k] = s.Yaml.Get(k)
-	}
+		var isEnc bool
+		var path string
+		vtype := reflect.TypeOf(vals).Kind()
+		if vtype == reflect.Map {
+			path, isEnc = processMap(key, vals.(map[interface{}]interface{}))
+		} else if vtype == reflect.Slice {
+			path, isEnc = processSlice(key, vals.([]interface{}))
+		} else if vtype == reflect.String {
+			path = key
+			isEnc = isEncrypted(vals.(string))
+		}
 
-	path, isEnc := processMap("", vals)
-	fmt.Printf("final path: %s\n", path)
-	fmt.Printf("end point is encrypted: %s\n", to.String(isEnc))
+		fmt.Printf("vtype: %v\n", vtype)
+		fmt.Printf("final path: %s\n", path)
+		fmt.Printf("end point is encrypted: %s\n", to.String(isEnc))
 
-	results := s.GetValueFromPath(path)
-	for i, res := range results {
-		fmt.Printf("RESULT %d: %#v\n", i+1, res.Interface())
+		results := s.GetValueFromPath(path)
+		for i, res := range results {
+			val := res.Interface()
+			if vtype == reflect.String && isEnc {
+				val = p.DecryptSecret(val.(string))
+			}
+			fmt.Printf("RESULT %d: %#v\n", i+1, val)
+		}
 	}
 }
 
@@ -314,6 +328,8 @@ func processMap(parentKey string, vals map[interface{}]interface{}) (string, boo
 	var path string
 	var matches bool
 
+	fmt.Printf("PARENT: %s\n", parentKey)
+
 	// the top level of the YAML will be a map, after that we aren't sure
 	for k, v := range vals {
 		matches = false
@@ -321,6 +337,7 @@ func processMap(parentKey string, vals map[interface{}]interface{}) (string, boo
 		buffer.WriteString(parentKey)
 
 		vtype := reflect.TypeOf(v).Kind()
+		fmt.Printf("K: %s vtype: %v\n", k, vtype)
 		if vtype == reflect.Map {
 			if buffer.Len() > 0 {
 				buffer.WriteString(":")
@@ -338,18 +355,13 @@ func processMap(parentKey string, vals map[interface{}]interface{}) (string, boo
 			buffer.Reset()
 			buffer.WriteString(path)
 		} else if vtype == reflect.String {
-			if strings.Contains(v.(string), pgpHeader) {
+			if isEncrypted(v.(string)) {
 				if buffer.Len() > 0 {
 					buffer.WriteString(":")
 				}
 				buffer.WriteString(to.String(k))
 				matches = true
 			}
-		}
-
-		// if nothing was processed the value wasn't encrypted or traversable
-		if buffer.Len() == 0 {
-			buffer.WriteString(to.String(k))
 		}
 		path = buffer.String()
 	}
@@ -376,7 +388,7 @@ func processSlice(parentKey string, vals []interface{}) (string, bool) {
 			buffer.Reset()
 			buffer.WriteString(path)
 		} else if vtype == reflect.String {
-			if strings.Contains(vals[v].(string), pgpHeader) {
+			if isEncrypted(vals[v].(string)) {
 				matches = true
 			}
 		}
@@ -384,4 +396,8 @@ func processSlice(parentKey string, vals []interface{}) (string, bool) {
 	}
 
 	return path, matches
+}
+
+func isEncrypted(str string) bool {
+	return strings.Contains(str, pgpHeader)
 }
