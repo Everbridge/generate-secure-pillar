@@ -260,6 +260,25 @@ func (s *Sls) ProcessDir(recurseDir string, action string) {
 	}
 }
 
+// DecryptSecrets decrypts secret strings
+func (s *Sls) DecryptSecrets() bytes.Buffer {
+	for index := 0; index < len(s.SecretNames); index++ {
+		vals := s.GetValueFromPath(s.SecretNames[index])
+		for _, val := range vals {
+			if val.Interface() != nil && isEncrypted(to.String(val)) {
+				plainText := p.DecryptSecret(to.String(val))
+				fmt.Printf("PLAIN TEXT: %s\n", plainText)
+				err := s.SetValueFromPath(s.SecretNames[index], plainText)
+				if err != nil {
+					logger.Fatalf("Error setting value: %s", err)
+				}
+			}
+		}
+	}
+
+	return s.FormatBuffer()
+}
+
 // Stuff does stuff
 func (s *Sls) Stuff() {
 	for key := range s.Yaml.Values {
