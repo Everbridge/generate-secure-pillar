@@ -140,6 +140,7 @@ func (s *Sls) ProcessYaml() {
 				logger.Fatalf("error setting value: %s", err)
 			}
 		} else {
+			fmt.Printf("PATH: %s\n", s.SecretNames[index])
 			err := s.SetValueFromPath(s.SecretNames[index], cipherText)
 			if err != nil {
 				logger.Fatalf("error setting value: %s", err)
@@ -280,14 +281,14 @@ func (s *Sls) DecryptSecrets() bytes.Buffer {
 }
 
 // Stuff does stuff
-func (s *Sls) Stuff() {
+func (s *Sls) Stuff() bytes.Buffer {
 	for key := range s.Yaml.Values {
-		vals := s.Yaml.Get(key)
-		fmt.Printf("KEY: %#v\n", key)
-		fmt.Printf("VALS: %#v\n", vals)
-
 		var isEnc bool
 		var path string
+
+		fmt.Printf("TOP KEY: %#v\n", key)
+
+		vals := s.Yaml.Get(key)
 		vtype := reflect.TypeOf(vals).Kind()
 		if vtype == reflect.Map {
 			path, isEnc = processMap(key, vals.(map[interface{}]interface{}))
@@ -298,19 +299,27 @@ func (s *Sls) Stuff() {
 			isEnc = isEncrypted(vals.(string))
 		}
 
-		fmt.Printf("vtype: %v\n", vtype)
-		fmt.Printf("final path: %s\n", path)
-		fmt.Printf("end point is encrypted: %s\n", to.String(isEnc))
-
-		results := s.GetValueFromPath(path)
-		for i, res := range results {
-			val := res.Interface()
-			if vtype == reflect.String && isEnc {
-				val = p.DecryptSecret(val.(string))
+		fmt.Printf("%s isEnc: %v\n", path, to.String(isEnc))
+		if isEnc {
+			results := s.GetValueFromPath(path)
+			for i, res := range results {
+				val := res.Interface()
+				vtype = reflect.TypeOf(val).Kind()
+				fmt.Printf("vtype: %v\n", vtype)
+				if vtype == reflect.String && isEncrypted(val.(string)) {
+					plainText := p.DecryptSecret(val.(string))
+					fmt.Printf("RESULT %d: %#v\n", i+1, plainText)
+					err := s.SetValueFromPath(path, plainText)
+					if err != nil {
+						logger.Fatalf("Error setting value: %s", err)
+					}
+				}
+				fmt.Printf("final path: %s\n", path)
 			}
-			fmt.Printf("RESULT %d: %#v\n", i+1, val)
 		}
 	}
+
+	return s.FormatBuffer()
 }
 
 // GetValueFromPath returns the value from a path string

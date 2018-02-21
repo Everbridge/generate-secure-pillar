@@ -130,7 +130,6 @@ $ generate-secure-pillar -k "Salt Master" decrypt recurse -d /path/to/pillar/sec
 		},
 		cli.StringFlag{
 			Name:        "element, e",
-			Value:       defaultElement,
 			Usage:       "Name of the top level element under which encrypted key/value pairs are kept",
 			Destination: &topLevelElement,
 		},
@@ -167,6 +166,7 @@ $ generate-secure-pillar -k "Salt Master" decrypt recurse -d /path/to/pillar/sec
 			Aliases: []string{"u"},
 			Usage:   "update the value of the given key in the given file",
 			Action: func(c *cli.Context) error {
+				topLevelElement = ""
 				if inputFilePath != os.Stdin.Name() {
 					outputFilePath = inputFilePath
 				}
@@ -271,9 +271,9 @@ $ generate-secure-pillar -k "Salt Master" decrypt recurse -d /path/to/pillar/sec
 						if err != nil {
 							logger.Fatal(err)
 						}
-						// s.Stuff()
+						buffer := s.Stuff()
 
-						buffer := s.DecryptSecrets()
+						// buffer := s.DecryptSecrets()
 						s.WriteSlsFile(buffer, outputFilePath)
 						// p := pki.New(pgpKeyName, publicKeyRing, secretKeyRing, logger)
 						// for index := 0; index < len(s.SecretNames); index++ {
