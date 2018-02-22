@@ -271,30 +271,10 @@ $ generate-secure-pillar -k "Salt Master" decrypt recurse -d /path/to/pillar/sec
 						if err != nil {
 							logger.Fatal(err)
 						}
-						buffer := s.Stuff()
-
-						// buffer := s.DecryptSecrets()
+						s.Stuff("encrypt")
+						buffer := s.FormatBuffer()
 						s.WriteSlsFile(buffer, outputFilePath)
-						// p := pki.New(pgpKeyName, publicKeyRing, secretKeyRing, logger)
-						// for index := 0; index < len(s.SecretNames); index++ {
-						// 	vals := s.GetValueFromPath(s.SecretNames[index])
-						// 	for _, val := range vals {
-						// 		if val.Interface() != nil {
-						// 			plainText := p.DecryptSecret(to.String(val))
-						// 			fmt.Printf("PLAIN TEXT: %s\n", plainText)
-						// 		}
-						// 	}
-						// }
-						// 	cipherText := ""
-						// 	if index >= 0 && index < len(s.SecretValues) {
-						// 		cipherText = p.EncryptSecret(s.SecretValues[index])
-						// 	}
-						// 	fmt.Printf("CIPHER TEXT: %s\n", cipherText)
-						// 	err = s.SetValueFromPath(s.SecretNames[index], cipherText)
-						// 	if err != nil {
-						// 		logger.Fatalf("error setting value: %s", err)
-						// 	}
-						// }
+
 						return nil
 					},
 				},

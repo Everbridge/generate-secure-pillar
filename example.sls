@@ -1,10 +1,20 @@
 #!yaml|gpg
 
 key: value
+multi-line: |
+  This is a multi
+  line example.
+  It could be a private key
+  or something similar.
 list:
-- one
-- two
-- three
+  - one
+  - two
+  - three
+sub:
+  list:
+    - one
+    - two
+    - three
 secure_vars:
   api_key: key_value
   password: |
