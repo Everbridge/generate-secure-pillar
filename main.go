@@ -217,12 +217,22 @@ $ generate-secure-pillar -k "Salt Master" decrypt recurse -d /path/to/pillar/sec
 			Usage:   "perform decryption operations",
 			Flags:   fileFlags,
 			Action: func(c *cli.Context) error {
-				s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, logger)
-				buffer := s.PlainTextYamlBuffer(inputFilePath)
-				s.WriteSlsFile(buffer, outputFilePath)
 				return nil
 			},
 			Subcommands: []cli.Command{
+				{
+					Name:  "all",
+					Flags: fileFlags,
+					Action: func(c *cli.Context) error {
+						s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, logger)
+						if inputFilePath != os.Stdin.Name() && outputFilePath == "" {
+							outputFilePath = inputFilePath
+						}
+						buffer := s.PlainTextYamlBuffer(inputFilePath)
+						s.WriteSlsFile(buffer, outputFilePath)
+						return nil
+					},
+				},
 				{
 					Name: "recurse",
 					Flags: []cli.Flag{
