@@ -170,6 +170,10 @@ $ generate-secure-pillar -k "Salt Master" decrypt recurse -d /path/to/pillar/sec
 					outputFilePath = inputFilePath
 				}
 				s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, logger)
+				err := s.Yaml.Read(inputFilePath)
+				if err != nil {
+					logger.Fatal(err)
+				}
 				s.ProcessYaml()
 				buffer := s.FormatBuffer()
 				s.WriteSlsFile(buffer, outputFilePath)
