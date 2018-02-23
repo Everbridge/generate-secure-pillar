@@ -234,7 +234,7 @@ func (s *Sls) CheckForFile(filePath string) error {
 	return err
 }
 
-// ProcessDir will recursively apply fileSlsFiles
+// ProcessDir will recursively apply findSlsFiles
 // It will either encrypt or decrypt, as specified by the action flag
 // It writes replaces the files found
 func (s *Sls) ProcessDir(recurseDir string, action string) {
@@ -249,9 +249,9 @@ func (s *Sls) ProcessDir(recurseDir string, action string) {
 		}
 		for _, file := range slsFiles {
 			var buffer bytes.Buffer
-			if action == "encrypt" {
+			if action == encrypt {
 				buffer = s.YamlBuffer(file, true)
-			} else if action == "decrypt" {
+			} else if action == decrypt {
 				buffer = s.PlainTextYamlBuffer(file)
 			} else {
 				logger.Fatalf("unknown action: %s", action)
@@ -315,39 +315,55 @@ func (s *Sls) SetValueFromPath(path string, value string) error {
 // PerformAction takes an action string (encrypt ot decrypt)
 // and applies that action on all items
 func (s *Sls) PerformAction(action string) bytes.Buffer {
-	var stuff = make(map[string]interface{})
 
-	for key := range s.Yaml.Values {
-		vals := s.Yaml.Get(key)
-		vtype := reflect.TypeOf(vals).Kind()
+	if action == encrypt || action == decrypt {
+		var stuff = make(map[string]interface{})
 
-		var res interface{}
-		switch vtype {
-		case reflect.Slice:
-			res = doSlice(vals, action)
-		case reflect.Map:
-			res = doMap(vals.(map[interface{}]interface{}), action)
-		case reflect.String:
-			switch action {
-			case decrypt:
-				if isEncrypted(vals.(string)) {
-					vals = p.DecryptSecret(vals.(string))
+		for key := range s.Yaml.Values {
+			if s.TopLevelElement != "" {
+				vals := s.Yaml.Get(key)
+				if s.TopLevelElement == key {
+					stuff[key] = processValues(vals, action)
+				} else {
+					stuff[key] = vals
 				}
-			case encrypt:
-				if !isEncrypted(vals.(string)) {
-					vals = p.EncryptSecret(vals.(string))
-				}
+			} else {
+				vals := s.Yaml.Get(key)
+				stuff[key] = processValues(vals, action)
 			}
-			res = vals.(string)
 		}
 
-		stuff[key] = res
+		// replace the values in the Yaml object
+		s.Yaml.Values = stuff
 	}
 
-	// replace the values in the Yaml object
-	s.Yaml.Values = stuff
-
 	return s.FormatBuffer()
+}
+
+func processValues(vals interface{}, action string) interface{} {
+	vtype := reflect.TypeOf(vals).Kind()
+
+	var res interface{}
+	switch vtype {
+	case reflect.Slice:
+		res = doSlice(vals, action)
+	case reflect.Map:
+		res = doMap(vals.(map[interface{}]interface{}), action)
+	case reflect.String:
+		switch action {
+		case decrypt:
+			if isEncrypted(vals.(string)) {
+				vals = p.DecryptSecret(vals.(string))
+			}
+		case encrypt:
+			if !isEncrypted(vals.(string)) {
+				vals = p.EncryptSecret(vals.(string))
+			}
+		}
+		res = vals.(string)
+	}
+
+	return res
 }
 
 func doSlice(vals interface{}, action string) interface{} {
