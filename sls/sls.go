@@ -18,16 +18,11 @@ import (
 
 // pgpHeader header const
 const pgpHeader = "-----BEGIN PGP MESSAGE-----"
+const encrypt = "encrypt"
+const decrypt = "decrypt"
 
 var logger *logrus.Logger
 var p pki.Pki
-
-// Node is a struct that defines a linked list
-type Node struct {
-	parent   *Node
-	children []*Node
-	element  interface{}
-}
 
 // Sls sls data
 type Sls struct {
@@ -38,7 +33,6 @@ type Sls struct {
 	SecretKeyRing   string
 	PgpKeyName      string
 	Yaml            *yaml.Yaml
-	Elements        *Node
 }
 
 // New return Sls struct
@@ -49,7 +43,7 @@ func New(secretNames []string, secretValues []string, topLevelElement string, pu
 		logger = logrus.New()
 	}
 
-	s := Sls{secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, yaml.New(), &Node{}}
+	s := Sls{secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, yaml.New()}
 	p = pki.New(pgpKeyName, publicKeyRing, secretKeyRing, logger)
 
 	return s
@@ -318,17 +312,14 @@ func (s *Sls) SetValueFromPath(path string, value string) error {
 	return fmt.Errorf("%s", err.(string))
 }
 
-// Stuff does stuff
-func (s *Sls) Stuff(action string) {
+// PerformAction takes an action string (encrypt ot decrypt)
+// and applies that action on all items
+func (s *Sls) PerformAction(action string) bytes.Buffer {
 	var stuff = make(map[string]interface{})
 
 	for key := range s.Yaml.Values {
-		fmt.Printf("TOP KEY: %#v\n", key)
-
 		vals := s.Yaml.Get(key)
-		fmt.Printf("VALS: %#v\n", vals)
 		vtype := reflect.TypeOf(vals).Kind()
-		fmt.Printf("TYPE: %s\n", vtype)
 
 		var res interface{}
 		switch vtype {
@@ -337,10 +328,15 @@ func (s *Sls) Stuff(action string) {
 		case reflect.Map:
 			res = doMap(vals.(map[interface{}]interface{}), action)
 		case reflect.String:
-			if action == "decrypt" && isEncrypted(vals.(string)) {
-				vals = p.DecryptSecret(vals.(string))
-			} else if action == "encrypt" && !isEncrypted(vals.(string)) {
-				vals = p.EncryptSecret(vals.(string))
+			switch action {
+			case decrypt:
+				if isEncrypted(vals.(string)) {
+					vals = p.DecryptSecret(vals.(string))
+				}
+			case encrypt:
+				if !isEncrypted(vals.(string)) {
+					vals = p.EncryptSecret(vals.(string))
+				}
 			}
 			res = vals.(string)
 		}
@@ -348,16 +344,17 @@ func (s *Sls) Stuff(action string) {
 		stuff[key] = res
 	}
 
-	fmt.Printf("RES: %#v\n", stuff)
+	// replace the values in the Yaml object
 	s.Yaml.Values = stuff
+
+	return s.FormatBuffer()
 }
 
 func doSlice(vals interface{}, action string) interface{} {
 	var things []interface{}
 
-	for index, item := range vals.([]interface{}) {
+	for _, item := range vals.([]interface{}) {
 		vtype := reflect.TypeOf(item).Kind()
-		fmt.Printf("%v ITEM TYPE: %s (%#v)\n", index, vtype, item)
 
 		switch vtype {
 		case reflect.Slice:
@@ -365,15 +362,19 @@ func doSlice(vals interface{}, action string) interface{} {
 		case reflect.Map:
 			things = append(things, doMap(item.(map[interface{}]interface{}), action))
 		case reflect.String:
-			if action == "decrypt" && isEncrypted(item.(string)) {
-				item = p.DecryptSecret(item.(string))
-			} else if action == "encrypt" && !isEncrypted(item.(string)) {
-				item = p.EncryptSecret(item.(string))
+			switch action {
+			case decrypt:
+				if isEncrypted(item.(string)) {
+					item = p.DecryptSecret(item.(string))
+				}
+			case encrypt:
+				if !isEncrypted(item.(string)) {
+					item = p.EncryptSecret(item.(string))
+				}
 			}
 			things = append(things, item)
 		}
 	}
-	fmt.Printf("THING: %#v\n", things)
 
 	return things
 }
@@ -383,7 +384,6 @@ func doMap(vals map[interface{}]interface{}, action string) map[interface{}]inte
 
 	for key, val := range vals {
 		vtype := reflect.TypeOf(val).Kind()
-		fmt.Printf("%s ITEM TYPE: %s\n", key, vtype)
 
 		switch vtype {
 		case reflect.Slice:
@@ -391,90 +391,21 @@ func doMap(vals map[interface{}]interface{}, action string) map[interface{}]inte
 		case reflect.Map:
 			ret = doMap(val.(map[interface{}]interface{}), action)
 		case reflect.String:
-			if action == "decrypt" && isEncrypted(val.(string)) {
-				val = p.DecryptSecret(val.(string))
-			} else if action == "encrypt" && !isEncrypted(val.(string)) {
-				val = p.EncryptSecret(val.(string))
+			switch action {
+			case decrypt:
+				if isEncrypted(val.(string)) {
+					val = p.DecryptSecret(val.(string))
+				}
+			case encrypt:
+				if !isEncrypted(val.(string)) {
+					val = p.EncryptSecret(val.(string))
+				}
 			}
 			ret[key] = val
 		}
 	}
 
 	return ret
-}
-
-func processMap(parentKey string, vals map[interface{}]interface{}) (string, bool) {
-	var path string
-	var matches bool
-
-	fmt.Printf("PARENT: %s\n", parentKey)
-
-	// the top level of the YAML will be a map, after that we aren't sure
-	for k, v := range vals {
-		matches = false
-		var buffer bytes.Buffer
-		buffer.WriteString(parentKey)
-
-		vtype := reflect.TypeOf(v).Kind()
-		fmt.Printf("K: %s vtype: %v\n", k, vtype)
-		if vtype == reflect.Map {
-			if buffer.Len() > 0 {
-				buffer.WriteString(":")
-			}
-			buffer.WriteString(to.String(k))
-			path, matches = processMap(buffer.String(), v.(map[interface{}]interface{}))
-			buffer.Reset()
-			buffer.WriteString(path)
-		} else if vtype == reflect.Slice {
-			if buffer.Len() > 0 {
-				buffer.WriteString(":")
-			}
-			buffer.WriteString(to.String(k))
-			path, matches = processSlice(buffer.String(), v.([]interface{}))
-			buffer.Reset()
-			buffer.WriteString(path)
-		} else if vtype == reflect.String {
-			if isEncrypted(v.(string)) {
-				if buffer.Len() > 0 {
-					buffer.WriteString(":")
-				}
-				buffer.WriteString(to.String(k))
-				matches = true
-			}
-		}
-		path = buffer.String()
-	}
-
-	return path, matches
-}
-
-func processSlice(parentKey string, vals []interface{}) (string, bool) {
-	var path string
-	var matches bool
-
-	for v := range vals {
-		matches = false
-		var buffer bytes.Buffer
-		buffer.WriteString(parentKey)
-
-		vtype := reflect.TypeOf(vals[v]).Kind()
-		if vtype == reflect.Map {
-			path, matches = processMap(buffer.String(), vals[v].(map[interface{}]interface{}))
-			buffer.Reset()
-			buffer.WriteString(path)
-		} else if vtype == reflect.Slice {
-			path, matches = processSlice(buffer.String(), vals[v].([]interface{}))
-			buffer.Reset()
-			buffer.WriteString(path)
-		} else if vtype == reflect.String {
-			if isEncrypted(vals[v].(string)) {
-				matches = true
-			}
-		}
-		path = buffer.String()
-	}
-
-	return path, matches
 }
 
 func isEncrypted(str string) bool {

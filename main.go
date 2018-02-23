@@ -21,6 +21,7 @@ var recurseDir string
 var secretNames cli.StringSlice
 var secretValues cli.StringSlice
 var topLevelElement string
+var action string
 
 var defaultPubRing = "~/.gnupg/pubring.gpg"
 var defaultSecRing = "~/.gnupg/secring.gpg"
@@ -259,10 +260,10 @@ $ generate-secure-pillar -k "Salt Master" decrypt recurse -d /path/to/pillar/sec
 					Flags: []cli.Flag{
 						inputFlag,
 						outputFlag,
-						cli.StringSliceFlag{
-							Name:  "name, n",
-							Usage: "secret name",
-							Value: &secretNames,
+						cli.StringFlag{
+							Name:        "action, a",
+							Usage:       "encrypt or decrypt",
+							Destination: &action,
 						},
 					},
 					Action: func(c *cli.Context) error {
@@ -271,7 +272,7 @@ $ generate-secure-pillar -k "Salt Master" decrypt recurse -d /path/to/pillar/sec
 						if err != nil {
 							logger.Fatal(err)
 						}
-						s.Stuff("encrypt")
+						s.PerformAction(action)
 						buffer := s.FormatBuffer()
 						s.WriteSlsFile(buffer, outputFilePath)
 
