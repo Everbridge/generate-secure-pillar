@@ -50,7 +50,7 @@ func main() {
 		logger.Level = logrus.DebugLevel
 	}
 	app := cli.NewApp()
-	app.Version = "1.0.113"
+	app.Version = "1.0.115"
 	app.Authors = []cli.Author{
 		cli.Author{
 			Name:  "Ed Silva",
@@ -59,26 +59,6 @@ func main() {
 	}
 
 	cli.AppHelpTemplate = fmt.Sprintf(`%s
-SLS FORMAT:
-This tool assumes a top level element in .sls files (named 'secure_vars' by default)
-under which are the key/value pairs meant to be secured. The reson for this
-is so that the files in question can easily have a mix of plain text and
-secured/encrypted values in an organized way, allowing for the bulk encryption
-or decryption of just those values (useful for automation).
-
-The name of the top level element can be specified using the --element flag.
-
-SAMPLE SLS FILE FORMAT:
-
-$ cat example.sls
-#!yaml|gpg
-
-key: value
-secure_vars:
-  password: secret
-  api_key: key_value
-
-
 EXAMPLES:
 # create a new sls file
 $ generate-secure-pillar -k "Salt Master" create --name secret_name1 --value secret_value1 --name secret_name2 --value secret_value2 --outfile new.sls
