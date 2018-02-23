@@ -8,6 +8,7 @@ import (
 
 	"eb-github.com/ed-silva/generate-secure-pillar/pki"
 	"eb-github.com/ed-silva/generate-secure-pillar/sls"
+	"menteslibres.net/gosexy/to"
 	yaml "menteslibres.net/gosexy/yaml"
 )
 
@@ -19,7 +20,7 @@ func TestWriteSlsFile(t *testing.T) {
 	s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, nil)
 
 	slsFile := "./testdata/foo.sls"
-	s.Yaml.Set("secret", "text")
+	s.SetValueFromPath("secret", "text")
 
 	buffer := s.FormatBuffer()
 	s.WriteSlsFile(buffer, slsFile)
@@ -59,7 +60,7 @@ func TestEmptyDir(t *testing.T) {
 }
 
 func TestReadSlsFile(t *testing.T) {
-	topLevelElement = defaultElement
+	topLevelElement = "secure_vars"
 	yaml, err := yaml.Open("./testdata/new.sls")
 	if err != nil {
 		t.Errorf("Returned error")
@@ -71,7 +72,7 @@ func TestReadSlsFile(t *testing.T) {
 }
 
 func TestReadBadFile(t *testing.T) {
-	topLevelElement = defaultElement
+	topLevelElement = "secure_vars"
 	yaml, err := yaml.Open("/dev/null")
 	if err != nil {
 		t.Errorf("Returned error")
@@ -82,7 +83,7 @@ func TestReadBadFile(t *testing.T) {
 }
 
 func TestEncryptSecret(t *testing.T) {
-	topLevelElement = defaultElement
+	topLevelElement = "secure_vars"
 	if os.Getenv("SALT_SEC_KEYRING") != "" {
 		publicKeyRing, _ = filepath.Abs(os.Getenv("SALT_PUB_KEYRING"))
 	} else {
@@ -112,7 +113,7 @@ func TestEncryptSecret(t *testing.T) {
 }
 
 func TestRecurseEncryptSecret(t *testing.T) {
-	topLevelElement = defaultElement
+	topLevelElement = "secure_vars"
 	if os.Getenv("SALT_SEC_KEYRING") != "" {
 		publicKeyRing, _ = filepath.Abs(os.Getenv("SALT_PUB_KEYRING"))
 	} else {
@@ -127,15 +128,15 @@ func TestRecurseEncryptSecret(t *testing.T) {
 		t.Errorf("%s has no sls files", recurseDir)
 	}
 	for _, file := range slsFiles {
-		yaml, err := yaml.Open(file)
+		err := s.Yaml.Read(file)
 		if err != nil {
 			t.Errorf("Returned error")
 		}
-		if len(yaml.Get(topLevelElement).(map[interface{}]interface{})) <= 0 {
-			t.Errorf("YAML content lenth is incorrect, got: %d, want: %d.",
-				len(yaml.Get(topLevelElement).(map[interface{}]interface{})), 2)
+		if s.GetValueFromPath(topLevelElement) == nil {
+			t.Errorf("YAML content is incorrect, got: %v.",
+				s.GetValueFromPath(topLevelElement))
 		}
-		secureVars := yaml.Get(topLevelElement)
+		secureVars := s.GetValueFromPath(topLevelElement)
 		for _, v := range secureVars.(map[interface{}]interface{}) {
 			if !strings.Contains(v.(string), pgpHeader) {
 				t.Errorf("YAML content was not encrypted.")
@@ -146,7 +147,7 @@ func TestRecurseEncryptSecret(t *testing.T) {
 
 func TestDecryptSecret(t *testing.T) {
 	var err error
-	topLevelElement = defaultElement
+	topLevelElement = "secure_vars"
 	if os.Getenv("SALT_SEC_KEYRING") != "" {
 		if secretKeyRing, err = filepath.Abs(os.Getenv("SALT_SEC_KEYRING")); err != nil {
 			t.Error(err)
@@ -174,7 +175,7 @@ func TestDecryptSecret(t *testing.T) {
 }
 
 func TestRecurseDecryptSecret(t *testing.T) {
-	topLevelElement = defaultElement
+	topLevelElement = "secure_vars"
 	if os.Getenv("SALT_SEC_KEYRING") != "" {
 		secretKeyRing, _ = filepath.Abs(os.Getenv("SALT_SEC_KEYRING"))
 	} else {
@@ -213,9 +214,8 @@ func TestGetValueFromPath(t *testing.T) {
 	if err != nil {
 		t.Errorf("Error getting test file: %s", err)
 	}
-	results := s.GetValueFromPath("bar:baz")
-	val := results[0].Interface()
-	if val != "qux" {
+	val := s.GetValueFromPath("bar:baz")
+	if to.String(val) != "qux" {
 		t.Errorf("Content from path '%s' is wrong: %#v", filePath, val)
 	}
 }
@@ -231,9 +231,8 @@ func TestSetValueFromPath(t *testing.T) {
 	if err != nil {
 		t.Errorf("Error setting value from path: %s", err)
 	}
-	results := s.GetValueFromPath("bar:baz")
-	val := results[0].Interface()
-	if val != "foo" {
+	val := s.GetValueFromPath("bar:baz")
+	if to.String(val) != "foo" {
 		t.Errorf("Content from path '%s' is wrong: %#v", filePath, val)
 	}
 }

@@ -25,7 +25,6 @@ var action string
 
 var defaultPubRing = "~/.gnupg/pubring.gpg"
 var defaultSecRing = "~/.gnupg/secring.gpg"
-var defaultElement = "secure_vars"
 
 var inputFlag = cli.StringFlag{
 	Name:        "file, f",
@@ -167,12 +166,12 @@ $ generate-secure-pillar -k "Salt Master" decrypt recurse -d /path/to/pillar/sec
 			Aliases: []string{"u"},
 			Usage:   "update the value of the given key in the given file",
 			Action: func(c *cli.Context) error {
-				topLevelElement = ""
 				if inputFilePath != os.Stdin.Name() {
 					outputFilePath = inputFilePath
 				}
 				s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, logger)
-				buffer := s.YamlBuffer(inputFilePath, false)
+				s.ProcessYaml()
+				buffer := s.FormatBuffer()
 				s.WriteSlsFile(buffer, outputFilePath)
 				return nil
 			},
@@ -206,7 +205,7 @@ $ generate-secure-pillar -k "Salt Master" decrypt recurse -d /path/to/pillar/sec
 						if inputFilePath != os.Stdin.Name() && outputFilePath == "" {
 							outputFilePath = inputFilePath
 						}
-						buffer := s.YamlBuffer(inputFilePath, true)
+						buffer := s.CipherTextYamlBuffer(inputFilePath)
 						s.WriteSlsFile(buffer, outputFilePath)
 						return nil
 					},
@@ -272,8 +271,15 @@ $ generate-secure-pillar -k "Salt Master" decrypt recurse -d /path/to/pillar/sec
 						if err != nil {
 							logger.Fatal(err)
 						}
-						s.PerformAction(action)
-						buffer := s.FormatBuffer()
+
+						// vals := s.GetValueFromPath(topLevelElement)
+						// vtype := reflect.TypeOf(vals).Kind()
+						// fmt.Printf("VALS: %#v, TYPE: %v\n", vals, vtype)
+						// vals = s.Yaml.Get(topLevelElement)
+						// vtype = reflect.TypeOf(vals).Kind()
+						// fmt.Printf("VALS: %#v, TYPE: %v\n", vals, vtype)
+
+						buffer := s.PerformAction(action)
 						s.WriteSlsFile(buffer, outputFilePath)
 
 						return nil
