@@ -6,16 +6,20 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 
 	"eb-github.com/ed-silva/generate-secure-pillar/pki"
 	yaml "github.com/esilva-everbridge/yaml"
+	"github.com/gosexy/to"
 	"github.com/sirupsen/logrus"
 	yamlv1 "gopkg.in/yaml.v1"
 )
 
 // pgpHeader header const
 const pgpHeader = "-----BEGIN PGP MESSAGE-----"
+const encrypt = "encrypt"
+const decrypt = "decrypt"
 
 var logger *logrus.Logger
 var p pki.Pki
@@ -87,9 +91,9 @@ func (s *Sls) FindSlsFiles(searchDir string) ([]string, int) {
 	return fileList, len(fileList)
 }
 
-// YamlBuffer returns a buffer with encrypted and formatted yaml text
+// CipherTextYamlBuffer returns a buffer with encrypted and formatted yaml text
 // If the 'all' flag is set all values under the designated top level element are encrypted
-func (s *Sls) YamlBuffer(filePath string, all bool) bytes.Buffer {
+func (s *Sls) CipherTextYamlBuffer(filePath string) bytes.Buffer {
 	err := s.CheckForFile(filePath)
 	if err != nil {
 		logger.Fatal(err)
@@ -103,63 +107,8 @@ func (s *Sls) YamlBuffer(filePath string, all bool) bytes.Buffer {
 	if err != nil {
 		logger.Fatal(err)
 	}
-	dataChanged := false
 
-	if all {
-		if s.Yaml.Get(s.TopLevelElement) != nil {
-			dataChanged = s.YamlRange()
-		} else {
-			logger.Infof(fmt.Sprintf("%s has no %s element", filePath, s.TopLevelElement))
-		}
-	} else {
-		s.ProcessYaml()
-		dataChanged = true
-	}
-
-	if !dataChanged {
-		var buffer bytes.Buffer
-		return buffer
-	}
-
-	return s.FormatBuffer()
-}
-
-// ProcessYaml encrypts elements matching keys specified on the command line
-func (s *Sls) ProcessYaml() {
-	for index := 0; index < len(s.SecretNames); index++ {
-		cipherText := ""
-		if index >= 0 && index < len(s.SecretValues) {
-			cipherText = p.EncryptSecret(s.SecretValues[index])
-		}
-		if s.Yaml.Get(s.TopLevelElement) != nil {
-			err := s.Yaml.Set(s.TopLevelElement, s.SecretNames[index], cipherText)
-			if err != nil {
-				logger.Fatalf("error setting value: %s", err)
-			}
-		} else {
-			err := s.Yaml.Set(s.SecretNames[index], cipherText)
-			if err != nil {
-				logger.Fatalf("error setting value: %s", err)
-			}
-		}
-	}
-}
-
-// YamlRange encrypts any plain text values in the top level element
-func (s *Sls) YamlRange() bool {
-	var dataChanged = false
-	secureVars := s.Yaml.Get(s.TopLevelElement)
-	for k, v := range secureVars.(map[interface{}]interface{}) {
-		if !strings.Contains(v.(string), pgpHeader) {
-			cipherText := p.EncryptSecret(v.(string))
-			err := s.Yaml.Set(s.TopLevelElement, k, cipherText)
-			if err != nil {
-				logger.Fatalf("error setting value: %s", err)
-			}
-			dataChanged = true
-		}
-	}
-	return dataChanged
+	return s.PerformAction(encrypt)
 }
 
 // PlainTextYamlBuffer decrypts all values under the top level element and returns a formatted buffer
@@ -178,21 +127,7 @@ func (s *Sls) PlainTextYamlBuffer(filePath string) bytes.Buffer {
 		logger.Fatal(err)
 	}
 
-	if s.Yaml.Get(s.TopLevelElement) != nil {
-		for k, v := range s.Yaml.Get(s.TopLevelElement).(map[interface{}]interface{}) {
-			if strings.Contains(v.(string), pgpHeader) {
-				plainText := p.DecryptSecret(v.(string))
-				err := s.Yaml.Set(s.TopLevelElement, k, plainText)
-				if err != nil {
-					logger.Fatalf("error setting value: %s", err)
-				}
-			}
-		}
-	} else {
-		logger.Fatal("WTF")
-	}
-
-	return s.FormatBuffer()
+	return s.PerformAction(decrypt)
 }
 
 // FormatBuffer returns a formatted .sls buffer with the gpg renderer line
@@ -226,7 +161,21 @@ func (s *Sls) CheckForFile(filePath string) error {
 	return err
 }
 
-// ProcessDir will recursively apply fileSlsFiles
+// ProcessYaml encrypts elements matching keys specified on the command line
+func (s *Sls) ProcessYaml() {
+	for index := 0; index < len(s.SecretNames); index++ {
+		cipherText := ""
+		if index >= 0 && index < len(s.SecretValues) {
+			cipherText = p.EncryptSecret(s.SecretValues[index])
+		}
+		err := s.SetValueFromPath(s.SecretNames[index], cipherText)
+		if err != nil {
+			logger.Fatalf("error setting value: %s", err)
+		}
+	}
+}
+
+// ProcessDir will recursively apply findSlsFiles
 // It will either encrypt or decrypt, as specified by the action flag
 // It writes replaces the files found
 func (s *Sls) ProcessDir(recurseDir string, action string) {
@@ -241,9 +190,9 @@ func (s *Sls) ProcessDir(recurseDir string, action string) {
 		}
 		for _, file := range slsFiles {
 			var buffer bytes.Buffer
-			if action == "encrypt" {
-				buffer = s.YamlBuffer(file, true)
-			} else if action == "decrypt" {
+			if action == encrypt {
+				buffer = s.CipherTextYamlBuffer(file)
+			} else if action == decrypt {
 				buffer = s.PlainTextYamlBuffer(file)
 			} else {
 				logger.Fatalf("unknown action: %s", action)
@@ -253,4 +202,150 @@ func (s *Sls) ProcessDir(recurseDir string, action string) {
 	} else {
 		logger.Fatalf("%s is not a directory", recurseDir)
 	}
+}
+
+// GetValueFromPath returns the value from a path string
+func (s *Sls) GetValueFromPath(path string) interface{} {
+	parts := strings.Split(path, ":")
+
+	args := make([]interface{}, len(parts))
+	for i := 0; i < len(parts); i++ {
+		args[i] = parts[i]
+	}
+	results := s.Yaml.Get(args...)
+	return results
+}
+
+// SetValueFromPath returns the value from a path string
+func (s *Sls) SetValueFromPath(path string, value string) error {
+	parts := strings.Split(path, ":")
+
+	// construct the args list
+	args := make([]interface{}, len(parts)+1)
+	for i := 0; i < len(parts); i++ {
+		args[i] = parts[i]
+	}
+	args[len(args)-1] = value
+	err := s.Yaml.Set(args...)
+	if err == nil {
+		return nil
+	}
+	return fmt.Errorf("%s", err)
+}
+
+// PerformAction takes an action string (encrypt or decrypt)
+// and applies that action on all items
+func (s *Sls) PerformAction(action string) bytes.Buffer {
+
+	if action == encrypt || action == decrypt {
+		var stuff = make(map[string]interface{})
+
+		for key := range s.Yaml.Values {
+			if s.TopLevelElement != "" {
+				vals := s.GetValueFromPath(key)
+				if s.TopLevelElement == key {
+					stuff[key] = processValues(vals, action)
+				} else {
+					stuff[key] = vals
+				}
+			} else {
+				vals := s.GetValueFromPath(key)
+				stuff[key] = processValues(vals, action)
+			}
+		}
+		// replace the values in the Yaml object
+		s.Yaml.Values = stuff
+	}
+
+	return s.FormatBuffer()
+}
+
+func processValues(vals interface{}, action string) interface{} {
+	vtype := reflect.TypeOf(vals).Kind()
+
+	var res interface{}
+	switch vtype {
+	case reflect.Slice:
+		res = doSlice(vals, action)
+	case reflect.Map:
+		res = doMap(vals.(map[interface{}]interface{}), action)
+	case reflect.String:
+		switch action {
+		case decrypt:
+			if isEncrypted(vals.(string)) {
+				vals = p.DecryptSecret(vals.(string))
+			}
+		case encrypt:
+			if !isEncrypted(vals.(string)) {
+				vals = p.EncryptSecret(vals.(string))
+			}
+		}
+		res = vals.(string)
+	}
+
+	return res
+}
+
+func doSlice(vals interface{}, action string) interface{} {
+	var things []interface{}
+
+	for _, item := range vals.([]interface{}) {
+		var thing interface{}
+		vtype := reflect.TypeOf(item).Kind()
+
+		switch vtype {
+		case reflect.Slice:
+			things = append(things, doSlice(item, action))
+		case reflect.Map:
+			thing = item
+			things = append(things, doMap(thing.(map[interface{}]interface{}), action))
+		case reflect.String:
+			switch action {
+			case decrypt:
+				if isEncrypted(to.String(item)) {
+					thing = p.DecryptSecret(to.String(item))
+				}
+			case encrypt:
+				if !isEncrypted(to.String(item)) {
+					thing = p.EncryptSecret(to.String(item))
+				}
+			}
+			things = append(things, thing)
+		}
+	}
+
+	return things
+}
+
+func doMap(vals map[interface{}]interface{}, action string) map[interface{}]interface{} {
+	var ret = make(map[interface{}]interface{})
+
+	for key, val := range vals {
+		vtype := reflect.TypeOf(val).Kind()
+
+		switch vtype {
+		case reflect.Slice:
+			ret[key] = doSlice(val, action)
+		case reflect.Map:
+			ret = doMap(val.(map[interface{}]interface{}), action)
+		case reflect.String:
+			switch action {
+			case decrypt:
+				if isEncrypted(val.(string)) {
+					val = p.DecryptSecret(val.(string))
+				}
+			case encrypt:
+				if !isEncrypted(val.(string)) {
+					val = p.EncryptSecret(val.(string))
+				}
+			}
+			ret[key] = val
+		}
+	}
+
+	return ret
+}
+
+func isEncrypted(str string) bool {
+	return strings.Contains(str, pgpHeader)
 }

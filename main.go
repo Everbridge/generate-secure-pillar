@@ -21,10 +21,10 @@ var recurseDir string
 var secretNames cli.StringSlice
 var secretValues cli.StringSlice
 var topLevelElement string
+var action string
 
 var defaultPubRing = "~/.gnupg/pubring.gpg"
 var defaultSecRing = "~/.gnupg/secring.gpg"
-var defaultElement = "secure_vars"
 
 var inputFlag = cli.StringFlag{
 	Name:        "file, f",
@@ -50,7 +50,7 @@ func main() {
 		logger.Level = logrus.DebugLevel
 	}
 	app := cli.NewApp()
-	app.Version = "1.0.91"
+	app.Version = "1.0.111"
 	app.Authors = []cli.Author{
 		cli.Author{
 			Name:  "Ed Silva",
@@ -84,10 +84,10 @@ EXAMPLES:
 $ generate-secure-pillar -k "Salt Master" create --name secret_name1 --value secret_value1 --name secret_name2 --value secret_value2 --outfile new.sls
 
 # add to the new file
-$ generate-secure-pillar -k "Salt Master" update --name new_secret_name --value new_secret_value --file new.sls --outfile new.sls
+$ generate-secure-pillar -k "Salt Master" update --name new_secret_name --value new_secret_value --file new.sls
 
 # update an existing value
-$ generate-secure-pillar -k "Salt Master" update --name secret_name --value secret_value3 --file new.sls --outfile new.sls
+$ generate-secure-pillar -k "Salt Master" update --name secret_name --value secret_value3 --file new.sls
 
 # encrypt all plain text values in a file
 $ generate-secure-pillar -k "Salt Master" encrypt all --file us1.sls --outfile us1.sls
@@ -95,10 +95,10 @@ $ generate-secure-pillar -k "Salt Master" encrypt all --file us1.sls --outfile u
 # encrypt all plain text values in a file under the element 'secret_stuff'
 $ generate-secure-pillar -k "Salt Master" --element secret_stuff encrypt all --file us1.sls --outfile us1.sls
 
-# recurse through all sls files, encrypting all key/value pairs under top level secure_vars element
+# recurse through all sls files, encrypting all values
 $ generate-secure-pillar -k "Salt Master" encrypt recurse -d /path/to/pillar/secure/stuff
 
-# recurse through all sls files, decrypting all key/value pairs under top level secure_vars element
+# recurse through all sls files, decrypting all values
 $ generate-secure-pillar -k "Salt Master" decrypt recurse -d /path/to/pillar/secure/stuff
 
 `, cli.AppHelpTemplate)
@@ -130,7 +130,6 @@ $ generate-secure-pillar -k "Salt Master" decrypt recurse -d /path/to/pillar/sec
 		},
 		cli.StringFlag{
 			Name:        "element, e",
-			Value:       defaultElement,
 			Usage:       "Name of the top level element under which encrypted key/value pairs are kept",
 			Destination: &topLevelElement,
 		},
@@ -156,7 +155,7 @@ $ generate-secure-pillar -k "Salt Master" decrypt recurse -d /path/to/pillar/sec
 					Value: &secretNames,
 				},
 				cli.StringSliceFlag{
-					Name:  "secret, s",
+					Name:  "value, s",
 					Usage: "secret value(s)",
 					Value: &secretValues,
 				},
@@ -171,7 +170,12 @@ $ generate-secure-pillar -k "Salt Master" decrypt recurse -d /path/to/pillar/sec
 					outputFilePath = inputFilePath
 				}
 				s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, logger)
-				buffer := s.YamlBuffer(inputFilePath, false)
+				err := s.Yaml.Read(inputFilePath)
+				if err != nil {
+					logger.Fatal(err)
+				}
+				s.ProcessYaml()
+				buffer := s.FormatBuffer()
 				s.WriteSlsFile(buffer, outputFilePath)
 				return nil
 			},
@@ -205,7 +209,7 @@ $ generate-secure-pillar -k "Salt Master" decrypt recurse -d /path/to/pillar/sec
 						if inputFilePath != os.Stdin.Name() && outputFilePath == "" {
 							outputFilePath = inputFilePath
 						}
-						buffer := s.YamlBuffer(inputFilePath, true)
+						buffer := s.CipherTextYamlBuffer(inputFilePath)
 						s.WriteSlsFile(buffer, outputFilePath)
 						return nil
 					},
@@ -251,6 +255,37 @@ $ generate-secure-pillar -k "Salt Master" decrypt recurse -d /path/to/pillar/sec
 					Action: func(c *cli.Context) error {
 						s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, logger)
 						s.ProcessDir(recurseDir, "decrypt")
+						return nil
+					},
+				},
+				{
+					Name: "test",
+					Flags: []cli.Flag{
+						inputFlag,
+						outputFlag,
+						cli.StringFlag{
+							Name:        "action, a",
+							Usage:       "encrypt or decrypt",
+							Destination: &action,
+						},
+					},
+					Action: func(c *cli.Context) error {
+						s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, logger)
+						err := s.Yaml.Read(inputFilePath)
+						if err != nil {
+							logger.Fatal(err)
+						}
+
+						// vals := s.GetValueFromPath(topLevelElement)
+						// vtype := reflect.TypeOf(vals).Kind()
+						// fmt.Printf("VALS: %#v, TYPE: %v\n", vals, vtype)
+						// vals = s.Yaml.Get(topLevelElement)
+						// vtype = reflect.TypeOf(vals).Kind()
+						// fmt.Printf("VALS: %#v, TYPE: %v\n", vals, vtype)
+
+						buffer := s.PerformAction(action)
+						s.WriteSlsFile(buffer, outputFilePath)
+
 						return nil
 					},
 				},
