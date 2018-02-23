@@ -11,9 +11,9 @@ import (
 
 	"eb-github.com/ed-silva/generate-secure-pillar/pki"
 	yaml "github.com/esilva-everbridge/yaml"
+	"github.com/gosexy/to"
 	"github.com/sirupsen/logrus"
 	yamlv1 "gopkg.in/yaml.v1"
-	"menteslibres.net/gosexy/to"
 )
 
 // pgpHeader header const

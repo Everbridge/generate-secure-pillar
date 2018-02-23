@@ -8,8 +8,8 @@ import (
 
 	"eb-github.com/ed-silva/generate-secure-pillar/pki"
 	"eb-github.com/ed-silva/generate-secure-pillar/sls"
-	"menteslibres.net/gosexy/to"
-	yaml "menteslibres.net/gosexy/yaml"
+	yaml "github.com/esilva-everbridge/yaml"
+	"github.com/gosexy/to"
 )
 
 // pgpHeader header const
