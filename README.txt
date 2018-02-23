@@ -5,7 +5,7 @@ USAGE:
    generate-secure-pillar [global options] command [command options] [arguments...]
 
 VERSION:
-   1.0.113
+   1.0.115
 
 AUTHOR:
    Ed Silva <ed.silva@everbridge.com>
@@ -28,26 +28,6 @@ GLOBAL OPTIONS:
 
 COPYRIGHT:
    (c) 2018 Everbridge, Inc.
-
-SLS FORMAT:
-This tool assumes a top level element in .sls files (named 'secure_vars' by default)
-under which are the key/value pairs meant to be secured. The reson for this
-is so that the files in question can easily have a mix of plain text and
-secured/encrypted values in an organized way, allowing for the bulk encryption
-or decryption of just those values (useful for automation).
-
-The name of the top level element can be specified using the --element flag.
-
-SAMPLE SLS FILE FORMAT:
-
-$ cat example.sls
-#!yaml|gpg
-
-key: value
-secure_vars:
-  password: secret
-  api_key: key_value
-
 
 EXAMPLES:
 # create a new sls file
