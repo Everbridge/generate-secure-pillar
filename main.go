@@ -59,6 +59,8 @@ func main() {
 	}
 
 	cli.AppHelpTemplate = fmt.Sprintf(`%s
+CAVEAT: YAML files with include statements are not handled properly.
+
 EXAMPLES:
 # create a new sls file
 $ generate-secure-pillar -k "Salt Master" create --name secret_name1 --value secret_value1 --name secret_name2 --value secret_value2 --outfile new.sls
