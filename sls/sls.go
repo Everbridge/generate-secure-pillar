@@ -189,6 +189,7 @@ func (s *Sls) ProcessDir(recurseDir string, action string) {
 			logger.Fatalf("%s has no sls files", recurseDir)
 		}
 		for _, file := range slsFiles {
+			logger.Infof("processing %s", file)
 			var buffer bytes.Buffer
 			if action == encrypt {
 				buffer = s.CipherTextYamlBuffer(file)
