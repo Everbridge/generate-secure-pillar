@@ -189,6 +189,7 @@ func (s *Sls) ProcessDir(recurseDir string, action string) {
 			logger.Fatalf("%s has no sls files", recurseDir)
 		}
 		for _, file := range slsFiles {
+			logger.Infof("processing %s", file)
 			var buffer bytes.Buffer
 			if action == encrypt {
 				buffer = s.CipherTextYamlBuffer(file)
@@ -272,15 +273,15 @@ func processValues(vals interface{}, action string) interface{} {
 	case reflect.String:
 		switch action {
 		case decrypt:
-			if isEncrypted(vals.(string)) {
-				vals = p.DecryptSecret(vals.(string))
+			if isEncrypted(to.String(vals)) {
+				vals = p.DecryptSecret(to.String(vals))
 			}
 		case encrypt:
-			if !isEncrypted(vals.(string)) {
-				vals = p.EncryptSecret(vals.(string))
+			if !isEncrypted(to.String(vals)) {
+				vals = p.EncryptSecret(to.String(vals))
 			}
 		}
-		res = vals.(string)
+		res = to.String(vals)
 	}
 
 	return res
@@ -327,16 +328,16 @@ func doMap(vals map[interface{}]interface{}, action string) map[interface{}]inte
 		case reflect.Slice:
 			ret[key] = doSlice(val, action)
 		case reflect.Map:
-			ret = doMap(val.(map[interface{}]interface{}), action)
+			ret[key] = doMap(val.(map[interface{}]interface{}), action)
 		case reflect.String:
 			switch action {
 			case decrypt:
-				if isEncrypted(val.(string)) {
-					val = p.DecryptSecret(val.(string))
+				if isEncrypted(to.String(val)) {
+					val = p.DecryptSecret(to.String(val))
 				}
 			case encrypt:
-				if !isEncrypted(val.(string)) {
-					val = p.EncryptSecret(val.(string))
+				if !isEncrypted(to.String(val)) {
+					val = p.EncryptSecret(to.String(val))
 				}
 			}
 			ret[key] = val

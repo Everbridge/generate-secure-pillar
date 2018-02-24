@@ -50,7 +50,7 @@ func main() {
 		logger.Level = logrus.DebugLevel
 	}
 	app := cli.NewApp()
-	app.Version = "1.0.115"
+	app.Version = "1.0.119"
 	app.Authors = []cli.Author{
 		cli.Author{
 			Name:  "Ed Silva",
@@ -59,6 +59,8 @@ func main() {
 	}
 
 	cli.AppHelpTemplate = fmt.Sprintf(`%s
+CAVEAT: YAML files with include statements are not handled properly.
+
 EXAMPLES:
 # create a new sls file
 $ generate-secure-pillar -k "Salt Master" create --name secret_name1 --value secret_value1 --name secret_name2 --value secret_value2 --outfile new.sls
@@ -217,12 +219,22 @@ $ generate-secure-pillar -k "Salt Master" decrypt recurse -d /path/to/pillar/sec
 			Usage:   "perform decryption operations",
 			Flags:   fileFlags,
 			Action: func(c *cli.Context) error {
-				s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, logger)
-				buffer := s.PlainTextYamlBuffer(inputFilePath)
-				s.WriteSlsFile(buffer, outputFilePath)
 				return nil
 			},
 			Subcommands: []cli.Command{
+				{
+					Name:  "all",
+					Flags: fileFlags,
+					Action: func(c *cli.Context) error {
+						s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, logger)
+						if inputFilePath != os.Stdin.Name() && outputFilePath == "" {
+							outputFilePath = inputFilePath
+						}
+						buffer := s.PlainTextYamlBuffer(inputFilePath)
+						s.WriteSlsFile(buffer, outputFilePath)
+						return nil
+					},
+				},
 				{
 					Name: "recurse",
 					Flags: []cli.Flag{
