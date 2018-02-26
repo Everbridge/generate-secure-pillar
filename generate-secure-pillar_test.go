@@ -44,9 +44,9 @@ func TestWriteSlsFile(t *testing.T) {
 func TestFindSlsFiles(t *testing.T) {
 	s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, nil)
 	slsFiles, count := s.FindSlsFiles("./testdata")
-	if count != 4 {
+	if count != 5 {
 		t.Errorf("File count was incorrect, got: %d, want: %d.",
-			len(slsFiles), 4)
+			len(slsFiles), 5)
 	}
 }
 
@@ -68,6 +68,18 @@ func TestReadSlsFile(t *testing.T) {
 	if len(yaml.Get(topLevelElement).(map[interface{}]interface{})) != 3 {
 		t.Errorf("YAML content length is incorrect, got: %d, want: %d.",
 			len(yaml.Get(topLevelElement).(map[interface{}]interface{})), 3)
+	}
+}
+
+func TestReadIncludeFile(t *testing.T) {
+	s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, nil)
+	err := s.ReadSlsFile("./testdata/inc.sls")
+	if err == nil {
+		t.Errorf("failed to throw error for include file")
+	}
+	err = s.ReadSlsFile("./testdata/new.sls")
+	if err != nil {
+		t.Errorf("threw error for non-include file")
 	}
 }
 
@@ -128,7 +140,7 @@ func TestRecurseEncryptSecret(t *testing.T) {
 		t.Errorf("%s has no sls files", recurseDir)
 	}
 	for _, file := range slsFiles {
-		err := s.Yaml.Read(file)
+		err := s.ReadSlsFile(file)
 		if err != nil {
 			t.Errorf("Returned error")
 		}
@@ -210,7 +222,7 @@ func TestRecurseDecryptSecret(t *testing.T) {
 func TestGetValueFromPath(t *testing.T) {
 	s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, nil)
 	filePath := "./testdata/new.sls"
-	err := s.Yaml.Read(filePath)
+	err := s.ReadSlsFile(filePath)
 	if err != nil {
 		t.Errorf("Error getting test file: %s", err)
 	}
@@ -223,7 +235,7 @@ func TestGetValueFromPath(t *testing.T) {
 func TestSetValueFromPath(t *testing.T) {
 	s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, nil)
 	filePath := "./testdata/new.sls"
-	err := s.Yaml.Read(filePath)
+	err := s.ReadSlsFile(filePath)
 	if err != nil {
 		t.Errorf("Error getting test file: %s", err)
 	}

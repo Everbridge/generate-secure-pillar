@@ -152,7 +152,7 @@ $ generate-secure-pillar -k "Salt Master" decrypt recurse -d /path/to/pillar/sec
 					outputFilePath = inputFilePath
 				}
 				s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, logger)
-				err := s.Yaml.Read(inputFilePath)
+				err := s.ReadSlsFile(inputFilePath)
 				if err != nil {
 					logger.Fatal(err)
 				}
@@ -263,7 +263,7 @@ $ generate-secure-pillar -k "Salt Master" decrypt recurse -d /path/to/pillar/sec
 					},
 					Action: func(c *cli.Context) error {
 						s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, logger)
-						err := s.Yaml.Read(inputFilePath)
+						err := s.ReadSlsFile(inputFilePath)
 						if err != nil {
 							logger.Fatal(err)
 						}
