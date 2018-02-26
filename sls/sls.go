@@ -1,6 +1,7 @@
 package sls
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
 	"io/ioutil"
@@ -47,6 +48,36 @@ func New(secretNames []string, secretValues []string, topLevelElement string, pu
 	p = pki.New(pgpKeyName, publicKeyRing, secretKeyRing, logger)
 
 	return s
+}
+
+// ReadSlsFile open and read a yaml file, if the file has include statements
+// we throw an error as the YAML parser will try to act on the include directives
+func (s *Sls) ReadSlsFile(filePath string) error {
+	fullPath, err := filepath.Abs(filePath)
+	if err != nil {
+		return err
+	}
+
+	f, err := os.Open(fullPath)
+	if err != nil {
+		return err
+	}
+
+	// Splits on newlines by default.
+	scanner := bufio.NewScanner(f)
+
+	// https://golang.org/pkg/bufio/#Scanner.Scan
+	for scanner.Scan() {
+		if strings.Contains(scanner.Text(), "include:") {
+			return fmt.Errorf("%s contains include directives", filePath)
+		}
+	}
+	if err = scanner.Err(); err != nil {
+		return err
+	}
+
+	err = s.Yaml.Read(fullPath)
+	return err
 }
 
 // WriteSlsFile writes a buffer to the specified file
@@ -103,9 +134,9 @@ func (s *Sls) CipherTextYamlBuffer(filePath string) bytes.Buffer {
 		logger.Fatal(err)
 	}
 
-	err = s.Yaml.Read(filePath)
+	err = s.ReadSlsFile(filePath)
 	if err != nil {
-		logger.Fatal(err)
+		logger.Warnf("%s", err)
 	}
 
 	return s.PerformAction(encrypt)
@@ -122,9 +153,9 @@ func (s *Sls) PlainTextYamlBuffer(filePath string) bytes.Buffer {
 		logger.Fatal(err)
 	}
 
-	err = s.Yaml.Read(filePath)
+	err = s.ReadSlsFile(filePath)
 	if err != nil {
-		logger.Fatal(err)
+		logger.Warnf("%s", err)
 	}
 
 	return s.PerformAction(decrypt)
