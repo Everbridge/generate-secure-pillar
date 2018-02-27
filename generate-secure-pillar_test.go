@@ -179,7 +179,10 @@ func TestDecryptSecret(t *testing.T) {
 	}
 	for _, v := range yaml.Get(topLevelElement).(map[interface{}]interface{}) {
 		cipherText := p.EncryptSecret(v.(string))
-		plainText := p.DecryptSecret(cipherText)
+		plainText, err := p.DecryptSecret(cipherText)
+		if err != nil {
+			t.Errorf("got error: %s", err)
+		}
 		if strings.Contains(plainText, pgpHeader) {
 			t.Errorf("YAML content was not decrypted.")
 		}
