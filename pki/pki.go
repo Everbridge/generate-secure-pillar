@@ -96,35 +96,35 @@ func (p *Pki) EncryptSecret(plainText string) (cipherText string) {
 }
 
 // DecryptSecret returns decrypted cipherText
-func (p *Pki) DecryptSecret(cipherText string) (plainText string) {
+func (p *Pki) DecryptSecret(cipherText string) (plainText string, err error) {
 	privringFile, err := os.Open(p.SecretKeyRing)
 	if err != nil {
-		logger.Fatal("unable to open secring: ", err)
+		return "", fmt.Errorf("unable to open secring: %s", err)
 	}
 	privring, err := openpgp.ReadKeyRing(privringFile)
 	if err != nil {
-		logger.Fatal("cannot read private keys: ", err)
+		return "", fmt.Errorf("cannot read private keys: %s", err)
 	} else if privring == nil {
-		logger.Fatal(fmt.Sprintf("%s is empty!", p.SecretKeyRing))
+		return "", fmt.Errorf(fmt.Sprintf("%s is empty!", p.SecretKeyRing))
 	}
 
 	decbuf := bytes.NewBuffer([]byte(cipherText))
 	block, err := armor.Decode(decbuf)
 	if block.Type != "PGP MESSAGE" {
-		logger.Fatal("block type is not PGP MESSAGE: ", err)
+		return "", fmt.Errorf("block type is not PGP MESSAGE: %s", err)
 	}
 
 	md, err := openpgp.ReadMessage(block.Body, privring, nil, nil)
 	if err != nil {
-		logger.Fatal("unable to read PGP message: ", err)
+		return "", fmt.Errorf("unable to read PGP message: %s", err)
 	}
 
 	bytes, err := ioutil.ReadAll(md.UnverifiedBody)
 	if err != nil {
-		logger.Fatal("unable to read message body: ", err)
+		return "", fmt.Errorf("unable to read message body: %s", err)
 	}
 
-	return string(bytes)
+	return string(bytes), err
 }
 
 // GetKeyByID returns a keyring by the given ID

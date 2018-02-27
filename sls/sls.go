@@ -293,6 +293,7 @@ func (s *Sls) PerformAction(action string) bytes.Buffer {
 }
 
 func processValues(vals interface{}, action string) interface{} {
+	var err error
 	vtype := reflect.TypeOf(vals).Kind()
 
 	var res interface{}
@@ -305,7 +306,10 @@ func processValues(vals interface{}, action string) interface{} {
 		switch action {
 		case decrypt:
 			if isEncrypted(to.String(vals)) {
-				vals = p.DecryptSecret(to.String(vals))
+				vals, err = p.DecryptSecret(to.String(vals))
+				if err != nil {
+					logger.Errorf("error decrypting value: %s", err)
+				}
 			}
 		case encrypt:
 			if !isEncrypted(to.String(vals)) {
@@ -319,6 +323,7 @@ func processValues(vals interface{}, action string) interface{} {
 }
 
 func doSlice(vals interface{}, action string) interface{} {
+	var err error
 	var things []interface{}
 
 	for _, item := range vals.([]interface{}) {
@@ -335,7 +340,10 @@ func doSlice(vals interface{}, action string) interface{} {
 			switch action {
 			case decrypt:
 				if isEncrypted(to.String(item)) {
-					thing = p.DecryptSecret(to.String(item))
+					thing, err = p.DecryptSecret(to.String(item))
+					if err != nil {
+						logger.Errorf("error decrypting value: %s", err)
+					}
 				}
 			case encrypt:
 				if !isEncrypted(to.String(item)) {
@@ -350,6 +358,7 @@ func doSlice(vals interface{}, action string) interface{} {
 }
 
 func doMap(vals map[interface{}]interface{}, action string) map[interface{}]interface{} {
+	var err error
 	var ret = make(map[interface{}]interface{})
 
 	for key, val := range vals {
@@ -364,7 +373,10 @@ func doMap(vals map[interface{}]interface{}, action string) map[interface{}]inte
 			switch action {
 			case decrypt:
 				if isEncrypted(to.String(val)) {
-					val = p.DecryptSecret(to.String(val))
+					val, err = p.DecryptSecret(to.String(val))
+					if err != nil {
+						logger.Errorf("error decrypting value for: %s, %s", key, err)
+					}
 				}
 			case encrypt:
 				if !isEncrypted(to.String(val)) {
