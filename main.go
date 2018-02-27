@@ -22,7 +22,7 @@ var recurseDir string
 var secretNames cli.StringSlice
 var secretValues cli.StringSlice
 var topLevelElement string
-var action string
+var yamlPath string
 
 var defaultPubRing = "~/.gnupg/pubring.gpg"
 var defaultSecRing = "~/.gnupg/secring.gpg"
@@ -252,14 +252,13 @@ $ generate-secure-pillar -k "Salt Master" decrypt recurse -d /path/to/pillar/sec
 					},
 				},
 				{
-					Name: "test",
+					Name: "path",
 					Flags: []cli.Flag{
 						inputFlag,
-						outputFlag,
 						cli.StringFlag{
-							Name:        "action, a",
-							Usage:       "encrypt or decrypt",
-							Destination: &action,
+							Name:        "path, p",
+							Usage:       "YAML path to decrypt",
+							Destination: &yamlPath,
 						},
 					},
 					Action: func(c *cli.Context) error {
@@ -269,15 +268,13 @@ $ generate-secure-pillar -k "Salt Master" decrypt recurse -d /path/to/pillar/sec
 							logger.Fatal(err)
 						}
 
-						// vals := s.GetValueFromPath(topLevelElement)
-						// vtype := reflect.TypeOf(vals).Kind()
-						// fmt.Printf("VALS: %#v, TYPE: %v\n", vals, vtype)
-						// vals = s.Yaml.Get(topLevelElement)
-						// vtype = reflect.TypeOf(vals).Kind()
-						// fmt.Printf("VALS: %#v, TYPE: %v\n", vals, vtype)
-
-						buffer := s.PerformAction(action)
-						s.WriteSlsFile(buffer, outputFilePath)
+						vals := s.GetValueFromPath(yamlPath)
+						if vals != nil {
+							vals = s.ProcessValues(vals, "decrypt")
+							fmt.Printf("%s: %s\n", yamlPath, vals)
+						} else {
+							logger.Warnf("unable to find path: '%s'", yamlPath)
+						}
 
 						return nil
 					},
