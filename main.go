@@ -84,6 +84,9 @@ $ generate-secure-pillar -k "Salt Master" encrypt recurse -d /path/to/pillar/sec
 # recurse through all sls files, decrypting all values
 $ generate-secure-pillar -k "Salt Master" decrypt recurse -d /path/to/pillar/secure/stuff
 
+# decrypt a specific existing value
+$ generate-secure-pillar -k "Salt Master" decrypt path --path "some:yaml:path" --file new.sls
+
 `, cli.AppHelpTemplate)
 
 	app.Copyright = "(c) 2018 Everbridge, Inc."
