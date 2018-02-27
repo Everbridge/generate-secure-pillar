@@ -191,8 +191,12 @@ $ generate-secure-pillar -k "Salt Master" decrypt recurse -d /path/to/pillar/sec
 						if inputFilePath != os.Stdin.Name() && outputFilePath == "" {
 							outputFilePath = inputFilePath
 						}
-						buffer := s.CipherTextYamlBuffer(inputFilePath)
-						s.WriteSlsFile(buffer, outputFilePath)
+						buffer, err := s.CipherTextYamlBuffer(inputFilePath)
+						if err != nil {
+							logger.Fatalf("%s", err)
+						} else {
+							s.WriteSlsFile(buffer, outputFilePath)
+						}
 						return nil
 					},
 				},
@@ -230,8 +234,12 @@ $ generate-secure-pillar -k "Salt Master" decrypt recurse -d /path/to/pillar/sec
 						if inputFilePath != os.Stdin.Name() && outputFilePath == "" {
 							outputFilePath = inputFilePath
 						}
-						buffer := s.PlainTextYamlBuffer(inputFilePath)
-						s.WriteSlsFile(buffer, outputFilePath)
+						buffer, err := s.PlainTextYamlBuffer(inputFilePath)
+						if err != nil {
+							logger.Fatalf("%s", err)
+						} else {
+							s.WriteSlsFile(buffer, outputFilePath)
+						}
 						return nil
 					},
 				},
