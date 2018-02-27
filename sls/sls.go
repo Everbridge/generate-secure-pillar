@@ -124,41 +124,45 @@ func (s *Sls) FindSlsFiles(searchDir string) ([]string, int) {
 
 // CipherTextYamlBuffer returns a buffer with encrypted and formatted yaml text
 // If the 'all' flag is set all values under the designated top level element are encrypted
-func (s *Sls) CipherTextYamlBuffer(filePath string) bytes.Buffer {
+func (s *Sls) CipherTextYamlBuffer(filePath string) (bytes.Buffer, error) {
+	var buffer bytes.Buffer
 	err := s.CheckForFile(filePath)
 	if err != nil {
-		logger.Fatal(err)
+		return buffer, err
 	}
 	filePath, err = filepath.Abs(filePath)
 	if err != nil {
-		logger.Fatal(err)
+		return buffer, err
 	}
 
 	err = s.ReadSlsFile(filePath)
 	if err != nil {
-		logger.Warnf("%s", err)
+		return buffer, err
 	}
 
-	return s.PerformAction(encrypt)
+	buffer = s.PerformAction(encrypt)
+	return buffer, err
 }
 
 // PlainTextYamlBuffer decrypts all values under the top level element and returns a formatted buffer
-func (s *Sls) PlainTextYamlBuffer(filePath string) bytes.Buffer {
+func (s *Sls) PlainTextYamlBuffer(filePath string) (bytes.Buffer, error) {
+	var buffer bytes.Buffer
 	err := s.CheckForFile(filePath)
 	if err != nil {
-		logger.Fatal(err)
+		return buffer, err
 	}
 	filePath, err = filepath.Abs(filePath)
 	if err != nil {
-		logger.Fatal(err)
+		return buffer, err
 	}
 
 	err = s.ReadSlsFile(filePath)
 	if err != nil {
-		logger.Warnf("%s", err)
+		return buffer, err
 	}
 
-	return s.PerformAction(decrypt)
+	buffer = s.PerformAction(decrypt)
+	return buffer, err
 }
 
 // FormatBuffer returns a formatted .sls buffer with the gpg renderer line
@@ -223,9 +227,17 @@ func (s *Sls) ProcessDir(recurseDir string, action string) {
 			logger.Infof("processing %s", file)
 			var buffer bytes.Buffer
 			if action == encrypt {
-				buffer = s.CipherTextYamlBuffer(file)
+				buffer, err = s.CipherTextYamlBuffer(file)
+				if err != nil {
+					logger.Warnf("%s", err)
+					continue
+				}
 			} else if action == decrypt {
-				buffer = s.PlainTextYamlBuffer(file)
+				buffer, err = s.PlainTextYamlBuffer(file)
+				if err != nil {
+					logger.Warnf("%s", err)
+					continue
+				}
 			} else {
 				logger.Fatalf("unknown action: %s", action)
 			}
@@ -293,7 +305,6 @@ func (s *Sls) PerformAction(action string) bytes.Buffer {
 }
 
 func processValues(vals interface{}, action string) interface{} {
-	var err error
 	vtype := reflect.TypeOf(vals).Kind()
 
 	var res interface{}
@@ -306,9 +317,11 @@ func processValues(vals interface{}, action string) interface{} {
 		switch action {
 		case decrypt:
 			if isEncrypted(to.String(vals)) {
-				vals, err = p.DecryptSecret(to.String(vals))
+				plainText, err := p.DecryptSecret(to.String(vals))
 				if err != nil {
 					logger.Errorf("error decrypting value: %s", err)
+				} else {
+					vals = plainText
 				}
 			}
 		case encrypt:
@@ -323,7 +336,6 @@ func processValues(vals interface{}, action string) interface{} {
 }
 
 func doSlice(vals interface{}, action string) interface{} {
-	var err error
 	var things []interface{}
 
 	for _, item := range vals.([]interface{}) {
@@ -340,9 +352,12 @@ func doSlice(vals interface{}, action string) interface{} {
 			switch action {
 			case decrypt:
 				if isEncrypted(to.String(item)) {
-					thing, err = p.DecryptSecret(to.String(item))
+					plainText, err := p.DecryptSecret(to.String(item))
 					if err != nil {
 						logger.Errorf("error decrypting value: %s", err)
+						thing = to.String(item)
+					} else {
+						thing = plainText
 					}
 				}
 			case encrypt:
@@ -358,7 +373,6 @@ func doSlice(vals interface{}, action string) interface{} {
 }
 
 func doMap(vals map[interface{}]interface{}, action string) map[interface{}]interface{} {
-	var err error
 	var ret = make(map[interface{}]interface{})
 
 	for key, val := range vals {
@@ -373,9 +387,11 @@ func doMap(vals map[interface{}]interface{}, action string) map[interface{}]inte
 			switch action {
 			case decrypt:
 				if isEncrypted(to.String(val)) {
-					val, err = p.DecryptSecret(to.String(val))
+					plainText, err := p.DecryptSecret(to.String(val))
 					if err != nil {
 						logger.Errorf("error decrypting value for: %s, %s", key, err)
+					} else {
+						val = plainText
 					}
 				}
 			case encrypt:

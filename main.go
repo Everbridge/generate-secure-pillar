@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 
@@ -50,7 +51,7 @@ func main() {
 		logger.Level = logrus.DebugLevel
 	}
 	app := cli.NewApp()
-	app.Version = "1.0.131"
+	app.Version = "1.0.134"
 	app.Authors = []cli.Author{
 		cli.Author{
 			Name:  "Ed Silva",
@@ -191,8 +192,8 @@ $ generate-secure-pillar -k "Salt Master" decrypt recurse -d /path/to/pillar/sec
 						if inputFilePath != os.Stdin.Name() && outputFilePath == "" {
 							outputFilePath = inputFilePath
 						}
-						buffer := s.CipherTextYamlBuffer(inputFilePath)
-						s.WriteSlsFile(buffer, outputFilePath)
+						buffer, err := s.CipherTextYamlBuffer(inputFilePath)
+						safeWrite(&s, buffer, err)
 						return nil
 					},
 				},
@@ -230,8 +231,8 @@ $ generate-secure-pillar -k "Salt Master" decrypt recurse -d /path/to/pillar/sec
 						if inputFilePath != os.Stdin.Name() && outputFilePath == "" {
 							outputFilePath = inputFilePath
 						}
-						buffer := s.PlainTextYamlBuffer(inputFilePath)
-						s.WriteSlsFile(buffer, outputFilePath)
+						buffer, err := s.PlainTextYamlBuffer(inputFilePath)
+						safeWrite(&s, buffer, err)
 						return nil
 					},
 				},
@@ -288,5 +289,13 @@ $ generate-secure-pillar -k "Salt Master" decrypt recurse -d /path/to/pillar/sec
 	err := app.Run(os.Args)
 	if err != nil {
 		logger.Fatal(err)
+	}
+}
+
+func safeWrite(s *sls.Sls, buffer bytes.Buffer, err error) {
+	if err != nil {
+		logger.Fatalf("%s", err)
+	} else {
+		s.WriteSlsFile(buffer, outputFilePath)
 	}
 }
