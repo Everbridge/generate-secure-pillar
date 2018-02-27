@@ -69,7 +69,7 @@ func (s *Sls) ReadSlsFile(filePath string) error {
 	// https://golang.org/pkg/bufio/#Scanner.Scan
 	for scanner.Scan() {
 		if strings.Contains(scanner.Text(), "include:") {
-			return fmt.Errorf("%s contains include directives", filePath)
+			return fmt.Errorf("skipping %s: contains include directives", filePath)
 		}
 	}
 	if err = scanner.Err(); err != nil {
@@ -98,7 +98,7 @@ func (s *Sls) WriteSlsFile(buffer bytes.Buffer, outFilePath string) {
 		logger.Fatal("error writing sls file: ", err)
 	}
 	if !stdOut {
-		logger.Printf("Wrote out to file: '%s'\n", outFilePath)
+		logger.Printf("Wrote out to file: '%s'", outFilePath)
 	}
 }
 
