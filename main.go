@@ -267,14 +267,7 @@ $ generate-secure-pillar -k "Salt Master" decrypt recurse -d /path/to/pillar/sec
 						if err != nil {
 							logger.Fatal(err)
 						}
-
-						vals := s.GetValueFromPath(yamlPath)
-						if vals != nil {
-							vals = s.ProcessValues(vals, "decrypt")
-							fmt.Printf("%s: %s\n", yamlPath, vals)
-						} else {
-							logger.Warnf("unable to find path: '%s'", yamlPath)
-						}
+						decryptPath(&s, yamlPath)
 
 						return nil
 					},
@@ -294,5 +287,15 @@ func safeWrite(s *sls.Sls, buffer bytes.Buffer, err error) {
 		logger.Fatalf("%s", err)
 	} else {
 		s.WriteSlsFile(buffer, outputFilePath)
+	}
+}
+
+func decryptPath(s *sls.Sls, path string) {
+	vals := s.GetValueFromPath(path)
+	if vals != nil {
+		vals = s.ProcessValues(vals, "decrypt")
+		fmt.Printf("%s: %s\n", path, vals)
+	} else {
+		logger.Warnf("unable to find path: '%s'", path)
 	}
 }
