@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 
@@ -192,11 +193,7 @@ $ generate-secure-pillar -k "Salt Master" decrypt recurse -d /path/to/pillar/sec
 							outputFilePath = inputFilePath
 						}
 						buffer, err := s.CipherTextYamlBuffer(inputFilePath)
-						if err != nil {
-							logger.Fatalf("%s", err)
-						} else {
-							s.WriteSlsFile(buffer, outputFilePath)
-						}
+						safeWrite(&s, buffer, err)
 						return nil
 					},
 				},
@@ -235,11 +232,7 @@ $ generate-secure-pillar -k "Salt Master" decrypt recurse -d /path/to/pillar/sec
 							outputFilePath = inputFilePath
 						}
 						buffer, err := s.PlainTextYamlBuffer(inputFilePath)
-						if err != nil {
-							logger.Fatalf("%s", err)
-						} else {
-							s.WriteSlsFile(buffer, outputFilePath)
-						}
+						safeWrite(&s, buffer, err)
 						return nil
 					},
 				},
@@ -296,5 +289,13 @@ $ generate-secure-pillar -k "Salt Master" decrypt recurse -d /path/to/pillar/sec
 	err := app.Run(os.Args)
 	if err != nil {
 		logger.Fatal(err)
+	}
+}
+
+func safeWrite(s *sls.Sls, buffer bytes.Buffer, err error) {
+	if err != nil {
+		logger.Fatalf("%s", err)
+	} else {
+		s.WriteSlsFile(buffer, outputFilePath)
 	}
 }
