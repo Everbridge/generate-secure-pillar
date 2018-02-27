@@ -22,7 +22,7 @@ var recurseDir string
 var secretNames cli.StringSlice
 var secretValues cli.StringSlice
 var topLevelElement string
-var action string
+var yamlPath string
 
 var defaultPubRing = "~/.gnupg/pubring.gpg"
 var defaultSecRing = "~/.gnupg/secring.gpg"
@@ -51,7 +51,7 @@ func main() {
 		logger.Level = logrus.DebugLevel
 	}
 	app := cli.NewApp()
-	app.Version = "1.0.138"
+	app.Version = "1.0.144"
 	app.Authors = []cli.Author{
 		cli.Author{
 			Name:  "Ed Silva",
@@ -83,6 +83,9 @@ $ generate-secure-pillar -k "Salt Master" encrypt recurse -d /path/to/pillar/sec
 
 # recurse through all sls files, decrypting all values
 $ generate-secure-pillar -k "Salt Master" decrypt recurse -d /path/to/pillar/secure/stuff
+
+# decrypt a specific existing value
+$ generate-secure-pillar -k "Salt Master" decrypt path --path "some:yaml:path" --file new.sls
 
 `, cli.AppHelpTemplate)
 
@@ -252,14 +255,13 @@ $ generate-secure-pillar -k "Salt Master" decrypt recurse -d /path/to/pillar/sec
 					},
 				},
 				{
-					Name: "test",
+					Name: "path",
 					Flags: []cli.Flag{
 						inputFlag,
-						outputFlag,
 						cli.StringFlag{
-							Name:        "action, a",
-							Usage:       "encrypt or decrypt",
-							Destination: &action,
+							Name:        "path, p",
+							Usage:       "YAML path to decrypt",
+							Destination: &yamlPath,
 						},
 					},
 					Action: func(c *cli.Context) error {
@@ -268,16 +270,7 @@ $ generate-secure-pillar -k "Salt Master" decrypt recurse -d /path/to/pillar/sec
 						if err != nil {
 							logger.Fatal(err)
 						}
-
-						// vals := s.GetValueFromPath(topLevelElement)
-						// vtype := reflect.TypeOf(vals).Kind()
-						// fmt.Printf("VALS: %#v, TYPE: %v\n", vals, vtype)
-						// vals = s.Yaml.Get(topLevelElement)
-						// vtype = reflect.TypeOf(vals).Kind()
-						// fmt.Printf("VALS: %#v, TYPE: %v\n", vals, vtype)
-
-						buffer := s.PerformAction(action)
-						s.WriteSlsFile(buffer, outputFilePath)
+						decryptPath(&s, yamlPath)
 
 						return nil
 					},
@@ -297,5 +290,15 @@ func safeWrite(s *sls.Sls, buffer bytes.Buffer, err error) {
 		logger.Fatalf("%s", err)
 	} else {
 		s.WriteSlsFile(buffer, outputFilePath)
+	}
+}
+
+func decryptPath(s *sls.Sls, path string) {
+	vals := s.GetValueFromPath(path)
+	if vals != nil {
+		vals = s.ProcessValues(vals, "decrypt")
+		fmt.Printf("%s: %s\n", path, vals)
+	} else {
+		logger.Warnf("unable to find path: '%s'", path)
 	}
 }

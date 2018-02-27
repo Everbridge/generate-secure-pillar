@@ -288,13 +288,13 @@ func (s *Sls) PerformAction(action string) bytes.Buffer {
 			if s.TopLevelElement != "" {
 				vals := s.GetValueFromPath(key)
 				if s.TopLevelElement == key {
-					stuff[key] = processValues(vals, action)
+					stuff[key] = s.ProcessValues(vals, action)
 				} else {
 					stuff[key] = vals
 				}
 			} else {
 				vals := s.GetValueFromPath(key)
-				stuff[key] = processValues(vals, action)
+				stuff[key] = s.ProcessValues(vals, action)
 			}
 		}
 		// replace the values in the Yaml object
@@ -304,7 +304,8 @@ func (s *Sls) PerformAction(action string) bytes.Buffer {
 	return s.FormatBuffer()
 }
 
-func processValues(vals interface{}, action string) interface{} {
+// ProcessValues will encrypt or decrypt given values
+func (s *Sls) ProcessValues(vals interface{}, action string) interface{} {
 	vtype := reflect.TypeOf(vals).Kind()
 
 	var res interface{}
