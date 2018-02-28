@@ -14,7 +14,7 @@ import (
 	yaml "github.com/esilva-everbridge/yaml"
 	"github.com/gosexy/to"
 	"github.com/sirupsen/logrus"
-	yamlv1 "gopkg.in/yaml.v1"
+	yamlv2 "gopkg.in/yaml.v2"
 )
 
 // pgpHeader header const
@@ -169,7 +169,7 @@ func (s *Sls) PlainTextYamlBuffer(filePath string) (bytes.Buffer, error) {
 func (s *Sls) FormatBuffer() bytes.Buffer {
 	var buffer bytes.Buffer
 
-	out, err := yamlv1.Marshal(s.Yaml.Values)
+	out, err := yamlv2.Marshal(s.Yaml.Values)
 	if err != nil {
 		logger.Fatal(err)
 	}
