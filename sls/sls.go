@@ -218,7 +218,7 @@ func (s *Sls) ProcessDir(recurseDir string, action string) {
 	if err != nil {
 		logger.Fatalf("cannot stat %s: %s", recurseDir, err)
 	}
-	if info.IsDir() {
+	if info.IsDir() && info.Name() != ".." {
 		slsFiles, count := s.FindSlsFiles(recurseDir)
 		if count == 0 {
 			logger.Fatalf("%s has no sls files", recurseDir)
