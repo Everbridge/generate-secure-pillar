@@ -81,11 +81,11 @@ $ generate-secure-pillar -k "Salt Master" --element secret_stuff encrypt all --f
 # recurse through all sls files, encrypting all values
 $ generate-secure-pillar -k "Salt Master" encrypt recurse -d /path/to/pillar/secure/stuff
 
-# recurse through all sls files, decrypting all values
-$ generate-secure-pillar -k "Salt Master" decrypt recurse -d /path/to/pillar/secure/stuff
+# recurse through all sls files, decrypting all values (requires imported private key)
+$ generate-secure-pillar decrypt recurse -d /path/to/pillar/secure/stuff
 
-# decrypt a specific existing value
-$ generate-secure-pillar -k "Salt Master" decrypt path --path "some:yaml:path" --file new.sls
+# decrypt a specific existing value (requires imported private key)
+$ generate-secure-pillar decrypt path --path "some:yaml:path" --file new.sls
 
 `, cli.AppHelpTemplate)
 
