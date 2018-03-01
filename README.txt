@@ -5,7 +5,7 @@ USAGE:
    generate-secure-pillar [global options] command [command options] [arguments...]
 
 VERSION:
-   1.0.156
+   1.0.158
 
 AUTHOR:
    Ed Silva <ed.silva@everbridge.com>
@@ -56,4 +56,7 @@ $ generate-secure-pillar decrypt recurse -d /path/to/pillar/secure/stuff
 
 # decrypt a specific existing value (requires imported private key)
 $ generate-secure-pillar decrypt path --path "some:yaml:path" --file new.sls
+
+# decrypt all files and re-encrypt with given key (requires imported private key)
+$ generate-secure-pillar -k "New Salt Master Key" rotate -d /path/to/pillar/secure/stuff
 

@@ -51,7 +51,7 @@ func main() {
 		logger.Level = logrus.DebugLevel
 	}
 	app := cli.NewApp()
-	app.Version = "1.0.156"
+	app.Version = "1.0.158"
 	app.Authors = []cli.Author{
 		cli.Author{
 			Name:  "Ed Silva",
@@ -86,6 +86,9 @@ $ generate-secure-pillar decrypt recurse -d /path/to/pillar/secure/stuff
 
 # decrypt a specific existing value (requires imported private key)
 $ generate-secure-pillar decrypt path --path "some:yaml:path" --file new.sls
+
+# decrypt all files and re-encrypt with given key (requires imported private key)
+$ generate-secure-pillar -k "New Salt Master Key" rotate -d /path/to/pillar/secure/stuff
 
 `, cli.AppHelpTemplate)
 
