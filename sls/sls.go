@@ -14,7 +14,7 @@ import (
 	yaml "github.com/esilva-everbridge/yaml"
 	"github.com/gosexy/to"
 	"github.com/sirupsen/logrus"
-	yamlv1 "gopkg.in/yaml.v1"
+	yamlv2 "gopkg.in/yaml.v2"
 )
 
 // pgpHeader header const
@@ -93,6 +93,15 @@ func (s *Sls) WriteSlsFile(buffer bytes.Buffer, outFilePath string) {
 		stdOut = true
 	}
 
+	// check that the path exists, create it if not
+	if !stdOut {
+		dir := filepath.Dir(fullPath)
+		err = os.MkdirAll(dir, 0700)
+		if err != nil {
+			logger.Fatal("error writing sls file: ", err)
+		}
+	}
+
 	err = ioutil.WriteFile(fullPath, buffer.Bytes(), 0644)
 	if err != nil {
 		logger.Fatal("error writing sls file: ", err)
@@ -169,7 +178,7 @@ func (s *Sls) PlainTextYamlBuffer(filePath string) (bytes.Buffer, error) {
 func (s *Sls) FormatBuffer() bytes.Buffer {
 	var buffer bytes.Buffer
 
-	out, err := yamlv1.Marshal(s.Yaml.Values)
+	out, err := yamlv2.Marshal(s.Yaml.Values)
 	if err != nil {
 		logger.Fatal(err)
 	}

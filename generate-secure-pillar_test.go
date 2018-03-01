@@ -21,7 +21,7 @@ func TestWriteSlsFile(t *testing.T) {
 	publicKeyRing = defaultPubRing
 	s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, nil)
 
-	slsFile := "./testdata/foo.sls"
+	slsFile := "./testdata/foo/foo.sls"
 	s.SetValueFromPath("secret", "text")
 
 	buffer := s.FormatBuffer()
