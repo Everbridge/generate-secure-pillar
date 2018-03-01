@@ -51,7 +51,7 @@ func main() {
 		logger.Level = logrus.DebugLevel
 	}
 	app := cli.NewApp()
-	app.Version = "1.0.153"
+	app.Version = "1.0.156"
 	app.Authors = []cli.Author{
 		cli.Author{
 			Name:  "Ed Silva",
@@ -275,6 +275,24 @@ $ generate-secure-pillar decrypt path --path "some:yaml:path" --file new.sls
 						return nil
 					},
 				},
+			},
+		},
+		{
+			Name:    "rotate",
+			Aliases: []string{"r"},
+			Usage:   "decrypt existing files and re-encrypt with a new key",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:        "dir, d",
+					Usage:       "recurse over all .sls files in the given directory",
+					Destination: &recurseDir,
+				},
+			},
+			Action: func(c *cli.Context) error {
+				s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, logger)
+				s.ProcessDir(recurseDir, "decrypt")
+				s.ProcessDir(recurseDir, "encrypt")
+				return nil
 			},
 		},
 	}

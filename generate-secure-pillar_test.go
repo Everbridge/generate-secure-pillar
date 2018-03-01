@@ -41,6 +41,7 @@ func TestWriteSlsFile(t *testing.T) {
 			yaml.Get("secret"), "text")
 	}
 	os.Remove(slsFile)
+	os.Remove("./testdata/foo/")
 }
 
 func TestFindSlsFiles(t *testing.T) {
