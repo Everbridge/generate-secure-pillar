@@ -93,6 +93,15 @@ func (s *Sls) WriteSlsFile(buffer bytes.Buffer, outFilePath string) {
 		stdOut = true
 	}
 
+	// check that the path exists, create it if not
+	if !stdOut {
+		dir := filepath.Dir(fullPath)
+		err = os.MkdirAll(dir, 0700)
+		if err != nil {
+			logger.Fatal("error writing sls file: ", err)
+		}
+	}
+
 	err = ioutil.WriteFile(fullPath, buffer.Bytes(), 0644)
 	if err != nil {
 		logger.Fatal("error writing sls file: ", err)
