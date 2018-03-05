@@ -3,16 +3,13 @@ package pki
 import (
 	"bufio"
 	"bytes"
-	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"os/user"
 	"path/filepath"
-	"strings"
 	"time"
 
-	"github.com/jcmdev0/gpgagent"
 	"github.com/keybase/go-crypto/openpgp"
 	"github.com/keybase/go-crypto/openpgp/armor"
 	"github.com/sirupsen/logrus"
@@ -68,34 +65,34 @@ func New(pgpKeyName string, publicKeyRing string, secretKeyRing string, log *log
 }
 
 // PromptFunction prompts for secure key pass phrase
-func (p *Pki) PromptFunction(keys []openpgp.Key, symmetric bool) ([]byte, error) {
-	conn, err := gpgagent.NewGpgAgentConn()
-	if err != nil {
-		return nil, err
-	}
-	defer conn.Close()
+// func (p *Pki) PromptFunction(keys []openpgp.Key, symmetric bool) ([]byte, error) {
+// 	conn, err := gpgagent.NewGpgAgentConn()
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	defer conn.Close()
 
-	for _, key := range keys {
-		cacheID := strings.ToUpper(hex.EncodeToString(key.PublicKey.Fingerprint[:]))
+// 	for _, key := range keys {
+// 		cacheID := strings.ToUpper(hex.EncodeToString(key.PublicKey.Fingerprint[:]))
 
-		// TODO: Add prompt, etc.
-		request := gpgagent.PassphraseRequest{CacheKey: cacheID}
+// 		// TODO: Add prompt, etc.
+// 		request := gpgagent.PassphraseRequest{CacheKey: cacheID}
 
-		passphrase, err := conn.GetPassphrase(&request)
-		if err != nil {
-			return nil, err
-		}
+// 		passphrase, err := conn.GetPassphrase(&request)
+// 		if err != nil {
+// 			return nil, err
+// 		}
 
-		err = key.PrivateKey.Decrypt([]byte(passphrase))
-		if err != nil {
-			return nil, err
-		}
+// 		err = key.PrivateKey.Decrypt([]byte(passphrase))
+// 		if err != nil {
+// 			return nil, err
+// 		}
 
-		return []byte(passphrase), nil
-	}
+// 		return []byte(passphrase), nil
+// 	}
 
-	return nil, fmt.Errorf("Unable to find key")
-}
+// 	return nil, fmt.Errorf("Unable to find key")
+// }
 
 // EncryptSecret returns encrypted plainText
 func (p *Pki) EncryptSecret(plainText string) (cipherText string) {
