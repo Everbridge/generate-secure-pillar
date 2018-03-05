@@ -5,7 +5,7 @@ USAGE:
    generate-secure-pillar [global options] command [command options] [arguments...]
 
 VERSION:
-   1.0.164
+   1.0.167
 
 AUTHOR:
    Ed Silva <ed.silva@everbridge.com>
@@ -44,6 +44,8 @@ $ generate-secure-pillar -k "Salt Master" update --name secret_name --value secr
 
 # encrypt all plain text values in a file
 $ generate-secure-pillar -k "Salt Master" encrypt all --file us1.sls --outfile us1.sls
+# or use --update flag
+$ generate-secure-pillar -k "Salt Master" encrypt all --file us1.sls --update
 
 # encrypt all plain text values in a file under the element 'secret_stuff'
 $ generate-secure-pillar -k "Salt Master" --element secret_stuff encrypt all --file us1.sls --outfile us1.sls
