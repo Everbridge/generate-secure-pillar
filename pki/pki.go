@@ -22,6 +22,7 @@ type Pki struct {
 	PublicKeyRing string
 	SecretKeyRing string
 	PgpKeyName    string
+	PublicKey     *openpgp.Entity
 }
 
 // New returns a pki struct
@@ -33,7 +34,7 @@ func New(pgpKeyName string, publicKeyRing string, secretKeyRing string, log *log
 		logger = logrus.New()
 	}
 
-	p := Pki{publicKeyRing, secretKeyRing, pgpKeyName}
+	p := Pki{publicKeyRing, secretKeyRing, pgpKeyName, nil}
 	publicKeyRing, err = p.ExpandTilde(p.PublicKeyRing)
 	if err != nil {
 		logger.Fatal("cannot expand public key ring path: ", err)
@@ -46,22 +47,56 @@ func New(pgpKeyName string, publicKeyRing string, secretKeyRing string, log *log
 	p.PublicKeyRing = publicKeyRing
 	p.SecretKeyRing = secretKeyRing
 
-	return p
-}
-
-// EncryptSecret returns encrypted plainText
-func (p *Pki) EncryptSecret(plainText string) (cipherText string) {
-	var memBuffer bytes.Buffer
-
 	pubringFile, err := os.Open(p.PublicKeyRing)
 	if err != nil {
+
 		logger.Fatal("cannot read public key ring: ", err)
 	}
 	pubring, err := openpgp.ReadKeyRing(pubringFile)
 	if err != nil {
 		logger.Fatal("cannot read public keys: ", err)
 	}
-	publicKey := p.GetKeyByID(pubring, p.PgpKeyName)
+	p.PublicKey = p.GetKeyByID(pubring, p.PgpKeyName)
+	if err = pubringFile.Close(); err != nil {
+		logger.Fatal("error closing pubring: ", err)
+	}
+
+	return p
+}
+
+// PromptFunction prompts for secure key pass phrase
+// func (p *Pki) PromptFunction(keys []openpgp.Key, symmetric bool) ([]byte, error) {
+// 	conn, err := gpgagent.NewGpgAgentConn()
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	defer conn.Close()
+
+// 	for _, key := range keys {
+// 		cacheID := strings.ToUpper(hex.EncodeToString(key.PublicKey.Fingerprint[:]))
+
+// 		// TODO: Add prompt, etc.
+// 		request := gpgagent.PassphraseRequest{CacheKey: cacheID}
+
+// 		passphrase, err := conn.GetPassphrase(&request)
+// 		if err != nil {
+// 			return nil, err
+// 		}
+
+// 		err = key.PrivateKey.Decrypt([]byte(passphrase))
+// 		if err != nil {
+// 			return nil, err
+// 		}
+
+// 		return []byte(passphrase), nil
+// 	}
+
+// 	return nil, fmt.Errorf("Unable to find key")
+// }
+
+// EncryptSecret returns encrypted plainText
+func (p *Pki) EncryptSecret(plainText string) (cipherText string) {
+	var memBuffer bytes.Buffer
 
 	hints := openpgp.FileHints{IsBinary: false, ModTime: time.Time{}}
 	writer := bufio.NewWriter(&memBuffer)
@@ -70,7 +105,7 @@ func (p *Pki) EncryptSecret(plainText string) (cipherText string) {
 		logger.Fatal("Encode error: ", err)
 	}
 
-	plainFile, err := openpgp.Encrypt(w, []*openpgp.Entity{publicKey}, nil, &hints, nil)
+	plainFile, err := openpgp.Encrypt(w, []*openpgp.Entity{p.PublicKey}, nil, &hints, nil)
 	if err != nil {
 		logger.Fatal("Encryption error: ", err)
 	}
@@ -87,9 +122,6 @@ func (p *Pki) EncryptSecret(plainText string) (cipherText string) {
 	}
 	if err = writer.Flush(); err != nil {
 		logger.Fatal("error flusing writer: ", err)
-	}
-	if err = pubringFile.Close(); err != nil {
-		logger.Fatal("error closing pubring: ", err)
 	}
 
 	return memBuffer.String()

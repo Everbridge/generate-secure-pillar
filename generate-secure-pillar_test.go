@@ -171,6 +171,14 @@ func TestDecryptSecret(t *testing.T) {
 		secretKeyRing = "~/.gnupg/secring.gpg"
 	}
 	p := pki.New(pgpKeyName, publicKeyRing, secretKeyRing, nil)
+	// privringFile, err := os.Open(p.SecretKeyRing)
+	// if err != nil {
+	// 	t.Errorf("unable to open secring: %s", err)
+	// }
+	// privring, err := openpgp.ReadKeyRing(privringFile)
+	// var keys []*openpgp.Entity
+	// keys = append(keys, p.GetKeyByID(privring, "ed@gnzo.org"))
+	// pass, err := p.PromptFunction(keys, false)
 
 	yaml, err := yaml.Open("./testdata/new.sls")
 	if err != nil {

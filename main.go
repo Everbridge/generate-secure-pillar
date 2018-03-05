@@ -23,6 +23,7 @@ var secretNames cli.StringSlice
 var secretValues cli.StringSlice
 var topLevelElement string
 var yamlPath string
+var updateInPlace bool
 
 var defaultPubRing = "~/.gnupg/pubring.gpg"
 var defaultSecRing = "~/.gnupg/secring.gpg"
@@ -51,7 +52,7 @@ func main() {
 		logger.Level = logrus.DebugLevel
 	}
 	app := cli.NewApp()
-	app.Version = "1.0.158"
+	app.Version = "1.0.164"
 	app.Authors = []cli.Author{
 		cli.Author{
 			Name:  "Ed Silva",
@@ -191,11 +192,19 @@ $ generate-secure-pillar -k "New Salt Master Key" rotate -d /path/to/pillar/secu
 			},
 			Subcommands: []cli.Command{
 				{
-					Name:  "all",
-					Flags: fileFlags,
+					Name: "all",
+					Flags: []cli.Flag{
+						inputFlag,
+						outputFlag,
+						cli.BoolFlag{
+							Name:        "update, u",
+							Usage:       "update the input file",
+							Destination: &updateInPlace,
+						},
+					},
 					Action: func(c *cli.Context) error {
 						s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, logger)
-						if inputFilePath != os.Stdin.Name() && outputFilePath == "" {
+						if inputFilePath != os.Stdin.Name() && updateInPlace {
 							outputFilePath = inputFilePath
 						}
 						buffer, err := s.CipherTextYamlBuffer(inputFilePath)
@@ -230,11 +239,19 @@ $ generate-secure-pillar -k "New Salt Master Key" rotate -d /path/to/pillar/secu
 			},
 			Subcommands: []cli.Command{
 				{
-					Name:  "all",
-					Flags: fileFlags,
+					Name: "all",
+					Flags: []cli.Flag{
+						inputFlag,
+						outputFlag,
+						cli.BoolFlag{
+							Name:        "update, u",
+							Usage:       "update the input file",
+							Destination: &updateInPlace,
+						},
+					},
 					Action: func(c *cli.Context) error {
 						s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, logger)
-						if inputFilePath != os.Stdin.Name() && outputFilePath == "" {
+						if inputFilePath != os.Stdin.Name() && updateInPlace {
 							outputFilePath = inputFilePath
 						}
 						buffer, err := s.PlainTextYamlBuffer(inputFilePath)
