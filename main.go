@@ -52,7 +52,7 @@ func main() {
 		logger.Level = logrus.DebugLevel
 	}
 	app := cli.NewApp()
-	app.Version = "1.0.167"
+	app.Version = "1.0.169"
 	app.Authors = []cli.Author{
 		cli.Author{
 			Name:  "Ed Silva",
@@ -190,7 +190,7 @@ $ generate-secure-pillar -k "New Salt Master Key" rotate -d /path/to/pillar/secu
 			Aliases: []string{"e"},
 			Usage:   "perform encryption operations",
 			Action: func(c *cli.Context) error {
-				return nil
+				return cli.ShowCommandHelp(c, "")
 			},
 			Subcommands: []cli.Command{
 				{
@@ -237,7 +237,7 @@ $ generate-secure-pillar -k "New Salt Master Key" rotate -d /path/to/pillar/secu
 			Usage:   "perform decryption operations",
 			Flags:   fileFlags,
 			Action: func(c *cli.Context) error {
-				return nil
+				return cli.ShowCommandHelp(c, "")
 			},
 			Subcommands: []cli.Command{
 				{
