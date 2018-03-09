@@ -25,7 +25,7 @@ func TestWriteSlsFile(t *testing.T) {
 	s.SetValueFromPath("secret", "text")
 
 	buffer := s.FormatBuffer()
-	s.WriteSlsFile(buffer, slsFile)
+	sls.WriteSlsFile(buffer, slsFile)
 
 	if _, err := os.Stat(slsFile); os.IsNotExist(err) {
 		t.Errorf("%s file was not written", slsFile)
@@ -45,8 +45,7 @@ func TestWriteSlsFile(t *testing.T) {
 }
 
 func TestFindSlsFiles(t *testing.T) {
-	s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, nil)
-	slsFiles, count := s.FindSlsFiles("./testdata")
+	slsFiles, count := sls.FindSlsFiles("./testdata")
 	if count != 6 {
 		t.Errorf("File count was incorrect, got: %d, want: %d.",
 			len(slsFiles), 6)
@@ -54,8 +53,7 @@ func TestFindSlsFiles(t *testing.T) {
 }
 
 func TestEmptyDir(t *testing.T) {
-	s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, nil)
-	slsFiles, count := s.FindSlsFiles("./testdata/empty")
+	slsFiles, count := sls.FindSlsFiles("./testdata/empty")
 	if count != 0 {
 		t.Errorf("File count was incorrect, got: %d, want: %d.",
 			len(slsFiles), 0)
@@ -138,7 +136,7 @@ func TestRecurseEncryptSecret(t *testing.T) {
 
 	recurseDir := "./testdata/test"
 	s.ProcessDir(recurseDir, "encrypt")
-	slsFiles, count := s.FindSlsFiles(recurseDir)
+	slsFiles, count := sls.FindSlsFiles(recurseDir)
 	if count == 0 {
 		t.Errorf("%s has no sls files", recurseDir)
 	}
@@ -211,7 +209,7 @@ func TestRecurseDecryptSecret(t *testing.T) {
 
 	recurseDir := "./testdata/test"
 	s.ProcessDir(recurseDir, "decrypt")
-	slsFiles, count := s.FindSlsFiles(recurseDir)
+	slsFiles, count := sls.FindSlsFiles(recurseDir)
 	if count == 0 {
 		t.Errorf("%s has no sls files", recurseDir)
 	}
@@ -262,7 +260,7 @@ func TestNestedAndMultiLineFile(t *testing.T) {
 	if err != nil {
 		t.Errorf("%s", err)
 	} else {
-		s.WriteSlsFile(buffer, filePath)
+		sls.WriteSlsFile(buffer, filePath)
 	}
 
 	err = checkLineCount(buffer.String(), 12)
@@ -285,7 +283,7 @@ func TestNestedAndMultiLineFile(t *testing.T) {
 	if err != nil {
 		t.Errorf("%s", err)
 	} else {
-		s.WriteSlsFile(buffer, filePath)
+		sls.WriteSlsFile(buffer, filePath)
 	}
 
 	err = checkLineCount(buffer.String(), 0)

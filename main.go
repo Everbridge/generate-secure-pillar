@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"runtime"
 
 	"eb-github.com/ed-silva/generate-secure-pillar/sls"
 	"github.com/sirupsen/logrus"
@@ -136,7 +137,7 @@ $ generate-secure-pillar -k "New Salt Master Key" rotate -d /path/to/pillar/secu
 				s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, logger)
 				s.ProcessYaml()
 				buffer := s.FormatBuffer()
-				s.WriteSlsFile(buffer, outputFilePath)
+				sls.WriteSlsFile(buffer, outputFilePath)
 				return nil
 			},
 			Flags: []cli.Flag{
@@ -168,7 +169,7 @@ $ generate-secure-pillar -k "New Salt Master Key" rotate -d /path/to/pillar/secu
 				}
 				s.ProcessYaml()
 				buffer := s.FormatBuffer()
-				s.WriteSlsFile(buffer, outputFilePath)
+				sls.WriteSlsFile(buffer, outputFilePath)
 				return nil
 			},
 			Flags: []cli.Flag{
@@ -210,7 +211,7 @@ $ generate-secure-pillar -k "New Salt Master Key" rotate -d /path/to/pillar/secu
 							outputFilePath = inputFilePath
 						}
 						buffer, err := s.CipherTextYamlBuffer(inputFilePath)
-						safeWrite(&s, buffer, err)
+						safeWrite(buffer, err)
 						return nil
 					},
 				},
@@ -257,7 +258,7 @@ $ generate-secure-pillar -k "New Salt Master Key" rotate -d /path/to/pillar/secu
 							outputFilePath = inputFilePath
 						}
 						buffer, err := s.PlainTextYamlBuffer(inputFilePath)
-						safeWrite(&s, buffer, err)
+						safeWrite(buffer, err)
 						return nil
 					},
 				},
@@ -311,9 +312,16 @@ $ generate-secure-pillar -k "New Salt Master Key" rotate -d /path/to/pillar/secu
 				},
 			},
 			Action: func(c *cli.Context) error {
-				s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, logger)
-				s.ProcessDir(recurseDir, "decrypt")
-				s.ProcessDir(recurseDir, "encrypt")
+				info, err := os.Stat(recurseDir)
+				if err != nil {
+					logger.Fatalf("cannot stat %s: %s", recurseDir, err)
+				}
+				if info.IsDir() && info.Name() != ".." {
+					processFiles()
+				} else {
+					logger.Fatalf("%s is not a directory", recurseDir)
+				}
+
 				return nil
 			},
 		},
@@ -325,11 +333,11 @@ $ generate-secure-pillar -k "New Salt Master Key" rotate -d /path/to/pillar/secu
 	}
 }
 
-func safeWrite(s *sls.Sls, buffer bytes.Buffer, err error) {
+func safeWrite(buffer bytes.Buffer, err error) {
 	if err != nil {
 		logger.Fatalf("%s", err)
 	} else {
-		s.WriteSlsFile(buffer, outputFilePath)
+		sls.WriteSlsFile(buffer, outputFilePath)
 	}
 }
 
@@ -341,4 +349,38 @@ func decryptPath(s *sls.Sls, path string) {
 	} else {
 		logger.Warnf("unable to find path: '%s'", path)
 	}
+}
+
+func rotateFile(file string, limChan chan bool) {
+	s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, logger)
+	logger.Infof("processing %s", file)
+
+	_, err := s.PlainTextYamlBuffer(file)
+	if err != nil {
+		logger.Warnf("%s", err)
+	} else {
+		buffer := s.PerformAction("encrypt")
+		sls.WriteSlsFile(buffer, file)
+	}
+	limChan <- true
+}
+
+func processFiles() {
+	slsFiles, count := sls.FindSlsFiles(recurseDir)
+	if count == 0 {
+		logger.Fatalf("%s has no sls files", recurseDir)
+	}
+
+	cores := runtime.GOMAXPROCS(0)
+	limChan := make(chan bool, cores)
+
+	for i := 0; i < cores; i++ {
+		limChan <- true
+	}
+
+	for _, file := range slsFiles {
+		<-limChan
+		go rotateFile(file, limChan)
+	}
+	close(limChan)
 }
