@@ -5,7 +5,7 @@ USAGE:
    generate-secure-pillar [global options] command [command options] [arguments...]
 
 VERSION:
-   1.0.169
+   1.0.176
 
 AUTHOR:
    Ed Silva <ed.silva@everbridge.com>
@@ -30,35 +30,35 @@ GLOBAL OPTIONS:
 COPYRIGHT:
    (c) 2018 Everbridge, Inc.
 
-CAVEAT: YAML files with include statements are not handled properly.
-
-EXAMPLES:
-# create a new sls file
-$ generate-secure-pillar -k "Salt Master" create --name secret_name1 --value secret_value1 --name secret_name2 --value secret_value2 --outfile new.sls
-
-# add to the new file
-$ generate-secure-pillar -k "Salt Master" update --name new_secret_name --value new_secret_value --file new.sls
-
-# update an existing value
-$ generate-secure-pillar -k "Salt Master" update --name secret_name --value secret_value3 --file new.sls
-
-# encrypt all plain text values in a file
-$ generate-secure-pillar -k "Salt Master" encrypt all --file us1.sls --outfile us1.sls
-# or use --update flag
-$ generate-secure-pillar -k "Salt Master" encrypt all --file us1.sls --update
-
-# encrypt all plain text values in a file under the element 'secret_stuff'
-$ generate-secure-pillar -k "Salt Master" --element secret_stuff encrypt all --file us1.sls --outfile us1.sls
-
-# recurse through all sls files, encrypting all values
-$ generate-secure-pillar -k "Salt Master" encrypt recurse -d /path/to/pillar/secure/stuff
-
-# recurse through all sls files, decrypting all values (requires imported private key)
-$ generate-secure-pillar decrypt recurse -d /path/to/pillar/secure/stuff
-
-# decrypt a specific existing value (requires imported private key)
-$ generate-secure-pillar decrypt path --path "some:yaml:path" --file new.sls
-
-# decrypt all files and re-encrypt with given key (requires imported private key)
-$ generate-secure-pillar -k "New Salt Master Key" rotate -d /path/to/pillar/secure/stuff
-
+  CAVEAT: YAML files with include statements are not handled properly.
+  
+  EXAMPLES:
+  # create a new sls file
+  $ generate-secure-pillar -k "Salt Master" create --name secret_name1 --value secret_value1 --name secret_name2 --value secret_value2 --outfile new.sls
+  
+  # add to the new file
+  $ generate-secure-pillar -k "Salt Master" update --name new_secret_name --value new_secret_value --file new.sls
+  
+  # update an existing value
+  $ generate-secure-pillar -k "Salt Master" update --name secret_name --value secret_value3 --file new.sls
+  
+  # encrypt all plain text values in a file
+  $ generate-secure-pillar -k "Salt Master" encrypt all --file us1.sls --outfile us1.sls
+  # or use --update flag
+  $ generate-secure-pillar -k "Salt Master" encrypt all --file us1.sls --update
+  
+  # encrypt all plain text values in a file under the element 'secret_stuff'
+  $ generate-secure-pillar -k "Salt Master" --element secret_stuff encrypt all --file us1.sls --outfile us1.sls
+  
+  # recurse through all sls files, encrypting all values
+  $ generate-secure-pillar -k "Salt Master" encrypt recurse -d /path/to/pillar/secure/stuff
+  
+  # recurse through all sls files, decrypting all values (requires imported private key)
+  $ generate-secure-pillar decrypt recurse -d /path/to/pillar/secure/stuff
+  
+  # decrypt a specific existing value (requires imported private key)
+  $ generate-secure-pillar decrypt path --path "some:yaml:path" --file new.sls
+  
+  # decrypt all files and re-encrypt with given key (requires imported private key)
+  $ generate-secure-pillar -k "New Salt Master Key" rotate -d /path/to/pillar/secure/stuff
+  
