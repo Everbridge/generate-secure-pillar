@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"os"
-	"runtime"
 
 	"eb-github.com/ed-silva/generate-secure-pillar/sls"
 	"github.com/sirupsen/logrus"
@@ -315,7 +314,15 @@ func main() {
 					Destination: &recurseDir,
 				},
 			},
-			Action: rotateFunc,
+			Action: func(c *cli.Context) error {
+				s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, logger)
+				err := s.RotateFiles(recurseDir)
+				if err != nil {
+					logger.Fatalf("%s", err)
+				}
+
+				return nil
+			},
 		},
 	}
 
@@ -341,57 +348,4 @@ func decryptPath(s *sls.Sls, path string) {
 	} else {
 		logger.Warnf("unable to find path: '%s'", path)
 	}
-}
-
-func rotateFile(file string, limChan chan bool) {
-	s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, logger)
-	logger.Infof("processing %s", file)
-
-	_, err := s.PlainTextYamlBuffer(file)
-	if err != nil {
-		logger.Warnf("%s", err)
-	} else {
-		buffer := s.PerformAction("encrypt")
-		sls.WriteSlsFile(buffer, file)
-	}
-	limChan <- true
-}
-
-func processFiles() int {
-	var fileCount int
-	slsFiles, count := sls.FindSlsFiles(recurseDir)
-	if count == 0 {
-		logger.Fatalf("%s has no sls files", recurseDir)
-	}
-
-	cores := runtime.GOMAXPROCS(0)
-	limChan := make(chan bool, cores)
-
-	for i := 0; i < cores; i++ {
-		limChan <- true
-	}
-
-	for _, file := range slsFiles {
-		<-limChan
-		go rotateFile(file, limChan)
-		fileCount++
-	}
-	close(limChan)
-
-	return fileCount
-}
-
-func rotateFunc(c *cli.Context) error {
-	info, err := os.Stat(recurseDir)
-	if err != nil {
-		logger.Fatalf("cannot stat %s: %s", recurseDir, err)
-	}
-	if info.IsDir() && info.Name() != ".." {
-		count := processFiles()
-		logger.Infof("Finished processing %d files.\n", count)
-	} else {
-		logger.Fatalf("%s is not a directory", recurseDir)
-	}
-
-	return nil
 }

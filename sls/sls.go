@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"strings"
 
 	"eb-github.com/ed-silva/generate-secure-pillar/pki"
@@ -418,4 +419,57 @@ func (s *Sls) doMap(vals map[interface{}]interface{}, action string) map[interfa
 
 func isEncrypted(str string) bool {
 	return strings.Contains(str, pgpHeader)
+}
+
+func (s *Sls) rotateFile(file string, limChan chan bool) {
+	logger.Infof("processing %s", file)
+
+	_, err := s.PlainTextYamlBuffer(file)
+	if err != nil {
+		logger.Warnf("%s", err)
+	} else {
+		buffer := s.PerformAction("encrypt")
+		WriteSlsFile(buffer, file)
+	}
+	limChan <- true
+}
+
+func (s *Sls) processFiles(recurseDir string) int {
+	var fileCount int
+	slsFiles, count := FindSlsFiles(recurseDir)
+	if count == 0 {
+		logger.Fatalf("%s has no sls files", recurseDir)
+	}
+
+	cores := runtime.GOMAXPROCS(0)
+	limChan := make(chan bool, cores)
+
+	for i := 0; i < cores; i++ {
+		limChan <- true
+	}
+
+	for _, file := range slsFiles {
+		<-limChan
+		go s.rotateFile(file, limChan)
+		fileCount++
+	}
+	close(limChan)
+
+	return fileCount
+}
+
+// RotateFiles rotate the encryption of all files in the given dir
+func (s *Sls) RotateFiles(recurseDir string) error {
+	info, err := os.Stat(recurseDir)
+	if err != nil {
+		logger.Fatalf("cannot stat %s: %s", recurseDir, err)
+	}
+	if info.IsDir() && info.Name() != ".." {
+		count := s.processFiles(recurseDir)
+		logger.Infof("Finished processing %d files.\n", count)
+	} else {
+		logger.Fatalf("%s is not a directory", recurseDir)
+	}
+
+	return nil
 }
