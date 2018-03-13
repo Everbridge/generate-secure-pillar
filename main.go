@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"runtime"
 
 	"eb-github.com/ed-silva/generate-secure-pillar/sls"
 	"github.com/sirupsen/logrus"
@@ -284,8 +285,7 @@ var appCommands = []cli.Command{
 			dirFlag,
 		},
 		Action: func(c *cli.Context) error {
-			s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, logger)
-			err := s.RotateFiles(recurseDir)
+			err := rotateFiles(recurseDir)
 			if err != nil {
 				logger.Fatalf("%s", err)
 			}
@@ -338,4 +338,44 @@ func decryptPath(s *sls.Sls, path string) {
 	} else {
 		logger.Warnf("unable to find path: '%s'", path)
 	}
+}
+
+func processFiles(recurseDir string) int {
+	var fileCount int
+	slsFiles, count := sls.FindSlsFiles(recurseDir)
+	if count == 0 {
+		logger.Fatalf("%s has no sls files", recurseDir)
+	}
+
+	cores := runtime.GOMAXPROCS(0)
+	limChan := make(chan bool, cores)
+
+	for i := 0; i < cores; i++ {
+		limChan <- true
+	}
+
+	for _, file := range slsFiles {
+		<-limChan
+		s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, logger)
+		go s.RotateFile(file, limChan)
+		fileCount++
+	}
+	close(limChan)
+
+	return fileCount
+}
+
+func rotateFiles(recurseDir string) error {
+	info, err := os.Stat(recurseDir)
+	if err != nil {
+		logger.Fatalf("cannot stat %s: %s", recurseDir, err)
+	}
+	if info.IsDir() && info.Name() != ".." {
+		count := processFiles(recurseDir)
+		logger.Infof("Finished processing %d files.\n", count)
+	} else {
+		logger.Fatalf("%s is not a directory", recurseDir)
+	}
+
+	return nil
 }
