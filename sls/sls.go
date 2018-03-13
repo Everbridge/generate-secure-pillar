@@ -107,7 +107,7 @@ func WriteSlsFile(buffer bytes.Buffer, outFilePath string) {
 		logger.Fatal("error writing sls file: ", err)
 	}
 	if !stdOut {
-		logger.Printf("Wrote out to file: '%s'", outFilePath)
+		logger.Infof("wrote out to file: '%s'", outFilePath)
 	}
 }
 
