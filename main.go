@@ -47,6 +47,30 @@ var fileFlags = []cli.Flag{
 	outputFlag,
 }
 
+var secNamesFlag = cli.StringSliceFlag{
+	Name:  "name, n",
+	Usage: "secret name(s)",
+	Value: &secretNames,
+}
+
+var secValsFlag = cli.StringSliceFlag{
+	Name:  "value, s",
+	Usage: "secret value(s)",
+	Value: &secretValues,
+}
+
+var updateFlag = cli.BoolFlag{
+	Name:        "update, u",
+	Usage:       "update the input file",
+	Destination: &updateInPlace,
+}
+
+var dirFlag = cli.StringFlag{
+	Name:        "dir, d",
+	Usage:       "recurse over all .sls files in the given directory",
+	Destination: &recurseDir,
+}
+
 var appFlags = []cli.Flag{
 	cli.StringFlag{
 		Name:        "pubring, pub",
@@ -112,6 +136,165 @@ var appHelp = fmt.Sprintf(`%s
 	
 `, cli.AppHelpTemplate)
 
+var appCommands = []cli.Command{
+	{
+		Name:    "create",
+		Aliases: []string{"c"},
+		Usage:   "create a new sls file",
+		Action: func(c *cli.Context) error {
+			s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, logger)
+			s.ProcessYaml()
+			buffer := s.FormatBuffer()
+			sls.WriteSlsFile(buffer, outputFilePath)
+			return nil
+		},
+		Flags: []cli.Flag{
+			outputFlag,
+			secNamesFlag,
+			secValsFlag,
+		},
+	},
+	{
+		Name:    "update",
+		Aliases: []string{"u"},
+		Usage:   "update the value of the given key in the given file",
+		Action: func(c *cli.Context) error {
+			if inputFilePath != os.Stdin.Name() {
+				outputFilePath = inputFilePath
+			}
+			s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, logger)
+			err := s.ReadSlsFile(inputFilePath)
+			if err != nil {
+				logger.Fatal(err)
+			}
+			s.ProcessYaml()
+			buffer := s.FormatBuffer()
+			sls.WriteSlsFile(buffer, outputFilePath)
+			return nil
+		},
+		Flags: []cli.Flag{
+			inputFlag,
+			secNamesFlag,
+			secValsFlag,
+		},
+	},
+	{
+		Name:    "encrypt",
+		Aliases: []string{"e"},
+		Usage:   "perform encryption operations",
+		Action: func(c *cli.Context) error {
+			return cli.ShowCommandHelp(c, "")
+		},
+		Subcommands: []cli.Command{
+			{
+				Name: "all",
+				Flags: []cli.Flag{
+					inputFlag,
+					outputFlag,
+					updateFlag,
+				},
+				Action: func(c *cli.Context) error {
+					s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, logger)
+					if inputFilePath != os.Stdin.Name() && updateInPlace {
+						outputFilePath = inputFilePath
+					}
+					buffer, err := s.CipherTextYamlBuffer(inputFilePath)
+					safeWrite(buffer, err)
+					return nil
+				},
+			},
+			{
+				Name: "recurse",
+				Flags: []cli.Flag{
+					dirFlag,
+				},
+				Action: func(c *cli.Context) error {
+					s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, logger)
+					s.ProcessDir(recurseDir, "encrypt")
+					return nil
+				},
+			},
+		},
+	},
+	{
+		Name:    "decrypt",
+		Aliases: []string{"d"},
+		Usage:   "perform decryption operations",
+		Flags:   fileFlags,
+		Action: func(c *cli.Context) error {
+			return cli.ShowCommandHelp(c, "")
+		},
+		Subcommands: []cli.Command{
+			{
+				Name: "all",
+				Flags: []cli.Flag{
+					inputFlag,
+					outputFlag,
+					updateFlag,
+				},
+				Action: func(c *cli.Context) error {
+					s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, logger)
+					if inputFilePath != os.Stdin.Name() && updateInPlace {
+						outputFilePath = inputFilePath
+					}
+					buffer, err := s.PlainTextYamlBuffer(inputFilePath)
+					safeWrite(buffer, err)
+					return nil
+				},
+			},
+			{
+				Name: "recurse",
+				Flags: []cli.Flag{
+					dirFlag,
+				},
+				Action: func(c *cli.Context) error {
+					s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, logger)
+					s.ProcessDir(recurseDir, "decrypt")
+					return nil
+				},
+			},
+			{
+				Name: "path",
+				Flags: []cli.Flag{
+					inputFlag,
+					cli.StringFlag{
+						Name:        "path, p",
+						Usage:       "YAML path to decrypt",
+						Destination: &yamlPath,
+					},
+				},
+				Action: func(c *cli.Context) error {
+					s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, logger)
+					err := s.ReadSlsFile(inputFilePath)
+					if err != nil {
+						logger.Fatal(err)
+					}
+					decryptPath(&s, yamlPath)
+
+					return nil
+				},
+			},
+		},
+	},
+	{
+		Name:    "rotate",
+		Aliases: []string{"r"},
+		Usage:   "decrypt existing files and re-encrypt with a new key",
+		Flags: []cli.Flag{
+			dirFlag,
+		},
+		Action: func(c *cli.Context) error {
+			s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, logger)
+			err := s.RotateFiles(recurseDir)
+			if err != nil {
+				logger.Fatalf("%s", err)
+			}
+
+			return nil
+		},
+	},
+}
+
 func main() {
 	if debug {
 		logger.Level = logrus.DebugLevel
@@ -131,200 +314,7 @@ func main() {
 	app.Usage = "Create and update encrypted content or decrypt encrypted content."
 	app.Flags = appFlags
 
-	app.Commands = []cli.Command{
-		{
-			Name:    "create",
-			Aliases: []string{"c"},
-			Usage:   "create a new sls file",
-			Action: func(c *cli.Context) error {
-				s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, logger)
-				s.ProcessYaml()
-				buffer := s.FormatBuffer()
-				sls.WriteSlsFile(buffer, outputFilePath)
-				return nil
-			},
-			Flags: []cli.Flag{
-				outputFlag,
-				cli.StringSliceFlag{
-					Name:  "name, n",
-					Usage: "secret name(s)",
-					Value: &secretNames,
-				},
-				cli.StringSliceFlag{
-					Name:  "value, s",
-					Usage: "secret value(s)",
-					Value: &secretValues,
-				},
-			},
-		},
-		{
-			Name:    "update",
-			Aliases: []string{"u"},
-			Usage:   "update the value of the given key in the given file",
-			Action: func(c *cli.Context) error {
-				if inputFilePath != os.Stdin.Name() {
-					outputFilePath = inputFilePath
-				}
-				s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, logger)
-				err := s.ReadSlsFile(inputFilePath)
-				if err != nil {
-					logger.Fatal(err)
-				}
-				s.ProcessYaml()
-				buffer := s.FormatBuffer()
-				sls.WriteSlsFile(buffer, outputFilePath)
-				return nil
-			},
-			Flags: []cli.Flag{
-				inputFlag,
-				cli.StringSliceFlag{
-					Name:  "name, n",
-					Usage: "secret name",
-					Value: &secretNames,
-				},
-				cli.StringSliceFlag{
-					Name:  "value, s",
-					Usage: "secret value",
-					Value: &secretValues,
-				},
-			},
-		},
-		{
-			Name:    "encrypt",
-			Aliases: []string{"e"},
-			Usage:   "perform encryption operations",
-			Action: func(c *cli.Context) error {
-				return cli.ShowCommandHelp(c, "")
-			},
-			Subcommands: []cli.Command{
-				{
-					Name: "all",
-					Flags: []cli.Flag{
-						inputFlag,
-						outputFlag,
-						cli.BoolFlag{
-							Name:        "update, u",
-							Usage:       "update the input file",
-							Destination: &updateInPlace,
-						},
-					},
-					Action: func(c *cli.Context) error {
-						s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, logger)
-						if inputFilePath != os.Stdin.Name() && updateInPlace {
-							outputFilePath = inputFilePath
-						}
-						buffer, err := s.CipherTextYamlBuffer(inputFilePath)
-						safeWrite(buffer, err)
-						return nil
-					},
-				},
-				{
-					Name: "recurse",
-					Flags: []cli.Flag{
-						cli.StringFlag{
-							Name:        "dir, d",
-							Usage:       "recurse over all .sls files in the given directory",
-							Destination: &recurseDir,
-						},
-					},
-					Action: func(c *cli.Context) error {
-						s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, logger)
-						s.ProcessDir(recurseDir, "encrypt")
-						return nil
-					},
-				},
-			},
-		},
-		{
-			Name:    "decrypt",
-			Aliases: []string{"d"},
-			Usage:   "perform decryption operations",
-			Flags:   fileFlags,
-			Action: func(c *cli.Context) error {
-				return cli.ShowCommandHelp(c, "")
-			},
-			Subcommands: []cli.Command{
-				{
-					Name: "all",
-					Flags: []cli.Flag{
-						inputFlag,
-						outputFlag,
-						cli.BoolFlag{
-							Name:        "update, u",
-							Usage:       "update the input file",
-							Destination: &updateInPlace,
-						},
-					},
-					Action: func(c *cli.Context) error {
-						s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, logger)
-						if inputFilePath != os.Stdin.Name() && updateInPlace {
-							outputFilePath = inputFilePath
-						}
-						buffer, err := s.PlainTextYamlBuffer(inputFilePath)
-						safeWrite(buffer, err)
-						return nil
-					},
-				},
-				{
-					Name: "recurse",
-					Flags: []cli.Flag{
-						cli.StringFlag{
-							Name:        "dir, d",
-							Usage:       "recurse over all .sls files in the given directory",
-							Destination: &recurseDir,
-						},
-					},
-					Action: func(c *cli.Context) error {
-						s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, logger)
-						s.ProcessDir(recurseDir, "decrypt")
-						return nil
-					},
-				},
-				{
-					Name: "path",
-					Flags: []cli.Flag{
-						inputFlag,
-						cli.StringFlag{
-							Name:        "path, p",
-							Usage:       "YAML path to decrypt",
-							Destination: &yamlPath,
-						},
-					},
-					Action: func(c *cli.Context) error {
-						s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, logger)
-						err := s.ReadSlsFile(inputFilePath)
-						if err != nil {
-							logger.Fatal(err)
-						}
-						decryptPath(&s, yamlPath)
-
-						return nil
-					},
-				},
-			},
-		},
-		{
-			Name:    "rotate",
-			Aliases: []string{"r"},
-			Usage:   "decrypt existing files and re-encrypt with a new key",
-			Flags: []cli.Flag{
-				cli.StringFlag{
-					Name:        "dir, d",
-					Usage:       "recurse over all .sls files in the given directory",
-					Destination: &recurseDir,
-				},
-			},
-			Action: func(c *cli.Context) error {
-				s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, logger)
-				err := s.RotateFiles(recurseDir)
-				if err != nil {
-					logger.Fatalf("%s", err)
-				}
-
-				return nil
-			},
-		},
-	}
+	app.Commands = appCommands
 
 	err := app.Run(os.Args)
 	if err != nil {
