@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"runtime"
 
 	"eb-github.com/ed-silva/generate-secure-pillar/sls"
 	"github.com/sirupsen/logrus"
@@ -47,6 +48,71 @@ var fileFlags = []cli.Flag{
 	outputFlag,
 }
 
+var appFlags = []cli.Flag{
+	cli.StringFlag{
+		Name:        "pubring, pub",
+		Value:       defaultPubRing,
+		Usage:       "PGP public keyring",
+		Destination: &publicKeyRing,
+	},
+	cli.StringFlag{
+		Name:        "secring, sec",
+		Value:       defaultSecRing,
+		Usage:       "PGP private keyring",
+		Destination: &secretKeyRing,
+	},
+	cli.StringFlag{
+		Name:        "pgp_key, k",
+		Usage:       "PGP key name, email, or ID to use for encryption",
+		Destination: &pgpKeyName,
+	},
+	cli.BoolFlag{
+		Name:        "debug",
+		Usage:       "adds line number info to log output",
+		Destination: &debug,
+	},
+	cli.StringFlag{
+		Name:        "element, e",
+		Usage:       "Name of the top level element under which encrypted key/value pairs are kept",
+		Destination: &topLevelElement,
+	},
+}
+
+var appHelp = fmt.Sprintf(`%s
+	CAVEAT: YAML files with include statements are not handled properly.
+	
+	EXAMPLES:
+	# create a new sls file
+	$ generate-secure-pillar -k "Salt Master" create --name secret_name1 --value secret_value1 --name secret_name2 --value secret_value2 --outfile new.sls
+	
+	# add to the new file
+	$ generate-secure-pillar -k "Salt Master" update --name new_secret_name --value new_secret_value --file new.sls
+	
+	# update an existing value
+	$ generate-secure-pillar -k "Salt Master" update --name secret_name --value secret_value3 --file new.sls
+	
+	# encrypt all plain text values in a file
+	$ generate-secure-pillar -k "Salt Master" encrypt all --file us1.sls --outfile us1.sls
+	# or use --update flag
+	$ generate-secure-pillar -k "Salt Master" encrypt all --file us1.sls --update
+	
+	# encrypt all plain text values in a file under the element 'secret_stuff'
+	$ generate-secure-pillar -k "Salt Master" --element secret_stuff encrypt all --file us1.sls --outfile us1.sls
+	
+	# recurse through all sls files, encrypting all values
+	$ generate-secure-pillar -k "Salt Master" encrypt recurse -d /path/to/pillar/secure/stuff
+	
+	# recurse through all sls files, decrypting all values (requires imported private key)
+	$ generate-secure-pillar decrypt recurse -d /path/to/pillar/secure/stuff
+	
+	# decrypt a specific existing value (requires imported private key)
+	$ generate-secure-pillar decrypt path --path "some:yaml:path" --file new.sls
+	
+	# decrypt all files and re-encrypt with given key (requires imported private key)
+	$ generate-secure-pillar -k "New Salt Master Key" rotate -d /path/to/pillar/secure/stuff
+	
+`, cli.AppHelpTemplate)
+
 func main() {
 	if debug {
 		logger.Level = logrus.DebugLevel
@@ -60,72 +126,11 @@ func main() {
 		},
 	}
 
-	cli.AppHelpTemplate = fmt.Sprintf(`%s
-CAVEAT: YAML files with include statements are not handled properly.
-
-EXAMPLES:
-# create a new sls file
-$ generate-secure-pillar -k "Salt Master" create --name secret_name1 --value secret_value1 --name secret_name2 --value secret_value2 --outfile new.sls
-
-# add to the new file
-$ generate-secure-pillar -k "Salt Master" update --name new_secret_name --value new_secret_value --file new.sls
-
-# update an existing value
-$ generate-secure-pillar -k "Salt Master" update --name secret_name --value secret_value3 --file new.sls
-
-# encrypt all plain text values in a file
-$ generate-secure-pillar -k "Salt Master" encrypt all --file us1.sls --outfile us1.sls
-# or use --update flag
-$ generate-secure-pillar -k "Salt Master" encrypt all --file us1.sls --update
-
-# encrypt all plain text values in a file under the element 'secret_stuff'
-$ generate-secure-pillar -k "Salt Master" --element secret_stuff encrypt all --file us1.sls --outfile us1.sls
-
-# recurse through all sls files, encrypting all values
-$ generate-secure-pillar -k "Salt Master" encrypt recurse -d /path/to/pillar/secure/stuff
-
-# recurse through all sls files, decrypting all values (requires imported private key)
-$ generate-secure-pillar decrypt recurse -d /path/to/pillar/secure/stuff
-
-# decrypt a specific existing value (requires imported private key)
-$ generate-secure-pillar decrypt path --path "some:yaml:path" --file new.sls
-
-# decrypt all files and re-encrypt with given key (requires imported private key)
-$ generate-secure-pillar -k "New Salt Master Key" rotate -d /path/to/pillar/secure/stuff
-
-`, cli.AppHelpTemplate)
+	cli.AppHelpTemplate = appHelp
 
 	app.Copyright = "(c) 2018 Everbridge, Inc."
 	app.Usage = "Create and update encrypted content or decrypt encrypted content."
-	app.Flags = []cli.Flag{
-		cli.StringFlag{
-			Name:        "pubring, pub",
-			Value:       defaultPubRing,
-			Usage:       "PGP public keyring",
-			Destination: &publicKeyRing,
-		},
-		cli.StringFlag{
-			Name:        "secring, sec",
-			Value:       defaultSecRing,
-			Usage:       "PGP private keyring",
-			Destination: &secretKeyRing,
-		},
-		cli.StringFlag{
-			Name:        "pgp_key, k",
-			Usage:       "PGP key name, email, or ID to use for encryption",
-			Destination: &pgpKeyName,
-		},
-		cli.BoolFlag{
-			Name:        "debug",
-			Usage:       "adds line number info to log output",
-			Destination: &debug,
-		},
-		cli.StringFlag{
-			Name:        "element, e",
-			Usage:       "Name of the top level element under which encrypted key/value pairs are kept",
-			Destination: &topLevelElement,
-		},
-	}
+	app.Flags = appFlags
 
 	app.Commands = []cli.Command{
 		{
@@ -136,7 +141,7 @@ $ generate-secure-pillar -k "New Salt Master Key" rotate -d /path/to/pillar/secu
 				s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, logger)
 				s.ProcessYaml()
 				buffer := s.FormatBuffer()
-				s.WriteSlsFile(buffer, outputFilePath)
+				sls.WriteSlsFile(buffer, outputFilePath)
 				return nil
 			},
 			Flags: []cli.Flag{
@@ -168,7 +173,7 @@ $ generate-secure-pillar -k "New Salt Master Key" rotate -d /path/to/pillar/secu
 				}
 				s.ProcessYaml()
 				buffer := s.FormatBuffer()
-				s.WriteSlsFile(buffer, outputFilePath)
+				sls.WriteSlsFile(buffer, outputFilePath)
 				return nil
 			},
 			Flags: []cli.Flag{
@@ -210,7 +215,7 @@ $ generate-secure-pillar -k "New Salt Master Key" rotate -d /path/to/pillar/secu
 							outputFilePath = inputFilePath
 						}
 						buffer, err := s.CipherTextYamlBuffer(inputFilePath)
-						safeWrite(&s, buffer, err)
+						safeWrite(buffer, err)
 						return nil
 					},
 				},
@@ -257,7 +262,7 @@ $ generate-secure-pillar -k "New Salt Master Key" rotate -d /path/to/pillar/secu
 							outputFilePath = inputFilePath
 						}
 						buffer, err := s.PlainTextYamlBuffer(inputFilePath)
-						safeWrite(&s, buffer, err)
+						safeWrite(buffer, err)
 						return nil
 					},
 				},
@@ -310,12 +315,7 @@ $ generate-secure-pillar -k "New Salt Master Key" rotate -d /path/to/pillar/secu
 					Destination: &recurseDir,
 				},
 			},
-			Action: func(c *cli.Context) error {
-				s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, logger)
-				s.ProcessDir(recurseDir, "decrypt")
-				s.ProcessDir(recurseDir, "encrypt")
-				return nil
-			},
+			Action: rotateFunc,
 		},
 	}
 
@@ -325,11 +325,11 @@ $ generate-secure-pillar -k "New Salt Master Key" rotate -d /path/to/pillar/secu
 	}
 }
 
-func safeWrite(s *sls.Sls, buffer bytes.Buffer, err error) {
+func safeWrite(buffer bytes.Buffer, err error) {
 	if err != nil {
 		logger.Fatalf("%s", err)
 	} else {
-		s.WriteSlsFile(buffer, outputFilePath)
+		sls.WriteSlsFile(buffer, outputFilePath)
 	}
 }
 
@@ -341,4 +341,57 @@ func decryptPath(s *sls.Sls, path string) {
 	} else {
 		logger.Warnf("unable to find path: '%s'", path)
 	}
+}
+
+func rotateFile(file string, limChan chan bool) {
+	s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, logger)
+	logger.Infof("processing %s", file)
+
+	_, err := s.PlainTextYamlBuffer(file)
+	if err != nil {
+		logger.Warnf("%s", err)
+	} else {
+		buffer := s.PerformAction("encrypt")
+		sls.WriteSlsFile(buffer, file)
+	}
+	limChan <- true
+}
+
+func processFiles() int {
+	var fileCount int
+	slsFiles, count := sls.FindSlsFiles(recurseDir)
+	if count == 0 {
+		logger.Fatalf("%s has no sls files", recurseDir)
+	}
+
+	cores := runtime.GOMAXPROCS(0)
+	limChan := make(chan bool, cores)
+
+	for i := 0; i < cores; i++ {
+		limChan <- true
+	}
+
+	for _, file := range slsFiles {
+		<-limChan
+		go rotateFile(file, limChan)
+		fileCount++
+	}
+	close(limChan)
+
+	return fileCount
+}
+
+func rotateFunc(c *cli.Context) error {
+	info, err := os.Stat(recurseDir)
+	if err != nil {
+		logger.Fatalf("cannot stat %s: %s", recurseDir, err)
+	}
+	if info.IsDir() && info.Name() != ".." {
+		count := processFiles()
+		logger.Infof("Finished processing %d files.\n", count)
+	} else {
+		logger.Fatalf("%s is not a directory", recurseDir)
+	}
+
+	return nil
 }

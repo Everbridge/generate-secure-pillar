@@ -23,7 +23,6 @@ const encrypt = "encrypt"
 const decrypt = "decrypt"
 
 var logger *logrus.Logger
-var p pki.Pki
 
 // Sls sls data
 type Sls struct {
@@ -34,6 +33,7 @@ type Sls struct {
 	SecretKeyRing   string
 	PgpKeyName      string
 	Yaml            *yaml.Yaml
+	Pki             *pki.Pki
 }
 
 // New return Sls struct
@@ -44,8 +44,8 @@ func New(secretNames []string, secretValues []string, topLevelElement string, pu
 		logger = logrus.New()
 	}
 
-	s := Sls{secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, yaml.New()}
-	p = pki.New(pgpKeyName, publicKeyRing, secretKeyRing, logger)
+	p := pki.New(pgpKeyName, publicKeyRing, secretKeyRing, logger)
+	s := Sls{secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, yaml.New(), &p}
 
 	return s
 }
@@ -82,7 +82,7 @@ func (s *Sls) ReadSlsFile(filePath string) error {
 
 // WriteSlsFile writes a buffer to the specified file
 // If the outFilePath is not stdout an INFO string will be printed to stdout
-func (s *Sls) WriteSlsFile(buffer bytes.Buffer, outFilePath string) {
+func WriteSlsFile(buffer bytes.Buffer, outFilePath string) {
 	fullPath, err := filepath.Abs(outFilePath)
 	if err != nil {
 		fullPath = outFilePath
@@ -107,12 +107,12 @@ func (s *Sls) WriteSlsFile(buffer bytes.Buffer, outFilePath string) {
 		logger.Fatal("error writing sls file: ", err)
 	}
 	if !stdOut {
-		logger.Printf("Wrote out to file: '%s'", outFilePath)
+		logger.Infof("wrote out to file: '%s'", outFilePath)
 	}
 }
 
 // FindSlsFiles recurses through the given searchDir returning a list of .sls files and it's length
-func (s *Sls) FindSlsFiles(searchDir string) ([]string, int) {
+func FindSlsFiles(searchDir string) ([]string, int) {
 	searchDir, err := filepath.Abs(searchDir)
 	if err != nil {
 		logger.Fatal(err)
@@ -135,7 +135,7 @@ func (s *Sls) FindSlsFiles(searchDir string) ([]string, int) {
 // If the 'all' flag is set all values under the designated top level element are encrypted
 func (s *Sls) CipherTextYamlBuffer(filePath string) (bytes.Buffer, error) {
 	var buffer bytes.Buffer
-	err := s.CheckForFile(filePath)
+	err := CheckForFile(filePath)
 	if err != nil {
 		return buffer, err
 	}
@@ -156,7 +156,7 @@ func (s *Sls) CipherTextYamlBuffer(filePath string) (bytes.Buffer, error) {
 // PlainTextYamlBuffer decrypts all values under the top level element and returns a formatted buffer
 func (s *Sls) PlainTextYamlBuffer(filePath string) (bytes.Buffer, error) {
 	var buffer bytes.Buffer
-	err := s.CheckForFile(filePath)
+	err := CheckForFile(filePath)
 	if err != nil {
 		return buffer, err
 	}
@@ -190,7 +190,7 @@ func (s *Sls) FormatBuffer() bytes.Buffer {
 }
 
 // CheckForFile does exactly what it says on the tin
-func (s *Sls) CheckForFile(filePath string) error {
+func CheckForFile(filePath string) error {
 	fi, err := os.Stat(filePath)
 	if err != nil {
 		logger.Fatalf("cannot stat %s: %s", filePath, err)
@@ -210,7 +210,7 @@ func (s *Sls) ProcessYaml() {
 	for index := 0; index < len(s.SecretNames); index++ {
 		cipherText := ""
 		if index >= 0 && index < len(s.SecretValues) {
-			cipherText = p.EncryptSecret(s.SecretValues[index])
+			cipherText = s.Pki.EncryptSecret(s.SecretValues[index])
 		}
 		err := s.SetValueFromPath(s.SecretNames[index], cipherText)
 		if err != nil {
@@ -228,7 +228,7 @@ func (s *Sls) ProcessDir(recurseDir string, action string) {
 		logger.Fatalf("cannot stat %s: %s", recurseDir, err)
 	}
 	if info.IsDir() && info.Name() != ".." {
-		slsFiles, count := s.FindSlsFiles(recurseDir)
+		slsFiles, count := FindSlsFiles(recurseDir)
 		if count == 0 {
 			logger.Fatalf("%s has no sls files", recurseDir)
 		}
@@ -250,7 +250,7 @@ func (s *Sls) ProcessDir(recurseDir string, action string) {
 			} else {
 				logger.Fatalf("unknown action: %s", action)
 			}
-			s.WriteSlsFile(buffer, file)
+			WriteSlsFile(buffer, file)
 		}
 	} else {
 		logger.Fatalf("%s is not a directory", recurseDir)
@@ -320,14 +320,14 @@ func (s *Sls) ProcessValues(vals interface{}, action string) interface{} {
 	var res interface{}
 	switch vtype {
 	case reflect.Slice:
-		res = doSlice(vals, action)
+		res = s.doSlice(vals, action)
 	case reflect.Map:
-		res = doMap(vals.(map[interface{}]interface{}), action)
+		res = s.doMap(vals.(map[interface{}]interface{}), action)
 	case reflect.String:
 		switch action {
 		case decrypt:
 			if isEncrypted(to.String(vals)) {
-				plainText, err := p.DecryptSecret(to.String(vals))
+				plainText, err := s.Pki.DecryptSecret(to.String(vals))
 				if err != nil {
 					logger.Errorf("error decrypting value: %s", err)
 				} else {
@@ -336,7 +336,7 @@ func (s *Sls) ProcessValues(vals interface{}, action string) interface{} {
 			}
 		case encrypt:
 			if !isEncrypted(to.String(vals)) {
-				vals = p.EncryptSecret(to.String(vals))
+				vals = s.Pki.EncryptSecret(to.String(vals))
 			}
 		}
 		res = to.String(vals)
@@ -345,7 +345,7 @@ func (s *Sls) ProcessValues(vals interface{}, action string) interface{} {
 	return res
 }
 
-func doSlice(vals interface{}, action string) interface{} {
+func (s *Sls) doSlice(vals interface{}, action string) interface{} {
 	var things []interface{}
 
 	for _, item := range vals.([]interface{}) {
@@ -354,15 +354,15 @@ func doSlice(vals interface{}, action string) interface{} {
 
 		switch vtype {
 		case reflect.Slice:
-			things = append(things, doSlice(item, action))
+			things = append(things, s.doSlice(item, action))
 		case reflect.Map:
 			thing = item
-			things = append(things, doMap(thing.(map[interface{}]interface{}), action))
+			things = append(things, s.doMap(thing.(map[interface{}]interface{}), action))
 		case reflect.String:
 			switch action {
 			case decrypt:
 				if isEncrypted(to.String(item)) {
-					plainText, err := p.DecryptSecret(to.String(item))
+					plainText, err := s.Pki.DecryptSecret(to.String(item))
 					if err != nil {
 						logger.Errorf("error decrypting value: %s", err)
 						thing = to.String(item)
@@ -372,7 +372,7 @@ func doSlice(vals interface{}, action string) interface{} {
 				}
 			case encrypt:
 				if !isEncrypted(to.String(item)) {
-					thing = p.EncryptSecret(to.String(item))
+					thing = s.Pki.EncryptSecret(to.String(item))
 				}
 			}
 			things = append(things, thing)
@@ -382,7 +382,7 @@ func doSlice(vals interface{}, action string) interface{} {
 	return things
 }
 
-func doMap(vals map[interface{}]interface{}, action string) map[interface{}]interface{} {
+func (s *Sls) doMap(vals map[interface{}]interface{}, action string) map[interface{}]interface{} {
 	var ret = make(map[interface{}]interface{})
 
 	for key, val := range vals {
@@ -390,14 +390,14 @@ func doMap(vals map[interface{}]interface{}, action string) map[interface{}]inte
 
 		switch vtype {
 		case reflect.Slice:
-			ret[key] = doSlice(val, action)
+			ret[key] = s.doSlice(val, action)
 		case reflect.Map:
-			ret[key] = doMap(val.(map[interface{}]interface{}), action)
+			ret[key] = s.doMap(val.(map[interface{}]interface{}), action)
 		case reflect.String:
 			switch action {
 			case decrypt:
 				if isEncrypted(to.String(val)) {
-					plainText, err := p.DecryptSecret(to.String(val))
+					plainText, err := s.Pki.DecryptSecret(to.String(val))
 					if err != nil {
 						logger.Errorf("error decrypting value for: %s, %s", key, err)
 					} else {
@@ -406,7 +406,7 @@ func doMap(vals map[interface{}]interface{}, action string) map[interface{}]inte
 				}
 			case encrypt:
 				if !isEncrypted(to.String(val)) {
-					val = p.EncryptSecret(to.String(val))
+					val = s.Pki.EncryptSecret(to.String(val))
 				}
 			}
 			ret[key] = val
