@@ -311,6 +311,7 @@ func TestSetValueFromPath(t *testing.T) {
 }
 
 func TestRotateFile(t *testing.T) {
+	topLevelElement = ""
 	if os.Getenv("SALT_SEC_KEYRING") != "" {
 		publicKeyRing, _ = filepath.Abs(os.Getenv("SALT_PUB_KEYRING"))
 	} else {
@@ -330,7 +331,7 @@ func TestRotateFile(t *testing.T) {
 	}
 
 	<-limChan
-	s := sls.New(secretNames, secretValues, "", publicKeyRing, secretKeyRing, pgpKeyName, nil)
+	s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, nil)
 	filePath := "./testdata/new.sls"
 	s.RotateFile(filePath, limChan)
 	close(limChan)
