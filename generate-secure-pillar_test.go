@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -306,6 +307,43 @@ func TestSetValueFromPath(t *testing.T) {
 	val := s.GetValueFromPath("bar:baz")
 	if to.String(val) != "foo" {
 		t.Errorf("Content from path '%s' is wrong: %#v", filePath, val)
+	}
+}
+
+func TestRotateFile(t *testing.T) {
+	if os.Getenv("SALT_SEC_KEYRING") != "" {
+		publicKeyRing, _ = filepath.Abs(os.Getenv("SALT_PUB_KEYRING"))
+	} else {
+		publicKeyRing = "~/.gnupg/pubring.gpg"
+	}
+	if os.Getenv("SALT_SEC_KEYRING") != "" {
+		secretKeyRing, _ = filepath.Abs(os.Getenv("SALT_SEC_KEYRING"))
+	} else {
+		secretKeyRing = "~/.gnupg/secring.gpg"
+	}
+
+	cores := runtime.GOMAXPROCS(0)
+	limChan := make(chan bool, cores)
+
+	for i := 0; i < cores; i++ {
+		limChan <- true
+	}
+
+	<-limChan
+	s := sls.New(secretNames, secretValues, "", publicKeyRing, secretKeyRing, pgpKeyName, nil)
+	filePath := "./testdata/new.sls"
+	s.RotateFile(filePath, limChan)
+	close(limChan)
+
+	val := s.GetValueFromPath("bar:baz")
+	if !strings.Contains(val.(string), pgpHeader) {
+		t.Errorf("YAML content was not encrypted.")
+	}
+	buffer, err := s.PlainTextYamlBuffer(filePath)
+	if err != nil {
+		t.Errorf("%s", err)
+	} else {
+		sls.WriteSlsFile(buffer, filePath)
 	}
 }
 
