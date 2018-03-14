@@ -426,7 +426,7 @@ func (s *Sls) RotateFile(file string, limChan chan bool) {
 
 	_, err := s.PlainTextYamlBuffer(file)
 	if err != nil {
-		logger.Warnf("%s", err)
+		logger.Errorf("%s", err)
 	} else {
 		buffer := s.PerformAction("encrypt")
 		WriteSlsFile(buffer, file)
