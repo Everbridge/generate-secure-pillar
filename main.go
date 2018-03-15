@@ -103,7 +103,7 @@ var appFlags = []cli.Flag{
 }
 
 var appHelp = fmt.Sprintf(`%s
-	CAVEAT: YAML files with include statements are not handled properly.
+	CAVEAT: YAML files with include statements are not handled properly, so we skip them.
 	
 	EXAMPLES:
 	# create a new sls file
