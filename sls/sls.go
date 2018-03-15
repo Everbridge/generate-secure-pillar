@@ -419,3 +419,17 @@ func (s *Sls) doMap(vals map[interface{}]interface{}, action string) map[interfa
 func isEncrypted(str string) bool {
 	return strings.Contains(str, pgpHeader)
 }
+
+// RotateFile decrypts a file and re-encrypts with the given key
+func (s *Sls) RotateFile(file string, limChan chan bool) {
+	logger.Infof("processing %s", file)
+
+	_, err := s.PlainTextYamlBuffer(file)
+	if err != nil {
+		logger.Errorf("%s", err)
+	} else {
+		buffer := s.PerformAction("encrypt")
+		WriteSlsFile(buffer, file)
+	}
+	limChan <- true
+}

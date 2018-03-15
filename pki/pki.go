@@ -40,11 +40,11 @@ func New(pgpKeyName string, publicKeyRing string, secretKeyRing string, log *log
 		logger.Fatal("cannot expand public key ring path: ", err)
 	}
 	p.PublicKeyRing = publicKeyRing
+
 	secretKeyRing, err = p.ExpandTilde(p.SecretKeyRing)
 	if err != nil {
 		logger.Fatal("cannot expand secret key ring path: ", err)
 	}
-	p.PublicKeyRing = publicKeyRing
 	p.SecretKeyRing = secretKeyRing
 
 	pubringFile, err := os.Open(p.PublicKeyRing)
@@ -57,6 +57,10 @@ func New(pgpKeyName string, publicKeyRing string, secretKeyRing string, log *log
 		logger.Fatal("cannot read public keys: ", err)
 	}
 	p.PublicKey = p.GetKeyByID(pubring, p.PgpKeyName)
+	if p.PublicKey == nil {
+		logger.Fatalf("unable to find key '%s' in %s", p.PgpKeyName, p.PublicKeyRing)
+	}
+
 	if err = pubringFile.Close(); err != nil {
 		logger.Fatal("error closing pubring: ", err)
 	}
