@@ -5,7 +5,7 @@ USAGE:
    generate-secure-pillar [global options] command [command options] [arguments...]
 
 VERSION:
-   1.0.185
+   1.0.188
 
 AUTHOR:
    Ed Silva <ed.silva@everbridge.com>
@@ -30,7 +30,7 @@ GLOBAL OPTIONS:
 COPYRIGHT:
    (c) 2018 Everbridge, Inc.
 
-  CAVEAT: YAML files with include statements are not handled properly.
+  CAVEAT: YAML files with include statements are not handled properly, so we skip them.
   
   EXAMPLES:
   # create a new sls file
