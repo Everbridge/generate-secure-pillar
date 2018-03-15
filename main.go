@@ -103,7 +103,7 @@ var appFlags = []cli.Flag{
 }
 
 var appHelp = fmt.Sprintf(`%s
-	CAVEAT: YAML files with include statements are not handled properly.
+	CAVEAT: YAML files with include statements are not handled properly, so we skip them.
 	
 	EXAMPLES:
 	# create a new sls file
@@ -300,7 +300,7 @@ func main() {
 		logger.Level = logrus.DebugLevel
 	}
 	app := cli.NewApp()
-	app.Version = "1.0.185"
+	app.Version = "1.0.188"
 	app.Authors = []cli.Author{
 		cli.Author{
 			Name:  "Ed Silva",
