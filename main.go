@@ -293,6 +293,20 @@ var appCommands = []cli.Command{
 			return nil
 		},
 	},
+	{
+		Name:    "test",
+		Aliases: []string{"r"},
+		Flags: []cli.Flag{
+			dirFlag,
+		},
+		Action: func(c *cli.Context) error {
+			s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, logger)
+			files := s.ValidateDir(recurseDir)
+			fmt.Printf("%#v\n", files)
+
+			return nil
+		},
+	},
 }
 
 func main() {

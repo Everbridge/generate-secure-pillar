@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -21,6 +22,7 @@ import (
 const pgpHeader = "-----BEGIN PGP MESSAGE-----"
 const encrypt = "encrypt"
 const decrypt = "decrypt"
+const validate = "validate"
 
 var logger *logrus.Logger
 
@@ -178,6 +180,10 @@ func (s *Sls) PlainTextYamlBuffer(filePath string) (bytes.Buffer, error) {
 func (s *Sls) FormatBuffer() bytes.Buffer {
 	var buffer bytes.Buffer
 
+	if len(s.Yaml.Values) == 0 {
+		logger.Errorf("no values to write")
+	}
+
 	out, err := yamlv2.Marshal(s.Yaml.Values)
 	if err != nil {
 		logger.Fatal(err)
@@ -257,6 +263,76 @@ func (s *Sls) ProcessDir(recurseDir string, action string) {
 	}
 }
 
+// ValidateDir will recursively apply findSlsFiles
+// It will try to get the key info from the values in each sls file
+// It returns the key info with a count of instances found
+// TODO: fix this
+func (s *Sls) ValidateDir(recurseDir string) []map[string]map[string]int {
+	var files []map[string]map[string]int
+	info, err := os.Stat(recurseDir)
+	if err != nil {
+		logger.Fatalf("cannot stat %s: %s", recurseDir, err)
+	}
+	if info.IsDir() && info.Name() != ".." {
+		slsFiles, count := FindSlsFiles(recurseDir)
+		if count == 0 {
+			logger.Fatalf("%s has no sls files", recurseDir)
+		}
+		for _, file := range slsFiles {
+			logger.Infof("processing %s", file)
+			err = s.ReadSlsFile(file)
+			if err != nil {
+				logger.Fatalf("%s", err)
+			}
+
+			files = append(files, s.FileInfo(file))
+		}
+	} else {
+		logger.Fatalf("%s is not a directory", recurseDir)
+	}
+
+	return files
+}
+
+// FileInfo gets the info on PGP keys used in a file
+// including the file name, the keys used with the count of instances
+func (s *Sls) FileInfo(file string) map[string]map[string]int {
+	fileInfo := make(map[string]map[string]int)
+	err := CheckForFile(file)
+	if err != nil {
+		logger.Fatalf("%s", err)
+	}
+	file, err = filepath.Abs(file)
+	if err != nil {
+		logger.Fatalf("%s", err)
+	}
+
+	err = s.ReadSlsFile(file)
+	if err != nil {
+		logger.Fatalf("%s", err)
+	}
+
+	fileInfo[file] = s.ValidateValues()
+
+	return fileInfo
+}
+
+// ValidateValues takes an action string (encrypt or decrypt)
+// and applies that action on all items
+func (s *Sls) ValidateValues() map[string]int {
+	var stuff = make(map[string]interface{})
+
+	for key := range s.Yaml.Values {
+		vals := s.GetValueFromPath(key)
+		stuff[key] = s.ProcessValues(vals, validate)
+	}
+
+	fmt.Printf("STUFF: %v\n", stuff)
+
+	var foo = make(map[string]int)
+	return foo
+}
+
 // GetValueFromPath returns the value from a path string
 func (s *Sls) GetValueFromPath(path string) interface{} {
 	parts := strings.Split(path, ":")
@@ -324,22 +400,20 @@ func (s *Sls) ProcessValues(vals interface{}, action string) interface{} {
 	case reflect.Map:
 		res = s.doMap(vals.(map[interface{}]interface{}), action)
 	case reflect.String:
+		strVal := to.String(vals)
 		switch action {
 		case decrypt:
-			if isEncrypted(to.String(vals)) {
-				plainText, err := s.Pki.DecryptSecret(to.String(vals))
-				if err != nil {
-					logger.Errorf("error decrypting value: %s", err)
-				} else {
-					vals = plainText
-				}
-			}
+			strVal = s.decryptVal(strVal)
 		case encrypt:
-			if !isEncrypted(to.String(vals)) {
-				vals = s.Pki.EncryptSecret(to.String(vals))
+			if !isEncrypted(strVal) {
+				strVal = s.Pki.EncryptSecret(strVal)
+			}
+		case validate:
+			if isEncrypted(strVal) {
+				strVal = s.keyInfo(strVal)
 			}
 		}
-		res = to.String(vals)
+		res = strVal
 	}
 
 	return res
@@ -359,21 +433,16 @@ func (s *Sls) doSlice(vals interface{}, action string) interface{} {
 			thing = item
 			things = append(things, s.doMap(thing.(map[interface{}]interface{}), action))
 		case reflect.String:
+			strVal := to.String(item)
 			switch action {
 			case decrypt:
-				if isEncrypted(to.String(item)) {
-					plainText, err := s.Pki.DecryptSecret(to.String(item))
-					if err != nil {
-						logger.Errorf("error decrypting value: %s", err)
-						thing = to.String(item)
-					} else {
-						thing = plainText
-					}
-				}
+				thing = s.decryptVal(strVal)
 			case encrypt:
-				if !isEncrypted(to.String(item)) {
-					thing = s.Pki.EncryptSecret(to.String(item))
+				if !isEncrypted(strVal) {
+					thing = s.Pki.EncryptSecret(strVal)
 				}
+			case validate:
+				thing = s.keyInfo(strVal)
 			}
 			things = append(things, thing)
 		}
@@ -394,20 +463,16 @@ func (s *Sls) doMap(vals map[interface{}]interface{}, action string) map[interfa
 		case reflect.Map:
 			ret[key] = s.doMap(val.(map[interface{}]interface{}), action)
 		case reflect.String:
+			strVal := to.String(val)
 			switch action {
 			case decrypt:
-				if isEncrypted(to.String(val)) {
-					plainText, err := s.Pki.DecryptSecret(to.String(val))
-					if err != nil {
-						logger.Errorf("error decrypting value for: %s, %s", key, err)
-					} else {
-						val = plainText
-					}
-				}
+				val = s.decryptVal(strVal)
 			case encrypt:
-				if !isEncrypted(to.String(val)) {
-					val = s.Pki.EncryptSecret(to.String(val))
+				if !isEncrypted(strVal) {
+					val = s.Pki.EncryptSecret(strVal)
 				}
+			case validate:
+				val = s.keyInfo(strVal)
 			}
 			ret[key] = val
 		}
@@ -432,4 +497,62 @@ func (s *Sls) RotateFile(file string, limChan chan bool) {
 		WriteSlsFile(buffer, file)
 	}
 	limChan <- true
+}
+
+func (s *Sls) keyInfo(val string) string {
+	tmpfile, err := ioutil.TempFile("", "gsp-")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if _, err = tmpfile.Write([]byte(val)); err != nil {
+		log.Fatal(err)
+	}
+
+	keyInfo, err := s.Pki.KeyUsedForEncryptedFile(tmpfile.Name())
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if err = tmpfile.Close(); err != nil {
+		log.Fatal(err)
+	}
+	if err = os.Remove(tmpfile.Name()); err != nil {
+		log.Fatal(err)
+	}
+
+	var keyStr string
+	lines := strings.Split(keyInfo, "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if strings.Contains(line, "encrypted with") {
+			keyStr = formatLine(keyStr, line)
+		}
+		if strings.Contains(line, "\"") {
+			keyStr = formatLine(keyStr, line)
+		}
+	}
+
+	return keyStr
+}
+
+func formatLine(str string, line string) string {
+	if len(str) > 0 {
+		str = fmt.Sprintf("%s %s", str, line)
+	} else {
+		str = str + line
+	}
+	return str
+}
+
+func (s *Sls) decryptVal(strVal string) string {
+	if isEncrypted(strVal) {
+		plainText, err := s.Pki.DecryptSecret(strVal)
+		if err != nil {
+			logger.Errorf("error decrypting value: %s", err)
+		}
+
+		return plainText
+	}
+	return ""
 }

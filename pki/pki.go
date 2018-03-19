@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"os/user"
 	"path/filepath"
+	"reflect"
 	"time"
 
 	"github.com/keybase/go-crypto/openpgp"
@@ -49,7 +51,6 @@ func New(pgpKeyName string, publicKeyRing string, secretKeyRing string, log *log
 
 	pubringFile, err := os.Open(p.PublicKeyRing)
 	if err != nil {
-
 		logger.Fatal("cannot read public key ring: ", err)
 	}
 	pubring, err := openpgp.ReadKeyRing(pubringFile)
@@ -164,17 +165,28 @@ func (p *Pki) DecryptSecret(cipherText string) (plainText string, err error) {
 }
 
 // GetKeyByID returns a keyring by the given ID
-func (p *Pki) GetKeyByID(keyring openpgp.EntityList, id string) *openpgp.Entity {
+func (p *Pki) GetKeyByID(keyring openpgp.EntityList, id interface{}) *openpgp.Entity {
 	for _, entity := range keyring {
-		for _, ident := range entity.Identities {
-			if ident.Name == id {
+
+		idType := reflect.TypeOf(id).Kind()
+		switch idType {
+		case reflect.Uint64:
+			if entity.PrimaryKey.KeyId == id.(uint64) {
+				return entity
+			} else if entity.PrivateKey.KeyId == id.(uint64) {
 				return entity
 			}
-			if ident.UserId.Email == id {
-				return entity
-			}
-			if ident.UserId.Name == id {
-				return entity
+		case reflect.String:
+			for _, ident := range entity.Identities {
+				if ident.Name == id.(string) {
+					return entity
+				}
+				if ident.UserId.Email == id.(string) {
+					return entity
+				}
+				if ident.UserId.Name == id.(string) {
+					return entity
+				}
 			}
 		}
 	}
@@ -193,4 +205,45 @@ func (p *Pki) ExpandTilde(path string) (string, error) {
 		return "", err
 	}
 	return filepath.Join(usr.HomeDir, path[1:]), nil
+}
+
+// KeyUsedForEncryptedFile gets the key used to encrypt a file
+func (p *Pki) KeyUsedForEncryptedFile(file string) (string, error) {
+	filePath, err := filepath.Abs(file)
+	if err != nil {
+		return "", err
+	}
+
+	in, err := os.Open(filePath)
+	if err != nil {
+		return "", err
+	}
+
+	block, err := armor.Decode(in)
+	if err != nil {
+		return "", err
+	}
+
+	if block.Type != "PGP MESSAGE" {
+		return "", fmt.Errorf("error decoding private key")
+	}
+
+	err = in.Close()
+	if err != nil {
+		return "", err
+	}
+
+	gpgCmd, err := exec.LookPath("gpg")
+	if err != nil {
+		return "", err
+	}
+
+	var cmd exec.Cmd
+	cmd.Path = gpgCmd
+	cmd.Args = []string{gpgCmd, "--list-packets", "--list-only", filePath}
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return "", err
+	}
+	return string(out), nil
 }
