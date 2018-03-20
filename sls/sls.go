@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -52,6 +53,33 @@ func New(secretNames []string, secretValues []string, topLevelElement string, pu
 	return s
 }
 
+// ReadBytes loads YAML from a []byte
+func (s *Sls) ReadBytes(buf []byte) error {
+	reader := strings.NewReader(string(buf))
+
+	err := s.ScanForIncludes(reader)
+	if err != nil {
+		return err
+	}
+
+	return yamlv2.Unmarshal(buf, &s.Yaml.Values)
+}
+
+// ScanForIncludes looks for include statements in the given io.Reader
+func (s *Sls) ScanForIncludes(reader io.Reader) error {
+	// Splits on newlines by default.
+	scanner := bufio.NewScanner(reader)
+
+	// https://golang.org/pkg/bufio/#Scanner.Scan
+	for scanner.Scan() {
+		txt := scanner.Text()
+		if strings.Contains(txt, "include:") {
+			return fmt.Errorf("contains include directives")
+		}
+	}
+	return scanner.Err()
+}
+
 // ReadSlsFile open and read a yaml file, if the file has include statements
 // we throw an error as the YAML parser will try to act on the include directives
 func (s *Sls) ReadSlsFile(filePath string) error {
@@ -60,26 +88,13 @@ func (s *Sls) ReadSlsFile(filePath string) error {
 		return err
 	}
 
-	f, err := os.Open(fullPath)
+	var buf []byte
+	buf, err = ioutil.ReadFile(fullPath)
 	if err != nil {
 		return err
 	}
 
-	// Splits on newlines by default.
-	scanner := bufio.NewScanner(f)
-
-	// https://golang.org/pkg/bufio/#Scanner.Scan
-	for scanner.Scan() {
-		if strings.Contains(scanner.Text(), "include:") {
-			return fmt.Errorf("skipping %s: contains include directives", filePath)
-		}
-	}
-	if err = scanner.Err(); err != nil {
-		return err
-	}
-
-	err = s.Yaml.Read(fullPath)
-	return err
+	return s.ReadBytes(buf)
 }
 
 // WriteSlsFile writes a buffer to the specified file
@@ -181,7 +196,7 @@ func (s *Sls) FormatBuffer() bytes.Buffer {
 	var buffer bytes.Buffer
 
 	if len(s.Yaml.Values) == 0 {
-		logger.Errorf("no values to write")
+		logger.Error("no values to format")
 	}
 
 	out, err := yamlv2.Marshal(s.Yaml.Values)
@@ -489,13 +504,12 @@ func isEncrypted(str string) bool {
 func (s *Sls) RotateFile(file string, limChan chan bool) {
 	logger.Infof("processing %s", file)
 
-	_, err := s.PlainTextYamlBuffer(file)
+	buffer, err := s.PlainTextYamlBuffer(file)
 	if err != nil {
 		logger.Errorf("%s", err)
-	} else {
-		buffer := s.PerformAction("encrypt")
-		WriteSlsFile(buffer, file)
 	}
+	buffer = s.PerformAction("encrypt")
+	WriteSlsFile(buffer, file)
 	limChan <- true
 }
 
@@ -546,13 +560,15 @@ func formatLine(str string, line string) string {
 }
 
 func (s *Sls) decryptVal(strVal string) string {
+	var plainText string
+
 	if isEncrypted(strVal) {
-		plainText, err := s.Pki.DecryptSecret(strVal)
+		var err error
+		plainText, err = s.Pki.DecryptSecret(strVal)
 		if err != nil {
 			logger.Errorf("error decrypting value: %s", err)
 		}
-
-		return plainText
 	}
-	return ""
+
+	return plainText
 }
