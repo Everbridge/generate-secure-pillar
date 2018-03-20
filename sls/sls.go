@@ -504,11 +504,11 @@ func isEncrypted(str string) bool {
 func (s *Sls) RotateFile(file string, limChan chan bool) {
 	logger.Infof("processing %s", file)
 
-	buffer, err := s.PlainTextYamlBuffer(file)
+	_, err := s.PlainTextYamlBuffer(file)
 	if err != nil {
 		logger.Errorf("%s", err)
 	}
-	buffer = s.PerformAction("encrypt")
+	buffer := s.PerformAction("encrypt")
 	WriteSlsFile(buffer, file)
 	limChan <- true
 }
