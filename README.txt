@@ -5,7 +5,7 @@ USAGE:
    generate-secure-pillar [global options] command [command options] [arguments...]
 
 VERSION:
-   1.0.196
+   1.0.197
 
 AUTHOR:
    Ed Silva <ed.silva@everbridge.com>
@@ -62,4 +62,13 @@ COPYRIGHT:
   
   # decrypt all files and re-encrypt with given key (requires imported private key)
   $ generate-secure-pillar -k "New Salt Master Key" rotate -d /path/to/pillar/secure/stuff
-  
+
+  # show all PGP key IDs used in a file
+  $ generate-secure-pillar keys all --file us1.sls
+
+  # show all keys used in all files in a given directory
+  generate-secure-pillar keys recurse -d /path/to/pillar/secure/stuff
+
+  # show the PGP Key ID used for an element at a path in a file
+  generate-secure-pillar keys path --path "some:yaml:path" --file new.sls
+
