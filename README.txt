@@ -5,7 +5,7 @@ USAGE:
    generate-secure-pillar [global options] command [command options] [arguments...]
 
 VERSION:
-   1.0.188
+   1.0.196
 
 AUTHOR:
    Ed Silva <ed.silva@everbridge.com>
@@ -16,6 +16,7 @@ COMMANDS:
      encrypt, e  perform encryption operations
      decrypt, d  perform decryption operations
      rotate, r   decrypt existing files and re-encrypt with a new key
+     keys, k     show PGP key IDs used
      help, h     Shows a list of commands or help for one command
 
 GLOBAL OPTIONS:

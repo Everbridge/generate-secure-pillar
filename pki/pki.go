@@ -6,8 +6,12 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"os/user"
 	"path/filepath"
+	"reflect"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/keybase/go-crypto/openpgp"
@@ -23,6 +27,14 @@ type Pki struct {
 	SecretKeyRing string
 	PgpKeyName    string
 	PublicKey     *openpgp.Entity
+	PGPTool       string
+}
+
+// PGPKey struct
+type PGPKey struct {
+	Pub     string
+	UIDs    []string
+	SubKeys []string
 }
 
 // New returns a pki struct
@@ -34,7 +46,7 @@ func New(pgpKeyName string, publicKeyRing string, secretKeyRing string, log *log
 		logger = logrus.New()
 	}
 
-	p := Pki{publicKeyRing, secretKeyRing, pgpKeyName, nil}
+	p := Pki{publicKeyRing, secretKeyRing, pgpKeyName, nil, ""}
 	publicKeyRing, err = p.ExpandTilde(p.PublicKeyRing)
 	if err != nil {
 		logger.Fatal("cannot expand public key ring path: ", err)
@@ -49,7 +61,6 @@ func New(pgpKeyName string, publicKeyRing string, secretKeyRing string, log *log
 
 	pubringFile, err := os.Open(p.PublicKeyRing)
 	if err != nil {
-
 		logger.Fatal("cannot read public key ring: ", err)
 	}
 	pubring, err := openpgp.ReadKeyRing(pubringFile)
@@ -59,6 +70,11 @@ func New(pgpKeyName string, publicKeyRing string, secretKeyRing string, log *log
 	p.PublicKey = p.GetKeyByID(pubring, p.PgpKeyName)
 	if p.PublicKey == nil {
 		logger.Fatalf("unable to find key '%s' in %s", p.PgpKeyName, p.PublicKeyRing)
+	}
+
+	p.PGPTool, err = gpgPath()
+	if err != nil {
+		logger.Fatal(err)
 	}
 
 	if err = pubringFile.Close(); err != nil {
@@ -164,17 +180,28 @@ func (p *Pki) DecryptSecret(cipherText string) (plainText string, err error) {
 }
 
 // GetKeyByID returns a keyring by the given ID
-func (p *Pki) GetKeyByID(keyring openpgp.EntityList, id string) *openpgp.Entity {
+func (p *Pki) GetKeyByID(keyring openpgp.EntityList, id interface{}) *openpgp.Entity {
 	for _, entity := range keyring {
-		for _, ident := range entity.Identities {
-			if ident.Name == id {
+
+		idType := reflect.TypeOf(id).Kind()
+		switch idType {
+		case reflect.Uint64:
+			if entity.PrimaryKey.KeyId == id.(uint64) {
+				return entity
+			} else if entity.PrivateKey.KeyId == id.(uint64) {
 				return entity
 			}
-			if ident.UserId.Email == id {
-				return entity
-			}
-			if ident.UserId.Name == id {
-				return entity
+		case reflect.String:
+			for _, ident := range entity.Identities {
+				if ident.Name == id.(string) {
+					return entity
+				}
+				if ident.UserId.Email == id.(string) {
+					return entity
+				}
+				if ident.UserId.Name == id.(string) {
+					return entity
+				}
 			}
 		}
 	}
@@ -193,4 +220,112 @@ func (p *Pki) ExpandTilde(path string) (string, error) {
 		return "", err
 	}
 	return filepath.Join(usr.HomeDir, path[1:]), nil
+}
+
+// KeyUsedForEncryptedFile gets the key used to encrypt a file
+func (p *Pki) KeyUsedForEncryptedFile(file string) (PGPKey, error) {
+	filePath, err := checkPGPFile(file)
+	if err != nil {
+		return PGPKey{}, err
+	}
+
+	var cmd exec.Cmd
+	cmd.Path = p.PGPTool
+	cmd.Args = []string{p.PGPTool, "--list-packets", "--list-only", "--keyid-format", "long", filePath}
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return PGPKey{}, fmt.Errorf("%s: %s", out, err)
+	}
+
+	var keyStr string
+	lines := strings.Split(string(out), "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if strings.Contains(line, " keyid ") {
+			words := strings.Split(line, ",")
+			line = words[len(words)-1]
+			words = strings.Split(line, " ")
+			keyStr = strings.TrimSpace(words[len(words)-1])
+		}
+	}
+	if keyStr == "" {
+		return PGPKey{}, fmt.Errorf("can't parse pgp key info")
+	}
+	return p.PGPKeyInfo(keyStr)
+}
+
+// PGPKeyInfo return long format key info
+func (p *Pki) PGPKeyInfo(keyID string) (PGPKey, error) {
+	var key PGPKey
+	var cmd exec.Cmd
+
+	cmd.Path = p.PGPTool
+	cmd.Args = []string{p.PGPTool, "--list-keys", "--keyid-format", "long", keyID}
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return key, fmt.Errorf("%s: %s", out, err)
+	}
+
+	lines := strings.Split(string(out), "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+
+		part := keyType("pub", line)
+		if part != "" {
+			key.Pub = part
+		} else {
+			key.Pub = keyID
+		}
+		part = keyType("uid", line)
+		if part != "" {
+			key.UIDs = append(key.UIDs, part)
+		}
+		part = keyType("sub", line)
+		if part != "" {
+			key.SubKeys = append(key.SubKeys, part)
+		}
+	}
+
+	return key, nil
+}
+
+func gpgPath() (string, error) {
+	gpgCmd, err := exec.LookPath("gpg1")
+	if err != nil {
+		return exec.LookPath("gpg")
+	}
+	return gpgCmd, err
+}
+
+func checkPGPFile(file string) (string, error) {
+	filePath, err := filepath.Abs(file)
+	if err != nil {
+		return filePath, err
+	}
+
+	in, err := os.Open(filePath)
+	if err != nil {
+		return filePath, err
+	}
+
+	block, err := armor.Decode(in)
+	if err != nil {
+		return filePath, err
+	}
+
+	if block.Type != "PGP MESSAGE" {
+		return filePath, fmt.Errorf("error decoding private key")
+	}
+
+	return filePath, in.Close()
+}
+
+func keyType(pgpType string, line string) string {
+	rgx := fmt.Sprintf(`^` + pgpType + `\s+(.*?)$`)
+	re := regexp.MustCompile(rgx)
+	match := re.FindStringSubmatch(line)
+	if len(match) < 2 {
+		return ""
+	}
+	return match[1]
 }

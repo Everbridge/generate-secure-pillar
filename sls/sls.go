@@ -4,7 +4,9 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"io"
 	"io/ioutil"
+	"log"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -21,6 +23,7 @@ import (
 const pgpHeader = "-----BEGIN PGP MESSAGE-----"
 const encrypt = "encrypt"
 const decrypt = "decrypt"
+const validate = "validate"
 
 var logger *logrus.Logger
 
@@ -34,6 +37,14 @@ type Sls struct {
 	PgpKeyName      string
 	Yaml            *yaml.Yaml
 	Pki             *pki.Pki
+	Keys            []string
+}
+
+// PGPInfo pgp data
+type PGPInfo struct {
+	Key   string
+	File  string
+	Count int
 }
 
 // New return Sls struct
@@ -44,10 +55,40 @@ func New(secretNames []string, secretValues []string, topLevelElement string, pu
 		logger = logrus.New()
 	}
 
+	var keys []string
 	p := pki.New(pgpKeyName, publicKeyRing, secretKeyRing, logger)
-	s := Sls{secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, yaml.New(), &p}
+	s := Sls{secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, yaml.New(), &p, keys}
 
 	return s
+}
+
+// ReadBytes loads YAML from a []byte
+func (s *Sls) ReadBytes(buf []byte) error {
+	s.Yaml = yaml.New()
+
+	reader := strings.NewReader(string(buf))
+
+	err := s.ScanForIncludes(reader)
+	if err != nil {
+		return err
+	}
+
+	return yamlv2.Unmarshal(buf, &s.Yaml.Values)
+}
+
+// ScanForIncludes looks for include statements in the given io.Reader
+func (s *Sls) ScanForIncludes(reader io.Reader) error {
+	// Splits on newlines by default.
+	scanner := bufio.NewScanner(reader)
+
+	// https://golang.org/pkg/bufio/#Scanner.Scan
+	for scanner.Scan() {
+		txt := scanner.Text()
+		if strings.Contains(txt, "include:") {
+			return fmt.Errorf("contains include directives")
+		}
+	}
+	return scanner.Err()
 }
 
 // ReadSlsFile open and read a yaml file, if the file has include statements
@@ -58,26 +99,13 @@ func (s *Sls) ReadSlsFile(filePath string) error {
 		return err
 	}
 
-	f, err := os.Open(fullPath)
+	var buf []byte
+	buf, err = ioutil.ReadFile(fullPath)
 	if err != nil {
 		return err
 	}
 
-	// Splits on newlines by default.
-	scanner := bufio.NewScanner(f)
-
-	// https://golang.org/pkg/bufio/#Scanner.Scan
-	for scanner.Scan() {
-		if strings.Contains(scanner.Text(), "include:") {
-			return fmt.Errorf("skipping %s: contains include directives", filePath)
-		}
-	}
-	if err = scanner.Err(); err != nil {
-		return err
-	}
-
-	err = s.Yaml.Read(fullPath)
-	return err
+	return s.ReadBytes(buf)
 }
 
 // WriteSlsFile writes a buffer to the specified file
@@ -107,7 +135,8 @@ func WriteSlsFile(buffer bytes.Buffer, outFilePath string) {
 		logger.Fatal("error writing sls file: ", err)
 	}
 	if !stdOut {
-		logger.Infof("wrote out to file: '%s'", outFilePath)
+		shortFile := shortFileName(outFilePath)
+		logger.Infof("wrote out to file: '%s'", shortFile)
 	}
 }
 
@@ -134,27 +163,21 @@ func FindSlsFiles(searchDir string) ([]string, int) {
 // CipherTextYamlBuffer returns a buffer with encrypted and formatted yaml text
 // If the 'all' flag is set all values under the designated top level element are encrypted
 func (s *Sls) CipherTextYamlBuffer(filePath string) (bytes.Buffer, error) {
-	var buffer bytes.Buffer
-	err := CheckForFile(filePath)
-	if err != nil {
-		return buffer, err
-	}
-	filePath, err = filepath.Abs(filePath)
-	if err != nil {
-		return buffer, err
-	}
-
-	err = s.ReadSlsFile(filePath)
-	if err != nil {
-		return buffer, err
-	}
-
-	buffer = s.PerformAction(encrypt)
-	return buffer, err
+	return s.FileAction(filePath, encrypt)
 }
 
 // PlainTextYamlBuffer decrypts all values under the top level element and returns a formatted buffer
 func (s *Sls) PlainTextYamlBuffer(filePath string) (bytes.Buffer, error) {
+	return s.FileAction(filePath, decrypt)
+}
+
+// KeysForYamlBuffer gets all keys used for encrypted values in a file
+func (s *Sls) KeysForYamlBuffer(filePath string) (bytes.Buffer, error) {
+	return s.FileAction(filePath, validate)
+}
+
+// FileAction performs an action on a file
+func (s *Sls) FileAction(filePath string, action string) (bytes.Buffer, error) {
 	var buffer bytes.Buffer
 	err := CheckForFile(filePath)
 	if err != nil {
@@ -170,20 +193,26 @@ func (s *Sls) PlainTextYamlBuffer(filePath string) (bytes.Buffer, error) {
 		return buffer, err
 	}
 
-	buffer = s.PerformAction(decrypt)
+	buffer = s.PerformAction(action)
 	return buffer, err
 }
 
 // FormatBuffer returns a formatted .sls buffer with the gpg renderer line
-func (s *Sls) FormatBuffer() bytes.Buffer {
+func (s *Sls) FormatBuffer(action string) bytes.Buffer {
 	var buffer bytes.Buffer
+
+	if len(s.Yaml.Values) == 0 {
+		logger.Error("no values to format")
+	}
 
 	out, err := yamlv2.Marshal(s.Yaml.Values)
 	if err != nil {
 		logger.Fatal(err)
 	}
 
-	buffer.WriteString("#!yaml|gpg\n\n")
+	if action != validate {
+		buffer.WriteString("#!yaml|gpg\n\n")
+	}
 	buffer.WriteString(string(out))
 
 	return buffer
@@ -221,7 +250,7 @@ func (s *Sls) ProcessYaml() {
 
 // ProcessDir will recursively apply findSlsFiles
 // It will either encrypt or decrypt, as specified by the action flag
-// It writes replaces the files found
+// It replaces the contents of the files found
 func (s *Sls) ProcessDir(recurseDir string, action string) {
 	info, err := os.Stat(recurseDir)
 	if err != nil {
@@ -233,24 +262,25 @@ func (s *Sls) ProcessDir(recurseDir string, action string) {
 			logger.Fatalf("%s has no sls files", recurseDir)
 		}
 		for _, file := range slsFiles {
-			logger.Infof("processing %s", file)
+			shortFile := shortFileName(file)
+			logger.Infof("processing %s", shortFile)
 			var buffer bytes.Buffer
 			if action == encrypt {
 				buffer, err = s.CipherTextYamlBuffer(file)
-				if err != nil {
-					logger.Warnf("%s", err)
-					continue
-				}
+				WriteSlsFile(buffer, file)
 			} else if action == decrypt {
 				buffer, err = s.PlainTextYamlBuffer(file)
-				if err != nil {
-					logger.Warnf("%s", err)
-					continue
-				}
+				WriteSlsFile(buffer, file)
+			} else if action == validate {
+				buffer, err = s.KeysForYamlBuffer(file)
+				fmt.Printf("%s\n", buffer.String())
 			} else {
 				logger.Fatalf("unknown action: %s", action)
 			}
-			WriteSlsFile(buffer, file)
+			if err != nil {
+				logger.Warnf("%s", err)
+				continue
+			}
 		}
 	} else {
 		logger.Fatalf("%s is not a directory", recurseDir)
@@ -289,8 +319,7 @@ func (s *Sls) SetValueFromPath(path string, value string) error {
 // PerformAction takes an action string (encrypt or decrypt)
 // and applies that action on all items
 func (s *Sls) PerformAction(action string) bytes.Buffer {
-
-	if action == encrypt || action == decrypt {
+	if validAction(action) {
 		var stuff = make(map[string]interface{})
 
 		for key := range s.Yaml.Values {
@@ -310,7 +339,7 @@ func (s *Sls) PerformAction(action string) bytes.Buffer {
 		s.Yaml.Values = stuff
 	}
 
-	return s.FormatBuffer()
+	return s.FormatBuffer(action)
 }
 
 // ProcessValues will encrypt or decrypt given values
@@ -324,22 +353,18 @@ func (s *Sls) ProcessValues(vals interface{}, action string) interface{} {
 	case reflect.Map:
 		res = s.doMap(vals.(map[interface{}]interface{}), action)
 	case reflect.String:
+		strVal := to.String(vals)
 		switch action {
 		case decrypt:
-			if isEncrypted(to.String(vals)) {
-				plainText, err := s.Pki.DecryptSecret(to.String(vals))
-				if err != nil {
-					logger.Errorf("error decrypting value: %s", err)
-				} else {
-					vals = plainText
-				}
-			}
+			strVal = s.decryptVal(strVal)
 		case encrypt:
-			if !isEncrypted(to.String(vals)) {
-				vals = s.Pki.EncryptSecret(to.String(vals))
+			if !isEncrypted(strVal) {
+				strVal = s.Pki.EncryptSecret(strVal)
 			}
+		case validate:
+			strVal = s.keyInfo(strVal)
 		}
-		res = to.String(vals)
+		res = strVal
 	}
 
 	return res
@@ -359,21 +384,16 @@ func (s *Sls) doSlice(vals interface{}, action string) interface{} {
 			thing = item
 			things = append(things, s.doMap(thing.(map[interface{}]interface{}), action))
 		case reflect.String:
+			strVal := to.String(item)
 			switch action {
 			case decrypt:
-				if isEncrypted(to.String(item)) {
-					plainText, err := s.Pki.DecryptSecret(to.String(item))
-					if err != nil {
-						logger.Errorf("error decrypting value: %s", err)
-						thing = to.String(item)
-					} else {
-						thing = plainText
-					}
-				}
+				thing = s.decryptVal(strVal)
 			case encrypt:
-				if !isEncrypted(to.String(item)) {
-					thing = s.Pki.EncryptSecret(to.String(item))
+				if !isEncrypted(strVal) {
+					thing = s.Pki.EncryptSecret(strVal)
 				}
+			case validate:
+				thing = s.keyInfo(strVal)
 			}
 			things = append(things, thing)
 		}
@@ -394,20 +414,16 @@ func (s *Sls) doMap(vals map[interface{}]interface{}, action string) map[interfa
 		case reflect.Map:
 			ret[key] = s.doMap(val.(map[interface{}]interface{}), action)
 		case reflect.String:
+			strVal := to.String(val)
 			switch action {
 			case decrypt:
-				if isEncrypted(to.String(val)) {
-					plainText, err := s.Pki.DecryptSecret(to.String(val))
-					if err != nil {
-						logger.Errorf("error decrypting value for: %s, %s", key, err)
-					} else {
-						val = plainText
-					}
-				}
+				val = s.decryptVal(strVal)
 			case encrypt:
-				if !isEncrypted(to.String(val)) {
-					val = s.Pki.EncryptSecret(to.String(val))
+				if !isEncrypted(strVal) {
+					val = s.Pki.EncryptSecret(strVal)
 				}
+			case validate:
+				val = s.keyInfo(strVal)
 			}
 			ret[key] = val
 		}
@@ -422,14 +438,69 @@ func isEncrypted(str string) bool {
 
 // RotateFile decrypts a file and re-encrypts with the given key
 func (s *Sls) RotateFile(file string, limChan chan bool) {
-	logger.Infof("processing %s", file)
+	shortFile := shortFileName(file)
+	logger.Infof("processing %s", shortFile)
 
 	_, err := s.PlainTextYamlBuffer(file)
 	if err != nil {
 		logger.Errorf("%s", err)
-	} else {
-		buffer := s.PerformAction("encrypt")
-		WriteSlsFile(buffer, file)
 	}
+	buffer := s.PerformAction("encrypt")
+	WriteSlsFile(buffer, file)
 	limChan <- true
+}
+
+func (s *Sls) keyInfo(val string) string {
+	if !isEncrypted(val) {
+		return ""
+	}
+
+	tmpfile, err := ioutil.TempFile("", "gsp-")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if _, err = tmpfile.Write([]byte(val)); err != nil {
+		log.Fatal(err)
+	}
+
+	keyInfo, err := s.Pki.KeyUsedForEncryptedFile(tmpfile.Name())
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if err = tmpfile.Close(); err != nil {
+		log.Fatal(err)
+	}
+	if err = os.Remove(tmpfile.Name()); err != nil {
+		log.Fatal(err)
+	}
+
+	return keyInfo.Pub
+}
+
+func (s *Sls) decryptVal(strVal string) string {
+	var plainText string
+
+	if isEncrypted(strVal) {
+		var err error
+		plainText, err = s.Pki.DecryptSecret(strVal)
+		if err != nil {
+			logger.Errorf("error decrypting value: %s", err)
+		}
+	}
+
+	return plainText
+}
+
+func validAction(action string) bool {
+	return action == encrypt || action == decrypt || action == validate
+}
+
+func shortFileName(file string) string {
+	pwd, err := os.Getwd()
+	if err != nil {
+		logger.Fatalf("%s", err)
+	}
+	return strings.Replace(file, pwd+"/", "", 1)
 }
