@@ -481,6 +481,51 @@ func TestRotateFile(t *testing.T) {
 	}
 }
 
+func TestKeyInfo(t *testing.T) {
+	pgpKeyName = "Dev Salt Master"
+
+	if os.Getenv("SALT_SEC_KEYRING") != "" {
+		publicKeyRing, _ = filepath.Abs(os.Getenv("SALT_PUB_KEYRING"))
+	} else {
+		publicKeyRing = "~/.gnupg/pubring.gpg"
+	}
+
+	if os.Getenv("SALT_SEC_KEYRING") != "" {
+		secretKeyRing, _ = filepath.Abs(os.Getenv("SALT_SEC_KEYRING"))
+	} else {
+		secretKeyRing = "~/.gnupg/secring.gpg"
+	}
+	topLevelElement = ""
+
+	path := os.Getenv("PATH")
+	os.Setenv("PATH", path+":/usr/local/bin")
+
+	s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, nil)
+	filePath := "./testdata/new.sls"
+	buffer, err := s.CipherTextYamlBuffer(filePath)
+	if err != nil {
+		t.Errorf("%s", err)
+	} else {
+		sls.WriteSlsFile(buffer, filePath)
+	}
+	err = s.ReadSlsFile(filePath)
+	if err != nil {
+		t.Errorf("Error getting test file: %s", err)
+	}
+
+	buffer = s.PerformAction("validate")
+	if err = checkLineCount(buffer.String(), 0); err != nil {
+		t.Errorf("Found PGP data in buffer: %s", err)
+	}
+
+	buffer, err = s.PlainTextYamlBuffer(filePath)
+	if err != nil {
+		t.Errorf("%s", err)
+	} else {
+		sls.WriteSlsFile(buffer, filePath)
+	}
+}
+
 func checkLineCount(buffer string, wantedCount int) error {
 	var err error
 	encCount := 0

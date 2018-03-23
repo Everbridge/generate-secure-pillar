@@ -135,7 +135,8 @@ func WriteSlsFile(buffer bytes.Buffer, outFilePath string) {
 		logger.Fatal("error writing sls file: ", err)
 	}
 	if !stdOut {
-		logger.Infof("wrote out to file: '%s'", outFilePath)
+		shortFile := shortFileName(outFilePath)
+		logger.Infof("wrote out to file: '%s'", shortFile)
 	}
 }
 
@@ -261,7 +262,8 @@ func (s *Sls) ProcessDir(recurseDir string, action string) {
 			logger.Fatalf("%s has no sls files", recurseDir)
 		}
 		for _, file := range slsFiles {
-			logger.Infof("processing %s", file)
+			shortFile := shortFileName(file)
+			logger.Infof("processing %s", shortFile)
 			var buffer bytes.Buffer
 			if action == encrypt {
 				buffer, err = s.CipherTextYamlBuffer(file)
@@ -271,7 +273,7 @@ func (s *Sls) ProcessDir(recurseDir string, action string) {
 				WriteSlsFile(buffer, file)
 			} else if action == validate {
 				buffer, err = s.KeysForYamlBuffer(file)
-				fmt.Printf("BUFFER: %s\n", buffer.String())
+				fmt.Printf("%s\n", buffer.String())
 			} else {
 				logger.Fatalf("unknown action: %s", action)
 			}
@@ -283,56 +285,6 @@ func (s *Sls) ProcessDir(recurseDir string, action string) {
 	} else {
 		logger.Fatalf("%s is not a directory", recurseDir)
 	}
-}
-
-// FileInfo gets the info on PGP keys used in a file
-// including the file name, the keys used with the count of instances
-func (s *Sls) FileInfo(file string) []PGPInfo {
-	err := CheckForFile(file)
-	if err != nil {
-		logger.Fatalf("%s", err)
-	}
-	file, err = filepath.Abs(file)
-	if err != nil {
-		logger.Fatalf("%s", err)
-	}
-
-	err = s.ReadSlsFile(file)
-	if err != nil {
-		logger.Fatalf("%s", err)
-	}
-
-	// keys := s.ValidateValues()
-	// fmt.Printf("KEYS: %s\n", keys)
-	// keys := s.ValidateValues(s.Yaml.Values)
-	// pwd, err := os.Getwd()
-	// if err != nil {
-	// 	logger.Fatalf("%s", err)
-	// }
-	// shortFile := strings.Replace(file, pwd+"/", "", 1)
-
-	var fileInfo []PGPInfo
-	// seen := make(map[string]bool, 1)
-	// for i := 0; i < len(keys); i++ {
-	// 	var info PGPInfo
-	// 	var index int
-	// 	if _, ok := seen[keys[i]]; ok {
-	// 		fmt.Printf("SEEN: %s\n", keys[i])
-	// 		info, index = findKeyInfo(fileInfo, keys[i])
-	// 		info.Count++
-	// 		fileInfo[index] = info
-	// 	} else {
-	// 		fmt.Printf("NEW: %s\n", keys[i])
-	// 		info.File = shortFile
-	// 		info.Key = keys[i]
-	// 		info.Count = 1
-	// 		seen[info.Key] = true
-	// 		fileInfo = append(fileInfo, info)
-	// 	}
-
-	// }
-
-	return fileInfo
 }
 
 // GetValueFromPath returns the value from a path string
@@ -486,7 +438,8 @@ func isEncrypted(str string) bool {
 
 // RotateFile decrypts a file and re-encrypts with the given key
 func (s *Sls) RotateFile(file string, limChan chan bool) {
-	logger.Infof("processing %s", file)
+	shortFile := shortFileName(file)
+	logger.Infof("processing %s", shortFile)
 
 	_, err := s.PlainTextYamlBuffer(file)
 	if err != nil {
@@ -523,17 +476,7 @@ func (s *Sls) keyInfo(val string) string {
 		log.Fatal(err)
 	}
 
-	fmt.Printf("KEY: %s\n", keyInfo)
-	return keyInfo
-}
-
-func formatLine(str string, line string) string {
-	if len(str) > 0 {
-		str = fmt.Sprintf("%s %s", str, line)
-	} else {
-		str = str + line
-	}
-	return str
+	return keyInfo.Pub
 }
 
 func (s *Sls) decryptVal(strVal string) string {
@@ -552,4 +495,12 @@ func (s *Sls) decryptVal(strVal string) string {
 
 func validAction(action string) bool {
 	return action == encrypt || action == decrypt || action == validate
+}
+
+func shortFileName(file string) string {
+	pwd, err := os.Getwd()
+	if err != nil {
+		logger.Fatalf("%s", err)
+	}
+	return strings.Replace(file, pwd+"/", "", 1)
 }

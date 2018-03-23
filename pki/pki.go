@@ -27,6 +27,7 @@ type Pki struct {
 	SecretKeyRing string
 	PgpKeyName    string
 	PublicKey     *openpgp.Entity
+	PGPTool       string
 }
 
 // PGPKey struct
@@ -45,7 +46,7 @@ func New(pgpKeyName string, publicKeyRing string, secretKeyRing string, log *log
 		logger = logrus.New()
 	}
 
-	p := Pki{publicKeyRing, secretKeyRing, pgpKeyName, nil}
+	p := Pki{publicKeyRing, secretKeyRing, pgpKeyName, nil, ""}
 	publicKeyRing, err = p.ExpandTilde(p.PublicKeyRing)
 	if err != nil {
 		logger.Fatal("cannot expand public key ring path: ", err)
@@ -69,6 +70,11 @@ func New(pgpKeyName string, publicKeyRing string, secretKeyRing string, log *log
 	p.PublicKey = p.GetKeyByID(pubring, p.PgpKeyName)
 	if p.PublicKey == nil {
 		logger.Fatalf("unable to find key '%s' in %s", p.PgpKeyName, p.PublicKeyRing)
+	}
+
+	p.PGPTool, err = gpgPath()
+	if err != nil {
+		logger.Fatal(err)
 	}
 
 	if err = pubringFile.Close(); err != nil {
@@ -217,23 +223,18 @@ func (p *Pki) ExpandTilde(path string) (string, error) {
 }
 
 // KeyUsedForEncryptedFile gets the key used to encrypt a file
-func (p *Pki) KeyUsedForEncryptedFile(file string) (string, error) {
+func (p *Pki) KeyUsedForEncryptedFile(file string) (PGPKey, error) {
 	filePath, err := checkPGPFile(file)
 	if err != nil {
-		return "", err
-	}
-
-	gpgCmd, err := gpgPath()
-	if err != nil {
-		return "", err
+		return PGPKey{}, err
 	}
 
 	var cmd exec.Cmd
-	cmd.Path = gpgCmd
-	cmd.Args = []string{gpgCmd, "--list-packets", "--list-only", "--keyid-format", "long", filePath}
+	cmd.Path = p.PGPTool
+	cmd.Args = []string{p.PGPTool, "--list-packets", "--list-only", "--keyid-format", "long", filePath}
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return "", err
+		return PGPKey{}, fmt.Errorf("%s: %s", out, err)
 	}
 
 	var keyStr string
@@ -248,31 +249,21 @@ func (p *Pki) KeyUsedForEncryptedFile(file string) (string, error) {
 		}
 	}
 	if keyStr == "" {
-		return "", fmt.Errorf("can't parse pgp key info")
+		return PGPKey{}, fmt.Errorf("can't parse pgp key info")
 	}
-
-	keyInfo, err := p.PGPKeyInfo(keyStr)
-	if err != nil {
-		return "", err
-	}
-
-	return keyInfo.Pub, nil
+	return p.PGPKeyInfo(keyStr)
 }
 
 // PGPKeyInfo return long format key info
 func (p *Pki) PGPKeyInfo(keyID string) (PGPKey, error) {
 	var key PGPKey
-	gpgCmd, err := gpgPath()
-	if err != nil {
-		return key, err
-	}
-
 	var cmd exec.Cmd
-	cmd.Path = gpgCmd
-	cmd.Args = []string{gpgCmd, "--list-keys", "--keyid-format", "long", keyID}
+
+	cmd.Path = p.PGPTool
+	cmd.Args = []string{p.PGPTool, "--list-keys", "--keyid-format", "long", keyID}
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return key, err
+		return key, fmt.Errorf("%s: %s", out, err)
 	}
 
 	lines := strings.Split(string(out), "\n")
@@ -282,6 +273,8 @@ func (p *Pki) PGPKeyInfo(keyID string) (PGPKey, error) {
 		part := keyType("pub", line)
 		if part != "" {
 			key.Pub = part
+		} else {
+			key.Pub = keyID
 		}
 		part = keyType("uid", line)
 		if part != "" {

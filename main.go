@@ -270,7 +270,7 @@ var appCommands = []cli.Command{
 					if err != nil {
 						logger.Fatal(err)
 					}
-					decryptPath(&s, yamlPath)
+					pathAction(&s, yamlPath, "decrypt")
 
 					return nil
 				},
@@ -294,15 +294,65 @@ var appCommands = []cli.Command{
 		},
 	},
 	{
-		Name:    "test",
-		Aliases: []string{"r"},
-		Flags: []cli.Flag{
-			dirFlag,
-		},
+		Name:    "keys",
+		Aliases: []string{"k"},
+		Usage:   "show PGP key IDs used",
+		Flags:   fileFlags,
 		Action: func(c *cli.Context) error {
-			s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, logger)
-			s.ProcessDir(recurseDir, "validate")
-			return nil
+			return cli.ShowCommandHelp(c, "")
+		},
+		Subcommands: []cli.Command{
+			{
+				Name: "all",
+				Flags: []cli.Flag{
+					inputFlag,
+					outputFlag,
+				},
+				Action: func(c *cli.Context) error {
+					s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, logger)
+					if inputFilePath != os.Stdin.Name() && updateInPlace {
+						outputFilePath = inputFilePath
+					}
+					buffer, err := s.KeysForYamlBuffer(inputFilePath)
+					if err != nil {
+						logger.Fatal(err)
+					}
+					fmt.Printf("%s\n", buffer.String())
+					return nil
+				},
+			},
+			{
+				Name: "recurse",
+				Flags: []cli.Flag{
+					dirFlag,
+				},
+				Action: func(c *cli.Context) error {
+					s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, logger)
+					s.ProcessDir(recurseDir, "validate")
+					return nil
+				},
+			},
+			{
+				Name: "path",
+				Flags: []cli.Flag{
+					inputFlag,
+					cli.StringFlag{
+						Name:        "path, p",
+						Usage:       "YAML path to examine",
+						Destination: &yamlPath,
+					},
+				},
+				Action: func(c *cli.Context) error {
+					s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, logger)
+					err := s.ReadSlsFile(inputFilePath)
+					if err != nil {
+						logger.Fatal(err)
+					}
+					pathAction(&s, yamlPath, "validate")
+
+					return nil
+				},
+			},
 		},
 	},
 }
@@ -342,10 +392,10 @@ func safeWrite(buffer bytes.Buffer, err error) {
 	}
 }
 
-func decryptPath(s *sls.Sls, path string) {
+func pathAction(s *sls.Sls, path string, action string) {
 	vals := s.GetValueFromPath(path)
 	if vals != nil {
-		vals = s.ProcessValues(vals, "decrypt")
+		vals = s.ProcessValues(vals, action)
 		fmt.Printf("%s: %s\n", path, vals)
 	} else {
 		logger.Warnf("unable to find path: '%s'", path)
