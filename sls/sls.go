@@ -362,7 +362,12 @@ func (s *Sls) ProcessValues(vals interface{}, action string) interface{} {
 				strVal = s.Pki.EncryptSecret(strVal)
 			}
 		case validate:
-			strVal = s.keyInfo(strVal)
+			keyInfo := s.keyInfo(strVal)
+			if keyInfo.UIDs[0] != "" {
+				strVal = fmt.Sprintf("%s: %s", keyInfo.Pub, keyInfo.UIDs[0])
+			} else {
+				strVal = keyInfo.Pub
+			}
 		}
 		res = strVal
 	}
@@ -393,7 +398,12 @@ func (s *Sls) doSlice(vals interface{}, action string) interface{} {
 					thing = s.Pki.EncryptSecret(strVal)
 				}
 			case validate:
-				thing = s.keyInfo(strVal)
+				keyInfo := s.keyInfo(strVal)
+				if keyInfo.UIDs[0] != "" {
+					thing = fmt.Sprintf("%s: %s", keyInfo.Pub, keyInfo.UIDs[0])
+				} else {
+					thing = keyInfo.Pub
+				}
 			}
 			things = append(things, thing)
 		}
@@ -423,7 +433,12 @@ func (s *Sls) doMap(vals map[interface{}]interface{}, action string) map[interfa
 					val = s.Pki.EncryptSecret(strVal)
 				}
 			case validate:
-				val = s.keyInfo(strVal)
+				keyInfo := s.keyInfo(strVal)
+				if keyInfo.UIDs[0] != "" {
+					val = fmt.Sprintf("%s: %s", keyInfo.Pub, keyInfo.UIDs[0])
+				} else {
+					val = keyInfo.Pub
+				}
 			}
 			ret[key] = val
 		}
@@ -450,9 +465,9 @@ func (s *Sls) RotateFile(file string, limChan chan bool) {
 	limChan <- true
 }
 
-func (s *Sls) keyInfo(val string) string {
+func (s *Sls) keyInfo(val string) pki.PGPKey {
 	if !isEncrypted(val) {
-		return ""
+		return pki.PGPKey{}
 	}
 
 	tmpfile, err := ioutil.TempFile("", "gsp-")
@@ -476,7 +491,7 @@ func (s *Sls) keyInfo(val string) string {
 		log.Fatal(err)
 	}
 
-	return keyInfo.Pub
+	return keyInfo
 }
 
 func (s *Sls) decryptVal(strVal string) string {
