@@ -385,7 +385,7 @@ func TestNestedAndMultiLineFile(t *testing.T) {
 		sls.WriteSlsFile(buffer, filePath)
 	}
 
-	err = checkLineCount(buffer.String(), 12)
+	err = scanString(buffer.String(), 12, pgpHeader)
 	if err != nil {
 		t.Errorf("%s", err)
 	}
@@ -403,7 +403,7 @@ func TestNestedAndMultiLineFile(t *testing.T) {
 		sls.WriteSlsFile(buffer, filePath)
 	}
 
-	err = checkLineCount(buffer.String(), 0)
+	err = scanString(buffer.String(), 0, pgpHeader)
 	if err != nil {
 		t.Errorf("%s", err)
 	}
@@ -514,8 +514,11 @@ func TestKeyInfo(t *testing.T) {
 	}
 
 	buffer = s.PerformAction("validate")
-	if err = checkLineCount(buffer.String(), 0); err != nil {
+	if err = scanString(buffer.String(), 0, pgpHeader); err != nil {
 		t.Errorf("Found PGP data in buffer: %s", err)
+	}
+	if err = scanString(buffer.String(), 5, pgpKeyName); err != nil {
+		t.Errorf("Key name count in buffer: %s", err)
 	}
 
 	buffer, err = s.PlainTextYamlBuffer(filePath)
@@ -526,14 +529,14 @@ func TestKeyInfo(t *testing.T) {
 	}
 }
 
-func checkLineCount(buffer string, wantedCount int) error {
+func scanString(buffer string, wantedCount int, term string) error {
 	var err error
 	encCount := 0
 	scanner := bufio.NewScanner(strings.NewReader(buffer))
 
 	for scanner.Scan() {
 		text := scanner.Text()
-		if strings.Contains(text, pgpHeader) {
+		if strings.Contains(text, term) {
 			encCount++
 		}
 	}
@@ -541,7 +544,7 @@ func checkLineCount(buffer string, wantedCount int) error {
 		return fmt.Errorf("%s", err)
 	}
 	if encCount != wantedCount {
-		return fmt.Errorf("encryption count is wrong, wanted %d, got %d", wantedCount, encCount)
+		return fmt.Errorf("count is wrong, wanted %d, got %d", wantedCount, encCount)
 	}
 
 	return err

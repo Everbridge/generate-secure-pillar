@@ -5,7 +5,7 @@ USAGE:
    generate-secure-pillar [global options] command [command options] [arguments...]
 
 VERSION:
-   1.0.197
+   1.0.198
 
 AUTHOR:
    Ed Silva <ed.silva@everbridge.com>
