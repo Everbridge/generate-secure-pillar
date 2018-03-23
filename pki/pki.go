@@ -279,15 +279,15 @@ func (p *Pki) PGPKeyInfo(keyID string) (PGPKey, error) {
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
 
-		part := pubType(line)
+		part := keyType("pub", line)
 		if part != "" {
 			key.Pub = part
 		}
-		part = uidType(line)
+		part = keyType("uid", line)
 		if part != "" {
 			key.UIDs = append(key.UIDs, part)
 		}
-		part = subType(line)
+		part = keyType("sub", line)
 		if part != "" {
 			key.SubKeys = append(key.SubKeys, part)
 		}
@@ -327,22 +327,9 @@ func checkPGPFile(file string) (string, error) {
 	return filePath, in.Close()
 }
 
-func pubType(line string) string {
-	re := regexp.MustCompile(`^pub\s+(.*?)$`)
-	return regexMatch(re, line)
-}
-
-func uidType(line string) string {
-	re := regexp.MustCompile(`^uid\s+(.*?)$`)
-	return regexMatch(re, line)
-}
-
-func subType(line string) string {
-	re := regexp.MustCompile(`^sub\s+(.*?)$`)
-	return regexMatch(re, line)
-}
-
-func regexMatch(re *regexp.Regexp, line string) string {
+func keyType(pgpType string, line string) string {
+	rgx := fmt.Sprintf(`^` + pgpType + `\s+(.*?)$`)
+	re := regexp.MustCompile(rgx)
 	match := re.FindStringSubmatch(line)
 	if len(match) < 2 {
 		return ""
