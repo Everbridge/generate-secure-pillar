@@ -10,6 +10,8 @@ import (
 	"os/user"
 	"path/filepath"
 	"reflect"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/keybase/go-crypto/openpgp"
@@ -25,6 +27,13 @@ type Pki struct {
 	SecretKeyRing string
 	PgpKeyName    string
 	PublicKey     *openpgp.Entity
+}
+
+// PGPKey struct
+type PGPKey struct {
+	Pub     string
+	UIDs    []string
+	SubKeys []string
 }
 
 // New returns a pki struct
@@ -209,41 +218,134 @@ func (p *Pki) ExpandTilde(path string) (string, error) {
 
 // KeyUsedForEncryptedFile gets the key used to encrypt a file
 func (p *Pki) KeyUsedForEncryptedFile(file string) (string, error) {
-	filePath, err := filepath.Abs(file)
+	filePath, err := checkPGPFile(file)
 	if err != nil {
 		return "", err
 	}
 
-	in, err := os.Open(filePath)
-	if err != nil {
-		return "", err
-	}
-
-	block, err := armor.Decode(in)
-	if err != nil {
-		return "", err
-	}
-
-	if block.Type != "PGP MESSAGE" {
-		return "", fmt.Errorf("error decoding private key")
-	}
-
-	err = in.Close()
-	if err != nil {
-		return "", err
-	}
-
-	gpgCmd, err := exec.LookPath("gpg")
+	gpgCmd, err := gpgPath()
 	if err != nil {
 		return "", err
 	}
 
 	var cmd exec.Cmd
 	cmd.Path = gpgCmd
-	cmd.Args = []string{gpgCmd, "--list-packets", "--list-only", filePath}
+	cmd.Args = []string{gpgCmd, "--list-packets", "--list-only", "--keyid-format", "long", filePath}
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return "", err
 	}
-	return string(out), nil
+
+	var keyStr string
+	lines := strings.Split(string(out), "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if strings.Contains(line, " keyid ") {
+			words := strings.Split(line, ",")
+			line = words[len(words)-1]
+			words = strings.Split(line, " ")
+			keyStr = strings.TrimSpace(words[len(words)-1])
+		}
+	}
+	if keyStr == "" {
+		return "", fmt.Errorf("can't parse pgp key info")
+	}
+
+	keyInfo, err := p.PGPKeyInfo(keyStr)
+	if err != nil {
+		return "", err
+	}
+
+	return keyInfo.Pub, nil
+}
+
+// PGPKeyInfo return long format key info
+func (p *Pki) PGPKeyInfo(keyID string) (PGPKey, error) {
+	var key PGPKey
+	gpgCmd, err := gpgPath()
+	if err != nil {
+		return key, err
+	}
+
+	var cmd exec.Cmd
+	cmd.Path = gpgCmd
+	cmd.Args = []string{gpgCmd, "--list-keys", "--keyid-format", "long", keyID}
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return key, err
+	}
+
+	lines := strings.Split(string(out), "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+
+		part := pubType(line)
+		if part != "" {
+			key.Pub = part
+		}
+		part = uidType(line)
+		if part != "" {
+			key.UIDs = append(key.UIDs, part)
+		}
+		part = subType(line)
+		if part != "" {
+			key.SubKeys = append(key.SubKeys, part)
+		}
+	}
+
+	return key, nil
+}
+
+func gpgPath() (string, error) {
+	gpgCmd, err := exec.LookPath("gpg1")
+	if err != nil {
+		return exec.LookPath("gpg")
+	}
+	return gpgCmd, err
+}
+
+func checkPGPFile(file string) (string, error) {
+	filePath, err := filepath.Abs(file)
+	if err != nil {
+		return filePath, err
+	}
+
+	in, err := os.Open(filePath)
+	if err != nil {
+		return filePath, err
+	}
+
+	block, err := armor.Decode(in)
+	if err != nil {
+		return filePath, err
+	}
+
+	if block.Type != "PGP MESSAGE" {
+		return filePath, fmt.Errorf("error decoding private key")
+	}
+
+	return filePath, in.Close()
+}
+
+func pubType(line string) string {
+	re := regexp.MustCompile(`^pub\s+(.*?)$`)
+	return regexMatch(re, line)
+}
+
+func uidType(line string) string {
+	re := regexp.MustCompile(`^uid\s+(.*?)$`)
+	return regexMatch(re, line)
+}
+
+func subType(line string) string {
+	re := regexp.MustCompile(`^sub\s+(.*?)$`)
+	return regexMatch(re, line)
+}
+
+func regexMatch(re *regexp.Regexp, line string) string {
+	match := re.FindStringSubmatch(line)
+	if len(match) < 2 {
+		return ""
+	}
+	return match[1]
 }

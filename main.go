@@ -145,7 +145,7 @@ var appCommands = []cli.Command{
 		Action: func(c *cli.Context) error {
 			s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, logger)
 			s.ProcessYaml()
-			buffer := s.FormatBuffer()
+			buffer := s.FormatBuffer("")
 			sls.WriteSlsFile(buffer, outputFilePath)
 			return nil
 		},
@@ -169,7 +169,7 @@ var appCommands = []cli.Command{
 				logger.Fatal(err)
 			}
 			s.ProcessYaml()
-			buffer := s.FormatBuffer()
+			buffer := s.FormatBuffer("")
 			sls.WriteSlsFile(buffer, outputFilePath)
 			return nil
 		},
@@ -301,9 +301,7 @@ var appCommands = []cli.Command{
 		},
 		Action: func(c *cli.Context) error {
 			s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, logger)
-			files := s.ValidateDir(recurseDir)
-			fmt.Printf("%#v\n", files)
-
+			s.ProcessDir(recurseDir, "validate")
 			return nil
 		},
 	},

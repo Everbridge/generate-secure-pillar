@@ -36,7 +36,7 @@ func TestWriteSlsFile(t *testing.T) {
 	slsFile := "./testdata/foo/foo.sls"
 	s.SetValueFromPath("secret", "text")
 
-	buffer := s.FormatBuffer()
+	buffer := s.FormatBuffer("")
 	sls.WriteSlsFile(buffer, slsFile)
 
 	if _, err := os.Stat(slsFile); os.IsNotExist(err) {
