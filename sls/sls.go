@@ -248,7 +248,7 @@ func (s *Sls) ProcessYaml() {
 	}
 }
 
-// ProcessDir will recursively apply findSlsFiles
+// ProcessDir will recursively apply FindSlsFiles
 // It will either encrypt or decrypt, as specified by the action flag
 // It replaces the contents of the files found
 func (s *Sls) ProcessDir(recurseDir string, action string) {
