@@ -292,13 +292,25 @@ var appCommands = []cli.Command{
 		Usage:   "decrypt existing files and re-encrypt with a new key",
 		Flags: []cli.Flag{
 			dirFlag,
+			cli.StringFlag{
+				Name:        "infile, f",
+				Usage:       "input file",
+				Destination: &inputFilePath,
+			},
 		},
 		Action: func(c *cli.Context) error {
-			err := rotateFiles(recurseDir)
-			if err != nil {
-				logger.Fatalf("%s", err)
+			if inputFilePath != "" {
+				s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, logger)
+				limChan := make(chan bool, 1)
+				s.RotateFile(inputFilePath, limChan)
+				<-limChan
+				close(limChan)
+			} else {
+				err := rotateFiles(recurseDir)
+				if err != nil {
+					logger.Fatalf("%s", err)
+				}
 			}
-
 			return nil
 		},
 	},
@@ -371,7 +383,7 @@ func main() {
 		logger.Level = logrus.DebugLevel
 	}
 	app := cli.NewApp()
-	app.Version = "1.0.201"
+	app.Version = "1.0.203"
 	app.Authors = []cli.Author{
 		cli.Author{
 			Name:  "Ed Silva",

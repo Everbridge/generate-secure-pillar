@@ -367,11 +367,7 @@ func (s *Sls) ProcessValues(vals interface{}, action string) interface{} {
 			}
 		case validate:
 			keyInfo := s.keyInfo(strVal)
-			if keyInfo.UIDs[0] != "" {
-				strVal = fmt.Sprintf("%s: %s", keyInfo.Pub, keyInfo.UIDs[0])
-			} else {
-				strVal = keyInfo.Pub
-			}
+			strVal = keyInfo.LongDesc
 		}
 		res = strVal
 	}
@@ -381,6 +377,10 @@ func (s *Sls) ProcessValues(vals interface{}, action string) interface{} {
 
 func (s *Sls) doSlice(vals interface{}, action string) interface{} {
 	var things []interface{}
+
+	if vals == nil {
+		return things
+	}
 
 	for _, item := range vals.([]interface{}) {
 		var thing interface{}
@@ -403,11 +403,7 @@ func (s *Sls) doSlice(vals interface{}, action string) interface{} {
 				}
 			case validate:
 				keyInfo := s.keyInfo(strVal)
-				if keyInfo.UIDs[0] != "" {
-					thing = fmt.Sprintf("%s: %s", keyInfo.Pub, keyInfo.UIDs[0])
-				} else {
-					thing = keyInfo.Pub
-				}
+				thing = keyInfo.LongDesc
 			}
 			things = append(things, thing)
 		}
@@ -420,8 +416,11 @@ func (s *Sls) doMap(vals map[interface{}]interface{}, action string) map[interfa
 	var ret = make(map[interface{}]interface{})
 
 	for key, val := range vals {
-		vtype := reflect.TypeOf(val).Kind()
+		if val == nil {
+			return ret
+		}
 
+		vtype := reflect.TypeOf(val).Kind()
 		switch vtype {
 		case reflect.Slice:
 			ret[key] = s.doSlice(val, action)
@@ -438,11 +437,7 @@ func (s *Sls) doMap(vals map[interface{}]interface{}, action string) map[interfa
 				}
 			case validate:
 				keyInfo := s.keyInfo(strVal)
-				if keyInfo.UIDs[0] != "" {
-					val = fmt.Sprintf("%s: %s", keyInfo.Pub, keyInfo.UIDs[0])
-				} else {
-					val = keyInfo.Pub
-				}
+				val = keyInfo.LongDesc
 			}
 			ret[key] = val
 		}
