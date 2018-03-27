@@ -139,10 +139,10 @@ var appHelp = fmt.Sprintf(`%s
 	$ generate-secure-pillar keys all --file us1.sls
 
 	# show all keys used in all files in a given directory
-	generate-secure-pillar keys recurse -d /path/to/pillar/secure/stuff
+	$ generate-secure-pillar keys recurse -d /path/to/pillar/secure/stuff
 
 	# show the PGP Key ID used for an element at a path in a file
-	generate-secure-pillar keys path --path "some:yaml:path" --file new.sls
+	$ generate-secure-pillar keys path --path "some:yaml:path" --file new.sls
 
 `, cli.AppHelpTemplate)
 
@@ -371,7 +371,7 @@ func main() {
 		logger.Level = logrus.DebugLevel
 	}
 	app := cli.NewApp()
-	app.Version = "1.0.198"
+	app.Version = "1.0.201"
 	app.Authors = []cli.Author{
 		cli.Author{
 			Name:  "Ed Silva",

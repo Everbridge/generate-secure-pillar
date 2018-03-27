@@ -248,7 +248,7 @@ func (s *Sls) ProcessYaml() {
 	}
 }
 
-// ProcessDir will recursively apply findSlsFiles
+// ProcessDir will recursively apply FindSlsFiles
 // It will either encrypt or decrypt, as specified by the action flag
 // It replaces the contents of the files found
 func (s *Sls) ProcessDir(recurseDir string, action string) {
@@ -344,9 +344,13 @@ func (s *Sls) PerformAction(action string) bytes.Buffer {
 
 // ProcessValues will encrypt or decrypt given values
 func (s *Sls) ProcessValues(vals interface{}, action string) interface{} {
-	vtype := reflect.TypeOf(vals).Kind()
-
 	var res interface{}
+
+	if vals == nil {
+		return res
+	}
+
+	vtype := reflect.TypeOf(vals).Kind()
 	switch vtype {
 	case reflect.Slice:
 		res = s.doSlice(vals, action)
