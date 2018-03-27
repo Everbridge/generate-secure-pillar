@@ -32,9 +32,10 @@ type Pki struct {
 
 // PGPKey struct
 type PGPKey struct {
-	Pub     string
-	UIDs    []string
-	SubKeys []string
+	Pub      string
+	UIDs     []string
+	SubKeys  []string
+	LongDesc string
 }
 
 // New returns a pki struct
@@ -284,6 +285,12 @@ func (p *Pki) PGPKeyInfo(keyID string) (PGPKey, error) {
 		if part != "" {
 			key.SubKeys = append(key.SubKeys, part)
 		}
+	}
+
+	if key.UIDs[0] != "" {
+		key.LongDesc = fmt.Sprintf("%s: %s", key.Pub, key.UIDs[0])
+	} else {
+		key.LongDesc = key.Pub
 	}
 
 	return key, nil
