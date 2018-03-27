@@ -344,9 +344,13 @@ func (s *Sls) PerformAction(action string) bytes.Buffer {
 
 // ProcessValues will encrypt or decrypt given values
 func (s *Sls) ProcessValues(vals interface{}, action string) interface{} {
-	vtype := reflect.TypeOf(vals).Kind()
-
 	var res interface{}
+
+	if vals == nil {
+		return res
+	}
+
+	vtype := reflect.TypeOf(vals).Kind()
 	switch vtype {
 	case reflect.Slice:
 		res = s.doSlice(vals, action)
