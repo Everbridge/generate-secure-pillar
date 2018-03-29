@@ -40,13 +40,6 @@ type Sls struct {
 	Keys            []string
 }
 
-// PGPInfo pgp data
-type PGPInfo struct {
-	Key   string
-	File  string
-	Count int
-}
-
 // New return Sls struct
 func New(secretNames []string, secretValues []string, topLevelElement string, publicKeyRing string, secretKeyRing string, pgpKeyName string, log *logrus.Logger) Sls {
 	if log != nil {
