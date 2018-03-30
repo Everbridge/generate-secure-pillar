@@ -34,17 +34,17 @@ $(TARGET): $(SRC)
 build: deps $(TARGET)
 	@cat main.go | sed 's/\"1.0.*\"/\"1.0.'$(COMMIT)'\"/' > main.go
 	@cat README.md | sed 's/1.0.*/1.0.'$(COMMIT)'/' > README.md
-	@go build
-	@rm generate-secure-pillar
-	@rm packages/generate-secure-pillar*
-	@make pkg deb
-	@git add packages
+	# @go build
+	# @rm generate-secure-pillar
+	# @rm packages/generate-secure-pillar*
+	# @make pkg deb
+	# @git add packages
 	@git commit -am "new $(BRANCH) build: $(VERSION)"
 	@git tag -a v$(VERSION) -m "new $(BRANCH) build: $(VERSION)"
 	@echo pushing to branch $(BRANCH)
 	@git push origin v$(VERSION)
 	@git push origin $(BRANCH)
-	# @goreleaser --rm-dist
+	@goreleaser --rm-dist
 	@true
 
 clean:
