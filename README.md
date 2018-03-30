@@ -38,7 +38,7 @@
 
    (c) 2018 Everbridge, Inc.
 
-  **CAVEAT: YAML files with include statements are not handled properly, so we skip them.**
+**CAVEAT: YAML files with include statements are not handled properly, so we skip them.**
 
 ## EXAMPLES
 
