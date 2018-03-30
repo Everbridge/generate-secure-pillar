@@ -44,7 +44,7 @@ build: deps $(TARGET)
 	@echo pushing to branch $(BRANCH)
 	@git push origin v$(VERSION)
 	@git push origin $(BRANCH)
-	@goreleaser
+	@goreleaser --rm-dist
 	@true
 
 clean:
