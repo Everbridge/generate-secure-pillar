@@ -85,36 +85,6 @@ func New(pgpKeyName string, publicKeyRing string, secretKeyRing string, log *log
 	return p
 }
 
-// PromptFunction prompts for secure key pass phrase
-// func (p *Pki) PromptFunction(keys []openpgp.Key, symmetric bool) ([]byte, error) {
-// 	conn, err := gpgagent.NewGpgAgentConn()
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	defer conn.Close()
-
-// 	for _, key := range keys {
-// 		cacheID := strings.ToUpper(hex.EncodeToString(key.PublicKey.Fingerprint[:]))
-
-// 		// TODO: Add prompt, etc.
-// 		request := gpgagent.PassphraseRequest{CacheKey: cacheID}
-
-// 		passphrase, err := conn.GetPassphrase(&request)
-// 		if err != nil {
-// 			return nil, err
-// 		}
-
-// 		err = key.PrivateKey.Decrypt([]byte(passphrase))
-// 		if err != nil {
-// 			return nil, err
-// 		}
-
-// 		return []byte(passphrase), nil
-// 	}
-
-// 	return nil, fmt.Errorf("Unable to find key")
-// }
-
 // EncryptSecret returns encrypted plainText
 func (p *Pki) EncryptSecret(plainText string) (cipherText string) {
 	var memBuffer bytes.Buffer
