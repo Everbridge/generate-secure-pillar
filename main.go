@@ -383,7 +383,7 @@ func main() {
 		logger.Level = logrus.DebugLevel
 	}
 	app := cli.NewApp()
-	app.Version = "1.0.222"
+	app.Version = "1.0.223"
 	app.Authors = []cli.Author{
 		cli.Author{
 			Name:  "Ed Silva",

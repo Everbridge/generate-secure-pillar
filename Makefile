@@ -1,5 +1,7 @@
 SHELL := /bin/bash
 
+PATH := $(PATH):/usr/local/bin
+
 # The name of the executable (default is current directory name)
 TARGET := $(shell echo $${PWD\#\#*/})
 .DEFAULT_GOAL: $(TARGET)
