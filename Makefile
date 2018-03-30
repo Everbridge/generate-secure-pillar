@@ -31,8 +31,8 @@ $(TARGET): $(SRC)
 
 build: deps $(TARGET)
 	@cat main.go | sed 's/\"1.0.*\"/\"1.0.'$(COMMIT)'\"/' > main.go
+	@cat README.md | sed 's/\"1.0.*\"/\"1.0.'$(COMMIT)'\"/' > README.md
 	@go build
-	./generate-secure-pillar -h > README.txt
 	@rm generate-secure-pillar
 	@rm packages/generate-secure-pillar*
 	@make pkg deb
