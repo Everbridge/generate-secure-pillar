@@ -7,3 +7,4 @@ _vendor*
 .DS_Store
 *~
 debug.test
+.goreleaser.yml
