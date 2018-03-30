@@ -1,5 +1,7 @@
 SHELL := /bin/bash
 
+PATH := $(PATH):/usr/local/bin
+
 # The name of the executable (default is current directory name)
 TARGET := $(shell echo $${PWD\#\#*/})
 .DEFAULT_GOAL: $(TARGET)
@@ -38,8 +40,11 @@ build: deps $(TARGET)
 	@make pkg deb
 	@git add packages
 	@git commit -am "new $(BRANCH) build: $(VERSION)"
+	@git tag -a v$(VERSION) -m "new $(BRANCH) build: $(VERSION)"
 	@echo pushing to branch $(BRANCH)
+	@git push origin v$(VERSION)
 	@git push origin $(BRANCH)
+	# @goreleaser --rm-dist
 	@true
 
 clean:

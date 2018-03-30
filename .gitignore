@@ -7,3 +7,13 @@ _vendor*
 .DS_Store
 *~
 debug.test
+.goreleaser.yml
+bar.sls
+bar2.sls
+blah2.sls
+dec.sls
+enc.sls
+foo.sls
+foo/
+foo2.sls
+new.sls
