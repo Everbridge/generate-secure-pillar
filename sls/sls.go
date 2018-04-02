@@ -40,7 +40,7 @@ type Sls struct {
 	Keys            []string
 }
 
-// New return Sls struct
+// New returns a Sls object
 func New(secretNames []string, secretValues []string, topLevelElement string, publicKeyRing string, secretKeyRing string, pgpKeyName string, log *logrus.Logger) Sls {
 	if log != nil {
 		logger = log
