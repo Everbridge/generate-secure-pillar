@@ -17,6 +17,7 @@ LDFLAGS=-ldflags "-X=main.Version=$(VERSION) -X=main.Build=$(BUILD)"
 # go source files, ignore vendor directory
 SRC = $(shell find . -type f -name '*.go' -not -path "./vendor/*")
 
+RELEASER := $(shell command -v goreleaser 2> /dev/null)
 METALINT := $(shell command -v gometalinter 2> /dev/null)
 DEP := $(shell command -v dep 2> /dev/null)
 FPM := $(shell command -v fpm 2> /dev/null)
@@ -44,7 +45,12 @@ build: deps test $(TARGET)
 	@echo pushing to branch $(BRANCH)
 	@git push origin v$(VERSION)
 	@git push origin $(BRANCH)
+ifndef RELEASER
+	@echo "cannot build release (missing goreleaser)"
+else
+	@echo "creating a new release"
 	@goreleaser --rm-dist
+endif
 	@true
 
 clean:
