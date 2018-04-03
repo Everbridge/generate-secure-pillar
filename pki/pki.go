@@ -39,13 +39,9 @@ type PGPKey struct {
 }
 
 // New returns a pki object
-func New(pgpKeyName string, publicKeyRing string, secretKeyRing string, log *logrus.Logger) Pki {
+func New(pgpKeyName string, publicKeyRing string, secretKeyRing string) Pki {
 	var err error
-	if log != nil {
-		logger = log
-	} else {
-		logger = logrus.New()
-	}
+	logger = logrus.New()
 
 	p := Pki{publicKeyRing, secretKeyRing, pgpKeyName, nil, ""}
 	publicKeyRing, err = p.ExpandTilde(p.PublicKeyRing)
