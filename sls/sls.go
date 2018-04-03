@@ -131,11 +131,18 @@ func WriteSlsFile(buffer bytes.Buffer, outFilePath string) {
 
 // FindSlsFiles recurses through the given searchDir returning a list of .sls files and it's length
 func FindSlsFiles(searchDir string) ([]string, int) {
+	fileList := []string{}
 	searchDir, err := filepath.Abs(searchDir)
 	if err != nil {
-		logger.Fatal(err)
+		logger.Error(err)
+		return fileList, 0
 	}
-	fileList := []string{}
+	err = CheckForDir(searchDir)
+	if err != nil {
+		logger.Error(err)
+		return fileList, 0
+	}
+
 	err = filepath.Walk(searchDir, func(path string, f os.FileInfo, err error) error {
 		if !f.IsDir() && strings.Contains(f.Name(), ".sls") {
 			fileList = append(fileList, path)
@@ -211,13 +218,29 @@ func (s *Sls) FormatBuffer(action string) bytes.Buffer {
 func CheckForFile(filePath string) error {
 	fi, err := os.Stat(filePath)
 	if err != nil {
-		logger.Fatalf("cannot stat %s: %s", filePath, err)
+		err = fmt.Errorf("cannot stat %s: %s", filePath, err)
 	}
 	switch mode := fi.Mode(); {
 	case mode.IsRegular():
 		return nil
 	case mode.IsDir():
-		logger.Fatalf("%s is a directory", filePath)
+		err = fmt.Errorf("%s is a directory", filePath)
+	}
+
+	return err
+}
+
+// CheckForDir does exactly what it says on the tin
+func CheckForDir(filePath string) error {
+	fi, err := os.Stat(filePath)
+	if err != nil {
+		err = fmt.Errorf("cannot stat %s: %s", filePath, err)
+	}
+	switch mode := fi.Mode(); {
+	case mode.IsRegular():
+		err = fmt.Errorf("%s is a file", filePath)
+	case mode.IsDir():
+		return nil
 	}
 
 	return err
