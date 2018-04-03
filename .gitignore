@@ -7,7 +7,6 @@ _vendor*
 .DS_Store
 *~
 debug.test
-.goreleaser.yml
 bar.sls
 bar2.sls
 blah2.sls

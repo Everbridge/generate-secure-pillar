@@ -1,0 +1,102 @@
+# This is an example goreleaser.yaml file with some sane defaults.
+# Make sure to check the documentation at http://goreleaser.com
+github_urls:
+    api: https://eb-github.com/api/v3/
+    upload: https://eb-github.com/api/uploads/
+    download: https://eb-github.com/api/downloads/
+
+dist: packages
+
+builds:
+  -
+    binary: generate-secure-pillar
+    goos:
+      - windows
+      - darwin
+      - linux
+    goarch:
+      - amd64
+
+archive:
+  replacements:
+    darwin: Darwin
+    linux: Linux
+    windows: Windows
+    amd64: x86_64
+  name_template: "{{ .Tag }}-next"
+
+snapshot:
+  name_template: SNAPSHOT-{{.Commit}}
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+    - '^docs:'
+    - '^test:'
+
+brew:
+  # Reporitory to push the tap to.
+  github:
+    owner: ed-silva
+    name: homebrew-tap
+
+  skip_upload: true
+
+  dependencies:
+    - gpg1
+
+  # Allows you to set a custom download strategy.
+  # Default is empty.
+  download_strategy: GitHubPrivateRepositoryReleaseDownloadStrategy
+
+  # Git author used to commit to the repository.
+  # Defaults are shown.
+  commit_author:
+    name: Ed Silva
+    email: ed.silva@everbridge.com
+
+  # Folder inside the repository to put the formula.
+  # Default is the root folder.
+  folder: Formula
+
+  # Your app's homepage.
+  # Default is empty.
+  homepage: https://github.com/Everbridge/generate-secure-pillar
+
+  # Your app's description.
+  # Default is empty.
+  description: "Create and update encrypted content or decrypt encrypted content in YAML files"
+
+nfpm:
+  # Your app's vendor.
+  # Default is empty.
+  vendor: Everbridge, Inc.
+  # Your app's homepage.
+  # Default is empty.
+  homepage: https://github.com/Everbridge/generate-secure-pillar
+
+  # Your app's maintainer (probably you).
+  # Default is empty.
+  maintainer: "Ed Silva <ed.silva@everbridge.com>"
+
+  # Your app's description.
+  # Default is empty.
+  description: "Create and update encrypted content or decrypt encrypted content in YAML files"
+
+  # Your app's license.
+  # Default is empty.
+  license: MIT
+
+  dependencies:
+    - gpg1
+
+  # Formats to be generated.
+  formats:
+    - deb
+    - rpm
+
+sign:
+  cmd: gpg
+  artifacts: checksum
+  args: ["-u", "Everbridge Open Source", "--output", "${signature}", "--detach-sign", "${artifact}"]
