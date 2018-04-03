@@ -17,6 +17,7 @@ LDFLAGS=-ldflags "-X=main.Version=$(VERSION) -X=main.Build=$(BUILD)"
 # go source files, ignore vendor directory
 SRC = $(shell find . -type f -name '*.go' -not -path "./vendor/*")
 
+RELEASER := $(shell command -v goreleaser 2> /dev/null)
 METALINT := $(shell command -v gometalinter 2> /dev/null)
 DEP := $(shell command -v dep 2> /dev/null)
 FPM := $(shell command -v fpm 2> /dev/null)
@@ -31,20 +32,25 @@ all: check build install
 $(TARGET): $(SRC)
 	@go build $(LDFLAGS) -o $(TARGET)
 
-build: deps $(TARGET)
+build: deps test $(TARGET)
 	@cat main.go | sed 's/\"1.0.*\"/\"1.0.'$(COMMIT)'\"/' > main.go
 	@cat README.md | sed 's/1.0.*/1.0.'$(COMMIT)'/' > README.md
-	@go build
-	@rm generate-secure-pillar
-	@rm packages/generate-secure-pillar*
-	@make pkg deb
-	@git add packages
+	# @go build
+	# @rm generate-secure-pillar
+	# @rm packages/generate-secure-pillar*
+	# @make pkg deb
+	# @git add packages
 	@git commit -am "new $(BRANCH) build: $(VERSION)"
 	@git tag -a v$(VERSION) -m "new $(BRANCH) build: $(VERSION)"
 	@echo pushing to branch $(BRANCH)
 	@git push origin v$(VERSION)
 	@git push origin $(BRANCH)
-	# @goreleaser --rm-dist
+ifndef RELEASER
+	@echo "cannot build release (missing goreleaser)"
+else
+	@echo "creating a new release"
+	@goreleaser --rm-dist
+endif
 	@true
 
 clean:

@@ -38,7 +38,7 @@ type PGPKey struct {
 	LongDesc string
 }
 
-// New returns a pki struct
+// New returns a pki object
 func New(pgpKeyName string, publicKeyRing string, secretKeyRing string, log *logrus.Logger) Pki {
 	var err error
 	if log != nil {
