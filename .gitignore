@@ -2,6 +2,7 @@ generate-secure-pillar
 .vscode
 bin/*
 Gopkg.lock
+packages/*
 vendor/*
 _vendor*
 .DS_Store
