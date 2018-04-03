@@ -6,7 +6,8 @@ import (
 	"os"
 	"runtime"
 
-	"eb-github.com/ed-silva/generate-secure-pillar/sls"
+	"eb-github.com/autoeng/generate-secure-pillar/sls"
+
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
