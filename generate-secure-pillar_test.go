@@ -31,7 +31,7 @@ func TestWriteSlsFile(t *testing.T) {
 	} else {
 		secretKeyRing = "~/.gnupg/secring.gpg"
 	}
-	s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, nil)
+	s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName)
 
 	slsFile := "./testdata/foo/foo.sls"
 	s.SetValueFromPath("secret", "text")
@@ -137,7 +137,7 @@ func TestReadIncludeFile(t *testing.T) {
 	} else {
 		secretKeyRing = "~/.gnupg/secring.gpg"
 	}
-	s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, nil)
+	s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName)
 	err := s.ReadSlsFile("./testdata/inc.sls")
 	if err == nil {
 		t.Errorf("failed to throw error for include file")
@@ -187,7 +187,7 @@ func TestEncryptSecret(t *testing.T) {
 		secretKeyRing = "~/.gnupg/secring.gpg"
 	}
 	topLevelElement = "secure_vars"
-	p := pki.New(pgpKeyName, publicKeyRing, secretKeyRing, nil)
+	p := pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
 
 	yaml, err := yaml.Open("./testdata/new.sls")
 	if err != nil {
@@ -225,7 +225,7 @@ func TestRecurseEncryptSecret(t *testing.T) {
 		secretKeyRing = "~/.gnupg/secring.gpg"
 	}
 	topLevelElement = "secure_vars"
-	s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, nil)
+	s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName)
 
 	recurseDir := "./testdata/test"
 	s.ProcessDir(recurseDir, "encrypt")
@@ -266,7 +266,7 @@ func TestDecryptSecret(t *testing.T) {
 		secretKeyRing = "~/.gnupg/secring.gpg"
 	}
 	topLevelElement = "secure_vars"
-	p := pki.New(pgpKeyName, publicKeyRing, secretKeyRing, nil)
+	p := pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
 
 	yaml, err := yaml.Open("./testdata/new.sls")
 	if err != nil {
@@ -306,7 +306,7 @@ func TestRecurseDecryptSecret(t *testing.T) {
 		secretKeyRing = "~/.gnupg/secring.gpg"
 	}
 	topLevelElement = "secure_vars"
-	s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, nil)
+	s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName)
 
 	recurseDir := "./testdata/test"
 	s.ProcessDir(recurseDir, "decrypt")
@@ -346,7 +346,7 @@ func TestGetValueFromPath(t *testing.T) {
 	} else {
 		secretKeyRing = "~/.gnupg/secring.gpg"
 	}
-	s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, nil)
+	s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName)
 	filePath := "./testdata/new.sls"
 	err := s.ReadSlsFile(filePath)
 	if err != nil {
@@ -372,7 +372,7 @@ func TestNestedAndMultiLineFile(t *testing.T) {
 	} else {
 		secretKeyRing = "~/.gnupg/secring.gpg"
 	}
-	s := sls.New(secretNames, secretValues, "", publicKeyRing, secretKeyRing, pgpKeyName, nil)
+	s := sls.New(secretNames, secretValues, "", publicKeyRing, secretKeyRing, pgpKeyName)
 	filePath := "./testdata/test.sls"
 	err := s.ReadSlsFile(filePath)
 	if err != nil {
@@ -390,7 +390,7 @@ func TestNestedAndMultiLineFile(t *testing.T) {
 		t.Errorf("%s", err)
 	}
 
-	s = sls.New(secretNames, secretValues, "", publicKeyRing, secretKeyRing, pgpKeyName, nil)
+	s = sls.New(secretNames, secretValues, "", publicKeyRing, secretKeyRing, pgpKeyName)
 	filePath = "./testdata/test.sls"
 	err = s.ReadSlsFile(filePath)
 	if err != nil {
@@ -423,7 +423,7 @@ func TestSetValueFromPath(t *testing.T) {
 	} else {
 		secretKeyRing = "~/.gnupg/secring.gpg"
 	}
-	s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, nil)
+	s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName)
 	filePath := "./testdata/new.sls"
 	err := s.ReadSlsFile(filePath)
 	if err != nil {
@@ -455,7 +455,7 @@ func TestRotateFile(t *testing.T) {
 	}
 	topLevelElement = ""
 
-	s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, nil)
+	s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName)
 	filePath := "./testdata/new.sls"
 	buffer, err := s.CipherTextYamlBuffer(filePath)
 	if err != nil {
@@ -500,7 +500,7 @@ func TestKeyInfo(t *testing.T) {
 	path := os.Getenv("PATH")
 	os.Setenv("PATH", path+":/usr/local/bin")
 
-	s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, nil)
+	s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName)
 	filePath := "./testdata/new.sls"
 	buffer, err := s.CipherTextYamlBuffer(filePath)
 	if err != nil {
