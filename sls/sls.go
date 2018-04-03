@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -483,23 +482,23 @@ func (s *Sls) keyInfo(val string) pki.PGPKey {
 
 	tmpfile, err := ioutil.TempFile("", "gsp-")
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal(err)
 	}
 
 	if _, err = tmpfile.Write([]byte(val)); err != nil {
-		log.Fatal(err)
+		logger.Fatal(err)
 	}
 
 	keyInfo, err := s.Pki.KeyUsedForEncryptedFile(tmpfile.Name())
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal(err)
 	}
 
 	if err = tmpfile.Close(); err != nil {
-		log.Fatal(err)
+		logger.Fatal(err)
 	}
 	if err = os.Remove(tmpfile.Name()); err != nil {
-		log.Fatal(err)
+		logger.Fatal(err)
 	}
 
 	return keyInfo

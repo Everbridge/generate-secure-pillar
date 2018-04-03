@@ -76,6 +76,7 @@ ifndef METALINT
 	@golint .
 else
 	@echo "running 'gometalinter ./...'"
+	@gometalinter --install
 	@gometalinter --vendor ./...
 endif
 
