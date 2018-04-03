@@ -218,13 +218,13 @@ func (s *Sls) FormatBuffer(action string) bytes.Buffer {
 func CheckForFile(filePath string) error {
 	fi, err := os.Stat(filePath)
 	if err != nil {
-		err = fmt.Errorf("cannot stat %s: %s", filePath, err)
+		return fmt.Errorf("cannot stat %s: %s", filePath, err)
 	}
 	switch mode := fi.Mode(); {
 	case mode.IsRegular():
 		return nil
 	case mode.IsDir():
-		err = fmt.Errorf("%s is a directory", filePath)
+		return fmt.Errorf("%s is a directory", filePath)
 	}
 
 	return err
@@ -234,11 +234,11 @@ func CheckForFile(filePath string) error {
 func CheckForDir(filePath string) error {
 	fi, err := os.Stat(filePath)
 	if err != nil {
-		err = fmt.Errorf("cannot stat %s: %s", filePath, err)
+		return fmt.Errorf("cannot stat %s: %s", filePath, err)
 	}
 	switch mode := fi.Mode(); {
 	case mode.IsRegular():
-		err = fmt.Errorf("%s is a file", filePath)
+		return fmt.Errorf("%s is a file", filePath)
 	case mode.IsDir():
 		return nil
 	}
