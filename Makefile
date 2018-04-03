@@ -31,7 +31,7 @@ all: check build install
 $(TARGET): $(SRC)
 	@go build $(LDFLAGS) -o $(TARGET)
 
-build: deps $(TARGET)
+build: deps test $(TARGET)
 	@cat main.go | sed 's/\"1.0.*\"/\"1.0.'$(COMMIT)'\"/' > main.go
 	@cat README.md | sed 's/1.0.*/1.0.'$(COMMIT)'/' > README.md
 	# @go build
