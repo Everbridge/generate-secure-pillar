@@ -513,6 +513,8 @@ func (s *Sls) decryptVal(strVal string) string {
 		if err != nil {
 			logger.Errorf("error decrypting value: %s", err)
 		}
+	} else {
+		return strVal
 	}
 
 	return plainText
