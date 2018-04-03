@@ -13,7 +13,6 @@ import (
 	"strings"
 
 	"eb-github.com/autoeng/generate-secure-pillar/pki"
-
 	yaml "github.com/esilva-everbridge/yaml"
 	"github.com/gosexy/to"
 	"github.com/sirupsen/logrus"
@@ -42,15 +41,11 @@ type Sls struct {
 }
 
 // New returns a Sls object
-func New(secretNames []string, secretValues []string, topLevelElement string, publicKeyRing string, secretKeyRing string, pgpKeyName string, log *logrus.Logger) Sls {
-	if log != nil {
-		logger = log
-	} else {
-		logger = logrus.New()
-	}
+func New(secretNames []string, secretValues []string, topLevelElement string, publicKeyRing string, secretKeyRing string, pgpKeyName string) Sls {
+	logger = logrus.New()
 
 	var keys []string
-	p := pki.New(pgpKeyName, publicKeyRing, secretKeyRing, logger)
+	p := pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
 	s := Sls{secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, yaml.New(), &p, keys}
 
 	return s

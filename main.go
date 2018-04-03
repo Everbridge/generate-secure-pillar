@@ -19,7 +19,6 @@ var outputFilePath = os.Stdout.Name()
 var pgpKeyName string
 var publicKeyRing = ""
 var secretKeyRing = ""
-var debug bool
 var recurseDir string
 var secretNames cli.StringSlice
 var secretValues cli.StringSlice
@@ -91,11 +90,6 @@ var appFlags = []cli.Flag{
 		Usage:       "PGP key name, email, or ID to use for encryption",
 		Destination: &pgpKeyName,
 	},
-	cli.BoolFlag{
-		Name:        "debug",
-		Usage:       "adds line number info to log output",
-		Destination: &debug,
-	},
 	cli.StringFlag{
 		Name:        "element, e",
 		Usage:       "Name of the top level element under which encrypted key/value pairs are kept",
@@ -153,7 +147,7 @@ var appCommands = []cli.Command{
 		Aliases: []string{"c"},
 		Usage:   "create a new sls file",
 		Action: func(c *cli.Context) error {
-			s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, logger)
+			s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName)
 			s.ProcessYaml()
 			buffer := s.FormatBuffer("")
 			sls.WriteSlsFile(buffer, outputFilePath)
@@ -173,7 +167,7 @@ var appCommands = []cli.Command{
 			if inputFilePath != os.Stdin.Name() {
 				outputFilePath = inputFilePath
 			}
-			s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, logger)
+			s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName)
 			err := s.ReadSlsFile(inputFilePath)
 			if err != nil {
 				logger.Fatal(err)
@@ -205,7 +199,7 @@ var appCommands = []cli.Command{
 					updateFlag,
 				},
 				Action: func(c *cli.Context) error {
-					s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, logger)
+					s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName)
 					if inputFilePath != os.Stdin.Name() && updateInPlace {
 						outputFilePath = inputFilePath
 					}
@@ -220,7 +214,7 @@ var appCommands = []cli.Command{
 					dirFlag,
 				},
 				Action: func(c *cli.Context) error {
-					s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, logger)
+					s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName)
 					s.ProcessDir(recurseDir, "encrypt")
 					return nil
 				},
@@ -244,7 +238,7 @@ var appCommands = []cli.Command{
 					updateFlag,
 				},
 				Action: func(c *cli.Context) error {
-					s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, logger)
+					s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName)
 					if inputFilePath != os.Stdin.Name() && updateInPlace {
 						outputFilePath = inputFilePath
 					}
@@ -259,7 +253,7 @@ var appCommands = []cli.Command{
 					dirFlag,
 				},
 				Action: func(c *cli.Context) error {
-					s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, logger)
+					s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName)
 					s.ProcessDir(recurseDir, "decrypt")
 					return nil
 				},
@@ -275,7 +269,7 @@ var appCommands = []cli.Command{
 					},
 				},
 				Action: func(c *cli.Context) error {
-					s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, logger)
+					s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName)
 					err := s.ReadSlsFile(inputFilePath)
 					if err != nil {
 						logger.Fatal(err)
@@ -301,7 +295,7 @@ var appCommands = []cli.Command{
 		},
 		Action: func(c *cli.Context) error {
 			if inputFilePath != "" {
-				s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, logger)
+				s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName)
 				limChan := make(chan bool, 1)
 				s.RotateFile(inputFilePath, limChan)
 				<-limChan
@@ -331,7 +325,7 @@ var appCommands = []cli.Command{
 					outputFlag,
 				},
 				Action: func(c *cli.Context) error {
-					s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, logger)
+					s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName)
 					if inputFilePath != os.Stdin.Name() && updateInPlace {
 						outputFilePath = inputFilePath
 					}
@@ -349,7 +343,7 @@ var appCommands = []cli.Command{
 					dirFlag,
 				},
 				Action: func(c *cli.Context) error {
-					s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, logger)
+					s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName)
 					s.ProcessDir(recurseDir, "validate")
 					return nil
 				},
@@ -365,7 +359,7 @@ var appCommands = []cli.Command{
 					},
 				},
 				Action: func(c *cli.Context) error {
-					s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, logger)
+					s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName)
 					err := s.ReadSlsFile(inputFilePath)
 					if err != nil {
 						logger.Fatal(err)
@@ -380,9 +374,6 @@ var appCommands = []cli.Command{
 }
 
 func main() {
-	if debug {
-		logger.Level = logrus.DebugLevel
-	}
 	app := cli.NewApp()
 	app.Version = "1.0.240"
 	app.Authors = []cli.Author{
@@ -440,7 +431,7 @@ func processFiles(recurseDir string) int {
 
 	for _, file := range slsFiles {
 		<-limChan
-		s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, logger)
+		s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName)
 		go s.RotateFile(file, limChan)
 		fileCount++
 	}
