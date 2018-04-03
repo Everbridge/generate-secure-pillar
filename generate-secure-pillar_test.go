@@ -77,6 +77,27 @@ func TestFindSlsFiles(t *testing.T) {
 	}
 }
 
+func TestBadDir(t *testing.T) {
+	pgpKeyName = "Dev Salt Master"
+
+	if os.Getenv("SALT_SEC_KEYRING") != "" {
+		publicKeyRing, _ = filepath.Abs(os.Getenv("SALT_PUB_KEYRING"))
+	} else {
+		publicKeyRing = "~/.gnupg/pubring.gpg"
+	}
+
+	if os.Getenv("SALT_SEC_KEYRING") != "" {
+		secretKeyRing, _ = filepath.Abs(os.Getenv("SALT_SEC_KEYRING"))
+	} else {
+		secretKeyRing = "~/.gnupg/secring.gpg"
+	}
+	slsFiles, count := sls.FindSlsFiles("./testdata/does_not_exist")
+	if count != 0 {
+		t.Errorf("File count was incorrect, got: %d, want: %d.",
+			len(slsFiles), 0)
+	}
+}
+
 func TestEmptyDir(t *testing.T) {
 	pgpKeyName = "Dev Salt Master"
 
