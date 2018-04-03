@@ -89,7 +89,7 @@ nfpm:
   license: MIT
 
   dependencies:
-    - gpg1
+    - gnupg1
 
   # Formats to be generated.
   formats:
