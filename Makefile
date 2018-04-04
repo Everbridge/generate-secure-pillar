@@ -32,14 +32,12 @@ all: check build install
 $(TARGET): $(SRC)
 	@go build $(LDFLAGS) -o $(TARGET)
 
-build: deps test $(TARGET)
+build: deps check test
+	@go build
+
+release: deps check test $(TARGET)
 	@cat main.go | sed 's/\"1.0.*\"/\"1.0.'$(COMMIT)'\"/' > main.go
 	@cat README.md | sed 's/1.0.*/1.0.'$(COMMIT)'/' > README.md
-	# @go build
-	# @rm generate-secure-pillar
-	# @rm packages/generate-secure-pillar*
-	# @make pkg deb
-	# @git add packages
 	@git commit -am "new $(BRANCH) build: $(VERSION)"
 	@git tag -a v$(VERSION) -m "new $(BRANCH) build: $(VERSION)"
 	@echo pushing to branch $(BRANCH)
@@ -76,7 +74,7 @@ ifndef METALINT
 	@golint .
 else
 	@echo "running 'gometalinter ./...'"
-	@gometalinter --install
+	@gometalinter --install 2>&1 >/dev/null
 	@gometalinter --vendor ./...
 endif
 
