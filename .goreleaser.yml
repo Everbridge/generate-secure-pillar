@@ -38,7 +38,7 @@ changelog:
 brew:
   # Reporitory to push the tap to.
   github:
-    owner: ed-silva
+    owner: esilva-everbridge
     name: homebrew-tap
 
   skip_upload: true
