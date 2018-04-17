@@ -1,9 +1,9 @@
 # This is an example goreleaser.yaml file with some sane defaults.
 # Make sure to check the documentation at http://goreleaser.com
-github_urls:
-    api: https://eb-github.com/api/v3/
-    upload: https://eb-github.com/api/uploads/
-    download: https://eb-github.com/api/downloads/
+# github_urls:
+#     api: https://eb-github.com/api/v3/
+#     upload: https://eb-github.com/api/uploads/
+#     download: https://eb-github.com/api/downloads/
 
 dist: packages
 
@@ -48,7 +48,7 @@ brew:
 
   # Allows you to set a custom download strategy.
   # Default is empty.
-  download_strategy: GitHubPrivateRepositoryReleaseDownloadStrategy
+  # download_strategy: GitHubPrivateRepositoryReleaseDownloadStrategy
 
   # Git author used to commit to the repository.
   # Defaults are shown.
