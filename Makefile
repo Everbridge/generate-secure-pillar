@@ -47,7 +47,7 @@ ifndef RELEASER
 	@echo "cannot build release (missing goreleaser)"
 else
 	@echo "creating a new release"
-	@goreleaser
+	@goreleaser --rm-dist
 endif
 	@true
 
