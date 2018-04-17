@@ -1,9 +1,5 @@
 # This is an example goreleaser.yaml file with some sane defaults.
 # Make sure to check the documentation at http://goreleaser.com
-# github_urls:
-#     api: https://eb-github.com/api/v3/
-#     upload: https://eb-github.com/api/uploads/
-#     download: https://eb-github.com/api/downloads/
 
 dist: packages
 
