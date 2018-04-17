@@ -11,7 +11,7 @@ import (
 	"reflect"
 	"strings"
 
-	"eb-github.com/autoeng/generate-secure-pillar/pki"
+	"github.com/Everbridge/generate-secure-pillar/pki"
 	yaml "github.com/esilva-everbridge/yaml"
 	"github.com/gosexy/to"
 	"github.com/sirupsen/logrus"

@@ -6,7 +6,7 @@ import (
 	"os"
 	"runtime"
 
-	"eb-github.com/autoeng/generate-secure-pillar/sls"
+	"github.com/Everbridge/generate-secure-pillar/sls"
 
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
@@ -375,7 +375,7 @@ var appCommands = []cli.Command{
 
 func main() {
 	app := cli.NewApp()
-	app.Version = "1.0.283"
+	app.Version = "1.0.285"
 	app.Authors = []cli.Author{
 		cli.Author{
 			Name:  "Ed Silva",

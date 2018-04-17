@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"eb-github.com/autoeng/generate-secure-pillar/pki"
-	"eb-github.com/autoeng/generate-secure-pillar/sls"
+	"github.com/Everbridge/generate-secure-pillar/pki"
+	"github.com/Everbridge/generate-secure-pillar/sls"
 	yaml "github.com/esilva-everbridge/yaml"
 	"github.com/gosexy/to"
 )
