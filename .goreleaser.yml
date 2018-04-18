@@ -37,7 +37,7 @@ brew:
     owner: esilva-everbridge
     name: homebrew-tap
 
-  skip_upload: true
+  skip_upload: false
 
   dependencies:
     - gpg1
