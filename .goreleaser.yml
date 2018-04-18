@@ -35,7 +35,7 @@ brew:
   # Reporitory to push the tap to.
   github:
     owner: esilva-everbridge
-    name: homebrew-tap
+    name: homebrew-generate-secure-pillar
 
   skip_upload: false
 
