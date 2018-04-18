@@ -8,11 +8,18 @@
 
 ## VERSION
 
-   1.0.300
+   1.0.302
 
 ## AUTHOR
 
    Ed Silva <ed.silva@everbridge.com>
+
+## HOMEBREW INSTALL
+
+```
+$ brew tap esilva-everbridge/homebrew-generate-secure-pillar
+$ brew install generate-secure-pillar
+```
 
 ## COMMANDS
 
