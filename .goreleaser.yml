@@ -19,7 +19,7 @@ archive:
     linux: Linux
     windows: Windows
     amd64: x86_64
-  name_template: "{{ .Tag }}-next"
+  name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
 
 snapshot:
   name_template: SNAPSHOT-{{.Commit}}
