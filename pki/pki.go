@@ -17,20 +17,13 @@ var logger *logrus.Logger
 // Pki pki info
 type Pki struct {
 	PgpKeyName string
-	Keys       []*gpgme.Key
 }
 
 // New returns a pki object
 func New(pgpKeyName string, publicKeyRing string, secretKeyRing string) Pki {
-	var err error
 	logger = logrus.New()
 
-	keys, err := gpgme.FindKeys(pgpKeyName, false)
-	if err != nil {
-		logger.Fatalf("unable to find key '%s'", pgpKeyName)
-	}
-
-	return Pki{pgpKeyName, keys}
+	return Pki{pgpKeyName}
 }
 
 // EncryptSecret returns encrypted plainText
@@ -102,5 +95,9 @@ func (p *Pki) ExpandTilde(path string) (string, error) {
 
 // KeyUsedForData gets the key used to encrypt a file
 func (p *Pki) KeyUsedForData(cipherText string) (string, error) {
-	return p.Keys[0].UserIDs().UID(), nil
+	keys, err := gpgme.FindKeys(p.PgpKeyName, false)
+	if err != nil {
+		return "", fmt.Errorf("unable to find key '%s'", p.PgpKeyName)
+	}
+	return keys[0].UserIDs().UID(), nil
 }
