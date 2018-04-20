@@ -7,7 +7,7 @@ builds:
   -
     binary: generate-secure-pillar
     goos:
-      - windows
+      # - windows
       - darwin
       - linux
     goarch:
