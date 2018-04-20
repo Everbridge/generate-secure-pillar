@@ -8,7 +8,7 @@ import (
 	"os/user"
 	"path/filepath"
 
-	"github.com/proglottis/gpgme"
+	gpgme "github.com/proglottis/gpgme"
 	"github.com/sirupsen/logrus"
 )
 
