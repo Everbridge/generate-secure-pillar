@@ -6,9 +6,7 @@
 
    generate-secure-pillar [global options] command [command options] [arguments...]
 
-## VERSION
-
-   1.0.305
+## VERSION 1.0.307
 
 ## AUTHOR
 
@@ -30,7 +28,7 @@ An easy way to do this is, after importing a key, run the following commands:
 expect -c "spawn gpg --edit-key '<the PGP key id here>' trust quit; send \"5\ry\r\"; expect eof"
 ```
 
-(found here: <https://gist.github.com/chrisroos/1.0.305
+(found here: <https://gist.github.com/chrisroos/1205934#gistcomment-2203760)>
 
 ## COMMANDS
 
