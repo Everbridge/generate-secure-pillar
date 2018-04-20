@@ -17,7 +17,7 @@ archive:
   replacements:
     darwin: Darwin
     linux: Linux
-    windows: Windows
+    # windows: Windows
     amd64: x86_64
   name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
 
