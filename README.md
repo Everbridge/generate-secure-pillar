@@ -16,10 +16,22 @@
 
 ## HOMEBREW INSTALL
 
+``` shell
+brew tap esilva-everbridge/homebrew-generate-secure-pillar
+brew install generate-secure-pillar
 ```
-$ brew tap esilva-everbridge/homebrew-generate-secure-pillar
-$ brew install generate-secure-pillar
+
+## ABOUT PGP KEYS
+
+The PGP keys you import for use with this tool need to be 'trusted' keys.
+An easy way to do this is, after importing a key, run the following commands:
+
+``` shell
+expect -c "spawn gpg --edit-key '<the PGP key id here>' trust quit; send \"5\ry\r\"; expect eof"
 ```
+
+(found here: <https://gist.github.com/chrisroos/1205934#gistcomment-2203760)>
+
 
 ## COMMANDS
 
