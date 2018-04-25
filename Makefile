@@ -47,7 +47,7 @@ ifndef RELEASER
 	@echo "cannot build release (missing goreleaser)"
 else
 	@echo "creating a new release"
-	@goreleaser --rm-dist
+	GITHUB_TOKEN=`~/.config/goreleaser/github_token` goreleaser --rm-dist
 endif
 	@true
 
