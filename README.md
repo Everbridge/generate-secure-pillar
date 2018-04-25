@@ -6,7 +6,7 @@
 
    generate-secure-pillar [global options] command [command options] [arguments...]
 
-## VERSION 1.0.308
+## VERSION 1.0.309
 
 ## AUTHOR
 
@@ -29,7 +29,6 @@ expect -c "spawn gpg --edit-key '<the PGP key id here>' trust quit; send \"5\ry\
 ```
 
 (found here: <https://gist.github.com/chrisroos/1205934#gistcomment-2203760)>
-
 
 ## COMMANDS
 
