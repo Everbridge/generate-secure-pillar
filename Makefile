@@ -37,7 +37,7 @@ build: deps check test
 
 release: deps check test $(TARGET)
 	@cat main.go | sed 's/\"1.0.*\"/\"1.0.'$(COMMIT)'\"/' > main.go
-	@cat README.md | sed 's/1.0.*/1.0.'$(COMMIT)'/' > README.md
+	@cat README.md | sed 's/VERSION 1.0.*/VERSION 1.0.'$(COMMIT)'/' > README.md
 	@git commit -am "new $(BRANCH) build: $(VERSION)"
 	@git tag -a v$(VERSION) -m "new $(BRANCH) build: $(VERSION)"
 	@echo pushing to branch $(BRANCH)
