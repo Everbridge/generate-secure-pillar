@@ -503,7 +503,7 @@ func TestRotateFile(t *testing.T) {
 }
 
 func TestKeyInfo(t *testing.T) {
-	pgpKeyName = "Dev Salt Master"
+	pgpKeyName = "Salt Master"
 
 	if os.Getenv("SALT_SEC_KEYRING") != "" {
 		publicKeyRing, _ = filepath.Abs(os.Getenv("SALT_PUB_KEYRING"))
@@ -517,9 +517,6 @@ func TestKeyInfo(t *testing.T) {
 		secretKeyRing = "~/.gnupg/secring.gpg"
 	}
 	topLevelElement = ""
-
-	path := os.Getenv("PATH")
-	os.Setenv("PATH", path+":/usr/local/bin")
 
 	s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName)
 	filePath := "./testdata/new.sls"

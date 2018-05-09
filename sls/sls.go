@@ -377,8 +377,7 @@ func (s *Sls) ProcessValues(vals interface{}, action string) interface{} {
 				strVal = s.Pki.EncryptSecret(strVal)
 			}
 		case validate:
-			keyInfo := s.keyInfo(strVal)
-			strVal = keyInfo.LongDesc
+			strVal = s.keyInfo(strVal)
 		}
 		res = strVal
 	}
@@ -413,8 +412,7 @@ func (s *Sls) doSlice(vals interface{}, action string) interface{} {
 					thing = s.Pki.EncryptSecret(strVal)
 				}
 			case validate:
-				keyInfo := s.keyInfo(strVal)
-				thing = keyInfo.LongDesc
+				thing = s.keyInfo(strVal)
 			}
 			things = append(things, thing)
 		}
@@ -447,8 +445,7 @@ func (s *Sls) doMap(vals map[interface{}]interface{}, action string) map[interfa
 					val = s.Pki.EncryptSecret(strVal)
 				}
 			case validate:
-				keyInfo := s.keyInfo(strVal)
-				val = keyInfo.LongDesc
+				val = s.keyInfo(strVal)
 			}
 			ret[key] = val
 		}
@@ -475,9 +472,9 @@ func (s *Sls) RotateFile(file string, limChan chan bool) {
 	limChan <- true
 }
 
-func (s *Sls) keyInfo(val string) pki.PGPKey {
+func (s *Sls) keyInfo(val string) string {
 	if !isEncrypted(val) {
-		return pki.PGPKey{}
+		return ""
 	}
 
 	tmpfile, err := ioutil.TempFile("", "gsp-")
