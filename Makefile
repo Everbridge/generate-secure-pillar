@@ -27,7 +27,7 @@ BRANCH := `git rev-parse --abbrev-ref HEAD`
 
 .PHONY: all build clean install uninstall fmt simplify check run
 
-all: check build install
+all: build install
 
 $(TARGET): $(SRC)
 	@go build $(LDFLAGS) -o $(TARGET)
@@ -35,7 +35,7 @@ $(TARGET): $(SRC)
 build: deps check test
 	@go build
 
-release: deps check test $(TARGET)
+release: build $(TARGET)
 	@cat main.go | sed 's/\"1.0.*\"/\"1.0.'$(COMMIT)'\"/' > main.go
 	@cat README.md | sed 's/VERSION 1.0.*/VERSION 1.0.'$(COMMIT)'/' > README.md
 	@git commit -am "new $(BRANCH) build: $(VERSION)"
