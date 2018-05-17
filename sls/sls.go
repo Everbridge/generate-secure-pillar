@@ -368,18 +368,7 @@ func (s *Sls) ProcessValues(vals interface{}, action string) interface{} {
 	case reflect.Map:
 		res = s.doMap(vals.(map[interface{}]interface{}), action)
 	case reflect.String:
-		strVal := to.String(vals)
-		switch action {
-		case decrypt:
-			strVal = s.decryptVal(strVal)
-		case encrypt:
-			if !isEncrypted(strVal) {
-				strVal = s.Pki.EncryptSecret(strVal)
-			}
-		case validate:
-			strVal = s.keyInfo(strVal)
-		}
-		res = strVal
+		res = s.doString(vals, action)
 	}
 
 	return res
@@ -403,17 +392,7 @@ func (s *Sls) doSlice(vals interface{}, action string) interface{} {
 			thing = item
 			things = append(things, s.doMap(thing.(map[interface{}]interface{}), action))
 		case reflect.String:
-			strVal := to.String(item)
-			switch action {
-			case decrypt:
-				thing = s.decryptVal(strVal)
-			case encrypt:
-				if !isEncrypted(strVal) {
-					thing = s.Pki.EncryptSecret(strVal)
-				}
-			case validate:
-				thing = s.keyInfo(strVal)
-			}
+			thing = s.doString(item, action)
 			things = append(things, thing)
 		}
 	}
@@ -436,22 +415,26 @@ func (s *Sls) doMap(vals map[interface{}]interface{}, action string) map[interfa
 		case reflect.Map:
 			ret[key] = s.doMap(val.(map[interface{}]interface{}), action)
 		case reflect.String:
-			strVal := to.String(val)
-			switch action {
-			case decrypt:
-				val = s.decryptVal(strVal)
-			case encrypt:
-				if !isEncrypted(strVal) {
-					val = s.Pki.EncryptSecret(strVal)
-				}
-			case validate:
-				val = s.keyInfo(strVal)
-			}
-			ret[key] = val
+			ret[key] = s.doString(val, action)
 		}
 	}
 
 	return ret
+}
+
+func (s *Sls) doString(val interface{}, action string) string {
+	strVal := to.String(val)
+	switch action {
+	case decrypt:
+		strVal = s.decryptVal(strVal)
+	case encrypt:
+		if !isEncrypted(strVal) {
+			strVal = s.Pki.EncryptSecret(strVal)
+		}
+	case validate:
+		strVal = s.keyInfo(strVal)
+	}
+	return strVal
 }
 
 func isEncrypted(str string) bool {
