@@ -36,16 +36,14 @@ type Sls struct {
 	PgpKeyName      string
 	Yaml            *yaml.Yaml
 	Pki             *pki.Pki
-	Keys            []string
 }
 
 // New returns a Sls object
 func New(secretNames []string, secretValues []string, topLevelElement string, publicKeyRing string, secretKeyRing string, pgpKeyName string) Sls {
 	logger = logrus.New()
 
-	var keys []string
 	p := pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
-	s := Sls{secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, yaml.New(), &p, keys}
+	s := Sls{secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName, yaml.New(), &p}
 
 	return s
 }
