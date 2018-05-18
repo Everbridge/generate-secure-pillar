@@ -214,8 +214,10 @@ var appCommands = []cli.Command{
 					dirFlag,
 				},
 				Action: func(c *cli.Context) error {
-					s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName)
-					s.ProcessDir(recurseDir, "encrypt")
+					err := changeFiles(recurseDir, "process", "encrypt")
+					if err != nil {
+						logger.Fatalf("%s", err)
+					}
 					return nil
 				},
 			},
@@ -301,7 +303,7 @@ var appCommands = []cli.Command{
 				<-limChan
 				close(limChan)
 			} else {
-				err := rotateFiles(recurseDir)
+				err := changeFiles(recurseDir, "rotate", "")
 				if err != nil {
 					logger.Fatalf("%s", err)
 				}
@@ -415,7 +417,7 @@ func pathAction(s *sls.Sls, path string, action string) {
 	}
 }
 
-func processFiles(recurseDir string) int {
+func processFiles(recurseDir string, how string, action string) int {
 	var fileCount int
 	slsFiles, count := sls.FindSlsFiles(recurseDir)
 	if count == 0 {
@@ -430,9 +432,14 @@ func processFiles(recurseDir string) int {
 	}
 
 	for _, file := range slsFiles {
-		<-limChan
 		s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName)
-		go s.RotateFile(file, limChan)
+		<-limChan
+		switch how {
+		case "rotate":
+			go s.RotateFile(file, limChan)
+		case "process":
+			go s.ApplyActionToFile(file, action, limChan)
+		}
 		fileCount++
 	}
 	close(limChan)
@@ -440,13 +447,13 @@ func processFiles(recurseDir string) int {
 	return fileCount
 }
 
-func rotateFiles(recurseDir string) error {
+func changeFiles(recurseDir string, how string, action string) error {
 	info, err := os.Stat(recurseDir)
 	if err != nil {
 		logger.Fatalf("cannot stat %s: %s", recurseDir, err)
 	}
 	if info.IsDir() && info.Name() != ".." {
-		count := processFiles(recurseDir)
+		count := processFiles(recurseDir, how, action)
 		logger.Infof("Finished processing %d files.\n", count)
 	} else {
 		logger.Fatalf("%s is not a directory", recurseDir)
