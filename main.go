@@ -255,8 +255,12 @@ var appCommands = []cli.Command{
 					dirFlag,
 				},
 				Action: func(c *cli.Context) error {
-					s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName)
-					s.ProcessDir(recurseDir, "decrypt")
+					err := changeFiles(recurseDir, "process", "decrypt")
+					if err != nil {
+						logger.Fatalf("%s", err)
+					}
+					// s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName)
+					// s.ProcessDir(recurseDir, "decrypt")
 					return nil
 				},
 			},
@@ -345,8 +349,12 @@ var appCommands = []cli.Command{
 					dirFlag,
 				},
 				Action: func(c *cli.Context) error {
-					s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName)
-					s.ProcessDir(recurseDir, "validate")
+					err := changeFiles(recurseDir, "process", "validate")
+					if err != nil {
+						logger.Fatalf("%s", err)
+					}
+					// s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName)
+					// s.ProcessDir(recurseDir, "validate")
 					return nil
 				},
 			},
