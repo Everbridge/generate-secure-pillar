@@ -270,30 +270,46 @@ func (s *Sls) ProcessDir(recurseDir string, action string) {
 		if count == 0 {
 			logger.Fatalf("%s has no sls files", recurseDir)
 		}
+
+		limChan := make(chan bool, 1)
+		limChan <- true
+
 		for _, file := range slsFiles {
-			shortFile := shortFileName(file)
-			logger.Infof("processing %s", shortFile)
-			var buffer bytes.Buffer
-			if action == encrypt {
-				buffer, err = s.CipherTextYamlBuffer(file)
-				WriteSlsFile(buffer, file)
-			} else if action == decrypt {
-				buffer, err = s.PlainTextYamlBuffer(file)
-				WriteSlsFile(buffer, file)
-			} else if action == validate {
-				buffer, err = s.KeysForYamlBuffer(file)
-				fmt.Printf("%s\n", buffer.String())
-			} else {
-				logger.Fatalf("unknown action: %s", action)
-			}
-			if err != nil {
-				logger.Warnf("%s", err)
-				continue
-			}
+			<-limChan
+			s.ApplyActionToFile(file, action, limChan)
 		}
+
+		close(limChan)
+
 	} else {
 		logger.Fatalf("%s is not a directory", recurseDir)
 	}
+}
+
+// ApplyActionToFile apply an action to a file, for use as a go routine
+func (s *Sls) ApplyActionToFile(file string, action string, limChan chan bool) {
+	var err error
+	ok := true
+	shortFile := shortFileName(file)
+	logger.Infof("processing %s", shortFile)
+	var buffer bytes.Buffer
+	if action == encrypt {
+		buffer, err = s.CipherTextYamlBuffer(file)
+		WriteSlsFile(buffer, file)
+	} else if action == decrypt {
+		buffer, err = s.PlainTextYamlBuffer(file)
+		WriteSlsFile(buffer, file)
+	} else if action == validate {
+		buffer, err = s.KeysForYamlBuffer(file)
+		fmt.Printf("%s\n", buffer.String())
+	} else {
+		logger.Fatalf("unknown action: %s", action)
+	}
+	if err != nil {
+		logger.Warnf("%s", err)
+		ok = false
+	}
+	limChan <- ok
 }
 
 // GetValueFromPath returns the value from a path string
