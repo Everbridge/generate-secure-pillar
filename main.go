@@ -214,10 +214,8 @@ var appCommands = []cli.Command{
 					dirFlag,
 				},
 				Action: func(c *cli.Context) error {
-					err := changeFiles(recurseDir, "process", "encrypt")
-					if err != nil {
-						logger.Fatalf("%s", err)
-					}
+					s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName)
+					s.ProcessDir(recurseDir, "encrypt")
 					return nil
 				},
 			},
@@ -303,7 +301,7 @@ var appCommands = []cli.Command{
 				<-limChan
 				close(limChan)
 			} else {
-				err := changeFiles(recurseDir, "rotate", "")
+				err := rotateFiles(recurseDir)
 				if err != nil {
 					logger.Fatalf("%s", err)
 				}
@@ -377,7 +375,7 @@ var appCommands = []cli.Command{
 
 func main() {
 	app := cli.NewApp()
-	app.Version = "1.0.322"
+	app.Version = "1.0.323"
 	app.Authors = []cli.Author{
 		cli.Author{
 			Name:  "Ed Silva",
@@ -417,7 +415,7 @@ func pathAction(s *sls.Sls, path string, action string) {
 	}
 }
 
-func processFiles(recurseDir string, how string, action string) int {
+func processFiles(recurseDir string) int {
 	var fileCount int
 	slsFiles, count := sls.FindSlsFiles(recurseDir)
 	if count == 0 {
@@ -432,14 +430,9 @@ func processFiles(recurseDir string, how string, action string) int {
 	}
 
 	for _, file := range slsFiles {
-		s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName)
 		<-limChan
-		switch how {
-		case "rotate":
-			go s.RotateFile(file, limChan)
-		case "process":
-			go s.ApplyActionToFile(file, action, limChan)
-		}
+		s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName)
+		go s.RotateFile(file, limChan)
 		fileCount++
 	}
 	close(limChan)
@@ -447,13 +440,13 @@ func processFiles(recurseDir string, how string, action string) int {
 	return fileCount
 }
 
-func changeFiles(recurseDir string, how string, action string) error {
+func rotateFiles(recurseDir string) error {
 	info, err := os.Stat(recurseDir)
 	if err != nil {
 		logger.Fatalf("cannot stat %s: %s", recurseDir, err)
 	}
 	if info.IsDir() && info.Name() != ".." {
-		count := processFiles(recurseDir, how, action)
+		count := processFiles(recurseDir)
 		logger.Infof("Finished processing %d files.\n", count)
 	} else {
 		logger.Fatalf("%s is not a directory", recurseDir)
