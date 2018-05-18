@@ -6,7 +6,11 @@
 
    generate-secure-pillar [global options] command [command options] [arguments...]
 
+<<<<<<< HEAD
 ## VERSION 1.0.323
+=======
+## VERSION 1.0.322
+>>>>>>> 74b986b1481f285b71997c406a4beb870c0af6d9
 
 ## AUTHOR
 
