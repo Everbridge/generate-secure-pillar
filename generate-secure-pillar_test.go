@@ -44,7 +44,7 @@ func TestWriteSlsFile(t *testing.T) {
 	}
 	yamlObj, err := yaml.Open(slsFile)
 	if err != nil {
-		t.Errorf("Returned error")
+		t.Fatalf("Returned error")
 	}
 	if yamlObj.Get("secret") == nil {
 		t.Errorf("YAML content is incorrect, missing key")
@@ -257,7 +257,7 @@ func TestRecurseEncryptSecret(t *testing.T) {
 	for _, file := range slsFiles {
 		err := s.ReadSlsFile(file)
 		if err != nil {
-			t.Errorf("Returned error")
+			t.Fatalf("Returned error")
 		}
 		if s.GetValueFromPath(topLevelElement) == nil {
 			t.Errorf("YAML content is incorrect, got: %v.",
@@ -338,7 +338,7 @@ func TestRecurseDecryptSecret(t *testing.T) {
 	for _, file := range slsFiles {
 		yamlObj, err := yaml.Open(file)
 		if err != nil {
-			t.Errorf("Returned error")
+			t.Fatalf("Returned error")
 		}
 		if len(yamlObj.Get(topLevelElement).(map[interface{}]interface{})) <= 0 {
 			t.Errorf("YAML content lenth is incorrect, got: %d, want: %d.",
@@ -371,7 +371,7 @@ func TestGetValueFromPath(t *testing.T) {
 	filePath := "./testdata/new.sls"
 	err := s.ReadSlsFile(filePath)
 	if err != nil {
-		t.Errorf("Error getting test file: %s", err)
+		t.Fatalf("Error getting test file: %s", err)
 	}
 	val := s.GetValueFromPath("bar:baz")
 	if to.String(val) != "qux" {
@@ -397,7 +397,7 @@ func TestNestedAndMultiLineFile(t *testing.T) {
 	filePath := "./testdata/test.sls"
 	err := s.ReadSlsFile(filePath)
 	if err != nil {
-		t.Errorf("Error getting test file: %s", err)
+		t.Fatalf("Error getting test file: %s", err)
 	}
 	buffer, err := s.CipherTextYamlBuffer(filePath)
 	if err != nil {
@@ -415,7 +415,7 @@ func TestNestedAndMultiLineFile(t *testing.T) {
 	filePath = "./testdata/test.sls"
 	err = s.ReadSlsFile(filePath)
 	if err != nil {
-		t.Errorf("Error getting test file: %s", err)
+		t.Fatalf("Error getting test file: %s", err)
 	}
 	buffer, err = s.PlainTextYamlBuffer(filePath)
 	if err != nil {
@@ -448,7 +448,7 @@ func TestSetValueFromPath(t *testing.T) {
 	filePath := "./testdata/new.sls"
 	err := s.ReadSlsFile(filePath)
 	if err != nil {
-		t.Errorf("Error getting test file: %s", err)
+		t.Fatalf("Error getting test file: %s", err)
 	}
 	err = s.SetValueFromPath("bar:baz", "foo")
 	if err != nil {
@@ -528,7 +528,7 @@ func TestKeyInfo(t *testing.T) {
 	}
 	err = s.ReadSlsFile(filePath)
 	if err != nil {
-		t.Errorf("Error getting test file: %s", err)
+		t.Fatalf("Error getting test file: %s", err)
 	}
 
 	buffer = s.PerformAction("validate")

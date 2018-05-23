@@ -3,9 +3,13 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"log"
 	"os"
+	"path/filepath"
 	"runtime"
+	"strings"
 
+	"github.com/Everbridge/generate-secure-pillar/pki"
 	"github.com/Everbridge/generate-secure-pillar/sls"
 
 	"github.com/sirupsen/logrus"
@@ -25,6 +29,7 @@ var secretValues cli.StringSlice
 var topLevelElement string
 var yamlPath string
 var updateInPlace bool
+var pk *pki.Pki
 
 var defaultPubRing = "~/.gnupg/pubring.gpg"
 var defaultSecRing = "~/.gnupg/secring.gpg"
@@ -147,10 +152,20 @@ var appCommands = []cli.Command{
 		Aliases: []string{"c"},
 		Usage:   "create a new sls file",
 		Action: func(c *cli.Context) error {
-			s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName)
-			s.ProcessYaml()
-			buffer := s.FormatBuffer("")
-			sls.WriteSlsFile(buffer, outputFilePath)
+			// s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName)
+			s := sls.New(outputFilePath, *pk, topLevelElement)
+			err := s.ProcessYaml(secretNames, secretValues)
+			if err != nil {
+				logger.Fatalf("create: %s", err)
+			}
+			buffer, err := s.FormatBuffer("")
+			if err != nil {
+				logger.Fatalf("create: %s", err)
+			}
+			err = sls.WriteSlsFile(buffer, outputFilePath)
+			if err != nil {
+				logger.Fatalf("create: %s", err)
+			}
 			return nil
 		},
 		Flags: []cli.Flag{
@@ -167,14 +182,24 @@ var appCommands = []cli.Command{
 			if inputFilePath != os.Stdin.Name() {
 				outputFilePath = inputFilePath
 			}
-			s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName)
-			err := s.ReadSlsFile(inputFilePath)
+			// s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName)
+			s := sls.New(inputFilePath, *pk, topLevelElement)
+			err := s.ReadSlsFile()
 			if err != nil {
 				logger.Fatal(err)
 			}
-			s.ProcessYaml()
-			buffer := s.FormatBuffer("")
-			sls.WriteSlsFile(buffer, outputFilePath)
+			err = s.ProcessYaml(secretNames, secretValues)
+			if err != nil {
+				logger.Fatal(err)
+			}
+			buffer, err := s.FormatBuffer("")
+			if err != nil {
+				logger.Fatal(err)
+			}
+			err = sls.WriteSlsFile(buffer, outputFilePath)
+			if err != nil {
+				logger.Fatal(err)
+			}
 			return nil
 		},
 		Flags: []cli.Flag{
@@ -199,11 +224,12 @@ var appCommands = []cli.Command{
 					updateFlag,
 				},
 				Action: func(c *cli.Context) error {
-					s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName)
+					// s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName)
+					s := sls.New(inputFilePath, *pk, topLevelElement)
 					if inputFilePath != os.Stdin.Name() && updateInPlace {
 						outputFilePath = inputFilePath
 					}
-					buffer, err := s.CipherTextYamlBuffer(inputFilePath)
+					buffer, err := s.PerformAction("encrypt")
 					safeWrite(buffer, err)
 					return nil
 				},
@@ -240,11 +266,12 @@ var appCommands = []cli.Command{
 					updateFlag,
 				},
 				Action: func(c *cli.Context) error {
-					s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName)
+					// s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName)
+					s := sls.New(inputFilePath, *pk, topLevelElement)
 					if inputFilePath != os.Stdin.Name() && updateInPlace {
 						outputFilePath = inputFilePath
 					}
-					buffer, err := s.PlainTextYamlBuffer(inputFilePath)
+					buffer, err := s.PerformAction("decrypt")
 					safeWrite(buffer, err)
 					return nil
 				},
@@ -261,6 +288,7 @@ var appCommands = []cli.Command{
 					}
 					// s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName)
 					// s.ProcessDir(recurseDir, "decrypt")
+					// TODO: FIX ME
 					return nil
 				},
 			},
@@ -275,10 +303,10 @@ var appCommands = []cli.Command{
 					},
 				},
 				Action: func(c *cli.Context) error {
-					s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName)
-					err := s.ReadSlsFile(inputFilePath)
-					if err != nil {
-						logger.Fatal(err)
+					// s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName)
+					s := sls.New(inputFilePath, *pk, topLevelElement)
+					if s.Error != nil {
+						logger.Fatal(s.Error)
 					}
 					pathAction(&s, yamlPath, "decrypt")
 
@@ -301,11 +329,9 @@ var appCommands = []cli.Command{
 		},
 		Action: func(c *cli.Context) error {
 			if inputFilePath != "" {
-				s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName)
-				limChan := make(chan bool, 1)
-				s.RotateFile(inputFilePath, limChan)
-				<-limChan
-				close(limChan)
+				// s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName)
+				s := sls.New(inputFilePath, *pk, topLevelElement)
+				buf, err := s.PerformAction("rotate")
 			} else {
 				err := changeFiles(recurseDir, "rotate", "")
 				if err != nil {
@@ -331,11 +357,12 @@ var appCommands = []cli.Command{
 					outputFlag,
 				},
 				Action: func(c *cli.Context) error {
-					s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName)
+					// s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName)
+					s := sls.New(inputFilePath, *pk, topLevelElement)
 					if inputFilePath != os.Stdin.Name() && updateInPlace {
 						outputFilePath = inputFilePath
 					}
-					buffer, err := s.KeysForYamlBuffer(inputFilePath)
+					buffer, err := s.PerformAction("validate")
 					if err != nil {
 						logger.Fatal(err)
 					}
@@ -369,10 +396,10 @@ var appCommands = []cli.Command{
 					},
 				},
 				Action: func(c *cli.Context) error {
-					s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName)
-					err := s.ReadSlsFile(inputFilePath)
-					if err != nil {
-						logger.Fatal(err)
+					// s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName)
+					s := sls.New(inputFilePath, *pk, topLevelElement)
+					if s.Error != nil {
+						logger.Fatal(s.Error)
 					}
 					pathAction(&s, yamlPath, "validate")
 
@@ -468,4 +495,120 @@ func changeFiles(recurseDir string, how string, action string) error {
 	}
 
 	return nil
+}
+
+func processDir(searchDir string, fileExt string) error {
+	// get a list of sls files along with the count
+	files, count := findFilesByExt(searchDir, fileExt)
+
+	// Copy files to a channel for workers to consume. Close the
+	// channel so that workers stop when all work is complete.
+	filesChan := make(chan string, count)
+	for _, file := range files {
+		filesChan <- file
+	}
+	close(filesChan)
+
+	errChan := make(chan error, count)
+	resChan := make(chan sls.Sls, count)
+
+	// pki set up for sls
+	p := pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
+
+	// run workers
+	for i := 0; i < count; i++ {
+		go func() {
+			// consume work from filesChan
+			for file := range filesChan {
+				// fd, err := os.Open(file)
+				// handleErr(err, errChan)
+				// res, err := fd.Stat()
+				// handleErr(err, errChan)
+				// err = fd.Close()
+				// handleErr(err, errChan)
+
+				s := sls.New(file, p)
+				if s.Error != nil {
+					handleErr(s.Error, errChan)
+				}
+				// TODO: here is where stuff needs to happen
+				buf := s.PlainTextYamlBuffer()
+				if s.Error != nil {
+					handleErr(s.Error, errChan)
+				}
+				log.Printf(buf.String())
+
+				resChan <- s
+			}
+		}()
+	}
+
+	// collect results
+	for i := 0; i < count; i++ {
+		select {
+		case s := <-resChan:
+			buf := s.PlainTextYamlBuffer()
+			fmt.Printf(buf.String())
+			fmt.Printf("%#v\n", s)
+			// log.Println(res)
+		case err := <-errChan:
+			return err
+		}
+	}
+	return nil
+}
+
+func handleErr(err error, errChan chan error) {
+	if err != nil {
+		select {
+		case errChan <- err:
+			// will break parent goroutine out of loop
+		default:
+			// don't care, first error wins
+		}
+		return
+	}
+}
+
+// findSlsFiles recurses through the given searchDir returning a list of .sls files and it's length
+func findFilesByExt(searchDir string, ext string) ([]string, int) {
+	fileList := []string{}
+	searchDir, err := filepath.Abs(searchDir)
+	if err != nil {
+		logger.Error(err)
+		return fileList, 0
+	}
+	err = checkForDir(searchDir)
+	if err != nil {
+		logger.Error(err)
+		return fileList, 0
+	}
+
+	err = filepath.Walk(searchDir, func(path string, f os.FileInfo, err error) error {
+		if !f.IsDir() && strings.Contains(f.Name(), ext) {
+			fileList = append(fileList, path)
+		}
+		return nil
+	})
+	if err != nil {
+		logger.Fatal("error walking file path: ", err)
+	}
+
+	return fileList, len(fileList)
+}
+
+//checkForDir does exactly what it says on the tin
+func checkForDir(filePath string) error {
+	fi, err := os.Stat(filePath)
+	if err != nil {
+		return fmt.Errorf("cannot stat %s: %s", filePath, err)
+	}
+	switch mode := fi.Mode(); {
+	case mode.IsRegular():
+		return fmt.Errorf("%s is a file", filePath)
+	case mode.IsDir():
+		return nil
+	}
+
+	return err
 }
