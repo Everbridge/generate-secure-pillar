@@ -235,7 +235,7 @@ var appCommands = []cli.Command{
 				Action: func(c *cli.Context) error {
 					err := processDir(recurseDir, ".sls", "encrypt")
 					if err != nil {
-						logger.Fatalf("encrypt: %s", err)
+						logger.Warnf("encrypt: %s", err)
 					}
 					return nil
 				},
@@ -295,7 +295,7 @@ var appCommands = []cli.Command{
 				Action: func(c *cli.Context) error {
 					err := processDir(recurseDir, ".sls", "decrypt")
 					if err != nil {
-						logger.Fatalf("decrypt: %s", err)
+						logger.Warnf("decrypt: %s", err)
 					}
 					return nil
 				},
@@ -341,7 +341,7 @@ var appCommands = []cli.Command{
 			} else {
 				err := processDir(recurseDir, ".sls", "rotate")
 				if err != nil {
-					logger.Fatalf("rotate: %s", err)
+					logger.Warnf("rotate: %s", err)
 				}
 			}
 			return nil
@@ -381,7 +381,7 @@ var appCommands = []cli.Command{
 				Action: func(c *cli.Context) error {
 					err := processDir(recurseDir, ".sls", "validate")
 					if err != nil {
-						logger.Fatalf("keys: %s", err)
+						logger.Warnf("keys: %s", err)
 					}
 					return nil
 				},
@@ -509,14 +509,11 @@ func applyActionAndWrite(file string, action string, pk *pki.Pki, errChan chan e
 	}
 
 	buf, err := s.PerformAction(action)
-	if err != nil && action != sls.Validate {
-		handleErr(err, errChan)
+	if buf.Len() > 0 && err != nil && action != sls.Validate {
+		logger.Warnf("%s", err)
 	}
 
-	if action == sls.Validate && buf.Len() > 0 {
-		if err != nil {
-			logger.Warnf("%s", err)
-		}
+	if action == sls.Validate {
 		fmt.Printf("%s\n", buf.String())
 		return 0
 	}
