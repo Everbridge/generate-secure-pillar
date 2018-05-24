@@ -7,6 +7,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -19,9 +20,18 @@ import (
 
 // pgpHeader header const
 const pgpHeader = "-----BEGIN PGP MESSAGE-----"
-const encrypt = "encrypt"
-const decrypt = "decrypt"
-const validate = "validate"
+
+// Encrypt action
+const Encrypt = "encrypt"
+
+// Decrypt action
+const Decrypt = "decrypt"
+
+// Validate action (keys)
+const Validate = "validate"
+
+// Rotate action
+const Rotate = "rotate"
 
 var logger *logrus.Logger
 
@@ -30,19 +40,21 @@ type Sls struct {
 	FilePath       string
 	Yaml           *yaml.Yaml
 	Pki            *pki.Pki
-	Error          error
 	IsInclude      bool
 	EncryptionPath string
+	KeyMap         map[string]interface{}
 }
 
 // New returns a Sls object
 func New(filePath string, p pki.Pki, encPath string) Sls {
 	logger = logrus.New()
 
-	s := Sls{filePath, yaml.New(), &p, nil, false, encPath}
-	err := s.ReadSlsFile()
-	if err != nil {
-		logger.Fatalf("init error for %s: %s", s.FilePath, err)
+	s := Sls{filePath, yaml.New(), &p, false, encPath, map[string]interface{}{}}
+	if len(filePath) > 0 {
+		err := s.ReadSlsFile()
+		if err != nil {
+			logger.Fatalf("init error for %s: %s", s.FilePath, err)
+		}
 	}
 
 	return s
@@ -72,7 +84,7 @@ func (s *Sls) ScanForIncludes(reader io.Reader) error {
 	for scanner.Scan() {
 		txt := scanner.Text()
 		if strings.Contains(txt, "include:") {
-			return fmt.Errorf("contains include directives")
+			return fmt.Errorf("%s contains include directives", shortFileName(s.FilePath))
 		}
 	}
 	return scanner.Err()
@@ -81,6 +93,22 @@ func (s *Sls) ScanForIncludes(reader io.Reader) error {
 // ReadSlsFile open and read a yaml file, if the file has include statements
 // we throw an error as the YAML parser will try to act on the include directives
 func (s *Sls) ReadSlsFile() error {
+	if len(s.FilePath) == 0 {
+		return fmt.Errorf("no file path given")
+	}
+
+	if _, statErr := os.Stat(s.FilePath); os.IsNotExist(statErr) {
+		dir := filepath.Dir(s.FilePath)
+		err := os.MkdirAll(dir, 0700)
+		if err != nil {
+			return err
+		}
+		_, err = os.OpenFile(s.FilePath, os.O_RDONLY|os.O_CREATE, 0600)
+		if err != nil {
+			return err
+		}
+	}
+
 	fullPath, err := filepath.Abs(s.FilePath)
 	if err != nil {
 		return err
@@ -97,7 +125,7 @@ func (s *Sls) ReadSlsFile() error {
 
 // WriteSlsFile writes a buffer to the specified file
 // If the outFilePath is not stdout an INFO string will be printed to stdout
-func WriteSlsFile(buffer bytes.Buffer, outFilePath string) error {
+func WriteSlsFile(buffer bytes.Buffer, outFilePath string) (int, error) {
 	fullPath, err := filepath.Abs(outFilePath)
 	if err != nil {
 		fullPath = outFilePath
@@ -113,51 +141,73 @@ func WriteSlsFile(buffer bytes.Buffer, outFilePath string) error {
 		dir := filepath.Dir(fullPath)
 		err = os.MkdirAll(dir, 0700)
 		if err != nil {
-			return fmt.Errorf("error creating sls path: %s", err)
+			return buffer.Len(), fmt.Errorf("error creating sls path: %s", err)
 		}
 	}
 
-	f, err := os.OpenFile(fullPath, os.O_WRONLY|os.O_CREATE, 0600)
-	if err != nil {
-		return fmt.Errorf("error opening sls file: %s", err)
-	}
+	byteCount, err := atomicWrite(fullPath, buffer)
 
-	bw := bufio.NewWriter(f)
-	_, err = bw.Write(buffer.Bytes())
-	if err != nil {
-		return fmt.Errorf("error writing sls file: %s", err)
-	}
-	err = bw.Flush()
-	if err != nil {
-		return fmt.Errorf("error flushing sls file: %s", err)
-	}
-	err = f.Close()
-	if err != nil {
-		return fmt.Errorf("error closing sls file: %s", err)
-	}
-
-	if !stdOut {
+	if !stdOut && err == nil {
 		shortFile := shortFileName(outFilePath)
 		logger.Infof("wrote out to file: '%s'", shortFile)
 	}
 
-	return nil
+	return byteCount, err
+}
+
+func atomicWrite(fullPath string, buffer bytes.Buffer) (int, error) {
+	_, name := path.Split(fullPath)
+	f, err := ioutil.TempFile("", fmt.Sprintf("gsp-%s", name))
+	if err != nil {
+		return 0, err
+	}
+	byteCount, err := f.Write(buffer.Bytes())
+	if err == nil {
+		err = f.Sync()
+	}
+	if closeErr := f.Close(); err == nil {
+		err = closeErr
+	}
+	if permErr := os.Chmod(f.Name(), 0600); err == nil {
+		err = permErr
+	}
+	if err == nil {
+		err = os.Rename(f.Name(), fullPath)
+	}
+	if err != nil {
+		return byteCount, err
+	}
+
+	if _, statErr := os.Stat(f.Name()); !os.IsNotExist(statErr) {
+		err = os.Remove(f.Name())
+	}
+
+	return byteCount, err
 }
 
 // FormatBuffer returns a formatted .sls buffer with the gpg renderer line
 func (s *Sls) FormatBuffer(action string) (bytes.Buffer, error) {
 	var buffer bytes.Buffer
+	var out []byte
+	var err error
+	var data map[string]interface{}
 
-	if len(s.Yaml.Values) == 0 {
-		return buffer, fmt.Errorf("no values to format")
+	if action != Validate {
+		data = s.Yaml.Values
+	} else {
+		data = s.KeyMap
 	}
 
-	out, err := yamlv2.Marshal(s.Yaml.Values)
+	if len(data) == 0 {
+		return buffer, fmt.Errorf("%s has no values to format", s.FilePath)
+	}
+
+	out, err = yamlv2.Marshal(data)
 	if err != nil {
-		return buffer, fmt.Errorf("format error: %s", err)
+		return buffer, fmt.Errorf("%s format error: %s", s.FilePath, err)
 	}
 
-	if action != validate {
+	if action != Validate {
 		buffer.WriteString("#!yaml|gpg\n\n")
 	}
 	_, err = buffer.WriteString(string(out))
@@ -243,8 +293,12 @@ func (s *Sls) PerformAction(action string) (bytes.Buffer, error) {
 				}
 			}
 		}
-		// replace the values in the Yaml object
-		s.Yaml.Values = stuff
+		if action != Validate {
+			// replace the values in the Yaml object
+			s.Yaml.Values = stuff
+		} else {
+			s.KeyMap = stuff
+		}
 	}
 
 	return s.FormatBuffer(action)
@@ -337,26 +391,39 @@ func (s *Sls) doString(val interface{}, action string) (string, error) {
 
 	strVal := val.(string)
 	switch action {
-	case decrypt:
+	case Decrypt:
 		strVal, err = s.decryptVal(strVal)
 		if err != nil {
 			return val.(string), err
 		}
-	case encrypt:
+	case Encrypt:
 		if !isEncrypted(strVal) {
 			strVal, err = s.Pki.EncryptSecret(strVal)
 			if err != nil {
 				return val.(string), err
 			}
 		}
-	case validate:
+	case Validate:
 		strVal, err = s.keyInfo(strVal)
+		if err != nil {
+			return val.(string), err
+		}
+	case Rotate:
+		strVal, err = s.rotateVal(strVal)
 		if err != nil {
 			return val.(string), err
 		}
 	}
 
 	return strVal, err
+}
+
+func (s *Sls) rotateVal(strVal string) (string, error) {
+	strVal, err := s.decryptVal(strVal)
+	if err != nil {
+		return strVal, err
+	}
+	return s.Pki.EncryptSecret(strVal)
 }
 
 func isEncrypted(str string) bool {
@@ -409,13 +476,14 @@ func (s *Sls) decryptVal(strVal string) (string, error) {
 }
 
 func validAction(action string) bool {
-	return action == encrypt || action == decrypt || action == validate
+	return action == Encrypt || action == Decrypt || action == Validate || action == Rotate
 }
 
 func shortFileName(file string) string {
 	pwd, err := os.Getwd()
 	if err != nil {
-		logger.Fatalf("%s", err)
+		logger.Warnf("%s", err)
+		return file
 	}
 	return strings.Replace(file, pwd+"/", "", 1)
 }
