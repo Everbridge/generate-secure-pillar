@@ -446,60 +446,15 @@ func safeWrite(buffer bytes.Buffer, err error) {
 func pathAction(s *sls.Sls, path string, action string) {
 	vals := s.GetValueFromPath(path)
 	if vals != nil {
-		vals, err := s.ProcessValues(vals, action)
+		processedVals, err := s.ProcessValues(vals, action)
 		if err != nil {
 			logger.Fatalf("path action failed: %s", err)
 		}
-		fmt.Printf("%s: %s\n", path, vals)
+		fmt.Printf("%s: %s\n", path, processedVals)
 	} else {
 		logger.Warnf("unable to find path: '%s'", path)
 	}
 }
-
-// func processFiles(recurseDir string, how string, action string) int {
-// 	var fileCount int
-// 	slsFiles, count := sls.FindSlsFiles(recurseDir)
-// 	if count == 0 {
-// 		logger.Fatalf("%s has no sls files", recurseDir)
-// 	}
-
-// 	cores := runtime.GOMAXPROCS(0)
-// 	limChan := make(chan bool, cores)
-
-// 	for i := 0; i < cores; i++ {
-// 		limChan <- true
-// 	}
-
-// 	for _, file := range slsFiles {
-// 		s := sls.New(inputFilePath, pk, topLevelElement)
-// 		<-limChan
-// 		switch how {
-// 		case "rotate":
-// 			go s.RotateFile(file, limChan)
-// 		case "process":
-// 			go s.ApplyActionToFile(file, action, limChan)
-// 		}
-// 		fileCount++
-// 	}
-// 	close(limChan)
-
-// 	return fileCount
-// }
-
-// func changeFiles(recurseDir string, how string, action string) error {
-// 	info, err := os.Stat(recurseDir)
-// 	if err != nil {
-// 		logger.Fatalf("cannot stat %s: %s", recurseDir, err)
-// 	}
-// 	if info.IsDir() && info.Name() != ".." {
-// 		count := processFiles(recurseDir, how, action)
-// 		logger.Infof("Finished processing %d files.\n", count)
-// 	} else {
-// 		logger.Fatalf("%s is not a directory", recurseDir)
-// 	}
-
-// 	return nil
-// }
 
 func processDir(searchDir string, fileExt string, action string) error {
 	// get a list of sls files along with the count

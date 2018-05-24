@@ -17,8 +17,6 @@ import (
 // pgpHeader header const
 const pgpHeader = "-----BEGIN PGP MESSAGE-----"
 
-var p pki.Pki
-
 func TestWriteSlsFile(t *testing.T) {
 	pgpKeyName = "Dev Salt Master"
 
