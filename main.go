@@ -514,7 +514,7 @@ func applyActionAndWrite(file string, action string, pk *pki.Pki, errChan chan e
 	}
 
 	if action == sls.Validate {
-		fmt.Printf("%s\n", buf.String())
+		fmt.Printf("%s:\n%s\n", s.FilePath, buf.String())
 		return 0
 	}
 
