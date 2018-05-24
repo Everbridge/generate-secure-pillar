@@ -145,7 +145,15 @@ func WriteSlsFile(buffer bytes.Buffer, outFilePath string) (int, error) {
 		}
 	}
 
-	byteCount, err := atomicWrite(fullPath, buffer)
+	byteCount := 0
+	if stdOut {
+		err = ioutil.WriteFile(fullPath, buffer.Bytes(), 0600)
+		if err != nil {
+			return buffer.Len(), fmt.Errorf("error writing to stdout: %s", err)
+		}
+	} else {
+		byteCount, err = atomicWrite(fullPath, buffer)
+	}
 
 	if !stdOut && err == nil {
 		shortFile := shortFileName(outFilePath)
