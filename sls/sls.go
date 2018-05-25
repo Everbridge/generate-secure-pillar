@@ -183,7 +183,7 @@ func atomicWrite(fullPath string, buffer bytes.Buffer) (int, error) {
 		err = permErr
 	}
 	if err == nil {
-		err = os.Rename(f.Name(), fullPath)
+		err = copyFile(f.Name(), fullPath)
 	}
 	if err != nil {
 		return byteCount, err
@@ -194,6 +194,37 @@ func atomicWrite(fullPath string, buffer bytes.Buffer) (int, error) {
 	}
 
 	return byteCount, err
+}
+
+func copyFile(src string, dst string) error {
+	srcStat, err := os.Stat(src)
+	if err != nil {
+		return err
+	}
+
+	fsrc, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+
+	fdst, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+
+	size, err := io.Copy(fdst, fsrc)
+	if err != nil {
+		return err
+	}
+	if size != srcStat.Size() {
+		return fmt.Errorf("%s: %d/%d copied", src, size, srcStat.Size())
+	}
+
+	err = fsrc.Close()
+	if err != nil {
+		return fdst.Close()
+	}
+	return err
 }
 
 // FormatBuffer returns a formatted .sls buffer with the gpg renderer line
