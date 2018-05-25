@@ -504,7 +504,7 @@ func processDir(searchDir string, fileExt string, action string) error {
 
 func applyActionAndWrite(file string, action string, pk *pki.Pki, errChan chan error) int {
 	s := sls.New(file, *pk, topLevelElement)
-	if s.IsInclude {
+	if s.IsInclude || s.Error != nil {
 		return 0
 	}
 

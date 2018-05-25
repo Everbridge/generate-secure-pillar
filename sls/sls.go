@@ -43,17 +43,19 @@ type Sls struct {
 	IsInclude      bool
 	EncryptionPath string
 	KeyMap         map[string]interface{}
+	Error          error
 }
 
 // New returns a Sls object
 func New(filePath string, p pki.Pki, encPath string) Sls {
 	logger = logrus.New()
 
-	s := Sls{filePath, yaml.New(), &p, false, encPath, map[string]interface{}{}}
+	s := Sls{filePath, yaml.New(), &p, false, encPath, map[string]interface{}{}, nil}
 	if len(filePath) > 0 {
 		err := s.ReadSlsFile()
 		if err != nil {
-			logger.Fatalf("init error for %s: %s", s.FilePath, err)
+			logger.Errorf("init error for %s: %s", s.FilePath, err)
+			s.Error = err
 		}
 	}
 
