@@ -460,8 +460,8 @@ func processDir(searchDir string, fileExt string, action string) error {
 	// get a list of sls files along with the count
 	files, count := findFilesByExt(searchDir, fileExt)
 
-	// Copy files to a channel for workers to consume. Close the
-	// channel so that workers stop when all work is complete.
+	// copy files to a channel then close the
+	// channel so that workers stop when done
 	filesChan := make(chan string, count)
 	for _, file := range files {
 		filesChan <- file
@@ -476,7 +476,6 @@ func processDir(searchDir string, fileExt string, action string) error {
 	// run workers
 	for i := 0; i < count; i++ {
 		go func() {
-			// consume work from filesChan
 			for file := range filesChan {
 				resChan <- applyActionAndWrite(file, action, &pk, errChan)
 			}
