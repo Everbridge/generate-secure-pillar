@@ -97,6 +97,10 @@ func (s *Sls) ReadSlsFile() error {
 		return fmt.Errorf("no file path given")
 	}
 
+	if s.FilePath == os.Stdout.Name() {
+		return nil
+	}
+
 	if _, statErr := os.Stat(s.FilePath); os.IsNotExist(statErr) {
 		dir := filepath.Dir(s.FilePath)
 		err := os.MkdirAll(dir, 0700)
@@ -145,12 +149,9 @@ func WriteSlsFile(buffer bytes.Buffer, outFilePath string) (int, error) {
 		}
 	}
 
-	byteCount := 0
+	var byteCount int
 	if stdOut {
-		err = ioutil.WriteFile(fullPath, buffer.Bytes(), 0600)
-		if err != nil {
-			return buffer.Len(), fmt.Errorf("error writing to stdout: %s", err)
-		}
+		byteCount, err = fmt.Fprintf(os.Stderr, fmt.Sprintf("%s\n", buffer.String()))
 	} else {
 		byteCount, err = atomicWrite(fullPath, buffer)
 	}
