@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/Everbridge/generate-secure-pillar/pki"
 	"github.com/Everbridge/generate-secure-pillar/sls"
+	"github.com/Everbridge/generate-secure-pillar/utils"
 	yaml "github.com/esilva-everbridge/yaml"
 	"github.com/gosexy/to"
 )
@@ -31,20 +33,26 @@ func TestWriteSlsFile(t *testing.T) {
 	} else {
 		secretKeyRing = "~/.gnupg/secring.gpg"
 	}
-	s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName)
 
 	slsFile := "./testdata/foo/foo.sls"
+
+	p := pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
+	s := sls.New(slsFile, p, topLevelElement)
+
 	s.SetValueFromPath("secret", "text")
 
-	buffer := s.FormatBuffer("")
+	buffer, err := s.FormatBuffer("")
+	if err != nil {
+		t.Fatalf("FormatBuffer returned error")
+	}
 	sls.WriteSlsFile(buffer, slsFile)
 
-	if _, err := os.Stat(slsFile); os.IsNotExist(err) {
+	if _, err = os.Stat(slsFile); os.IsNotExist(err) {
 		t.Errorf("%s file was not written", slsFile)
 	}
 	yamlObj, err := yaml.Open(slsFile)
 	if err != nil {
-		t.Errorf("Returned error")
+		t.Fatalf("Returned error")
 	}
 	if yamlObj.Get("secret") == nil {
 		t.Errorf("YAML content is incorrect, missing key")
@@ -54,69 +62,6 @@ func TestWriteSlsFile(t *testing.T) {
 	}
 	os.Remove(slsFile)
 	os.Remove("./testdata/foo/")
-}
-
-func TestFindSlsFiles(t *testing.T) {
-	pgpKeyName = "Dev Salt Master"
-
-	if os.Getenv("SALT_SEC_KEYRING") != "" {
-		publicKeyRing, _ = filepath.Abs(os.Getenv("SALT_PUB_KEYRING"))
-	} else {
-		publicKeyRing = "~/.gnupg/pubring.gpg"
-	}
-
-	if os.Getenv("SALT_SEC_KEYRING") != "" {
-		secretKeyRing, _ = filepath.Abs(os.Getenv("SALT_SEC_KEYRING"))
-	} else {
-		secretKeyRing = "~/.gnupg/secring.gpg"
-	}
-	slsFiles, count := sls.FindSlsFiles("./testdata")
-	if count != 6 {
-		t.Errorf("File count was incorrect, got: %d, want: %d.",
-			len(slsFiles), 6)
-	}
-}
-
-func TestBadDir(t *testing.T) {
-	pgpKeyName = "Dev Salt Master"
-
-	if os.Getenv("SALT_SEC_KEYRING") != "" {
-		publicKeyRing, _ = filepath.Abs(os.Getenv("SALT_PUB_KEYRING"))
-	} else {
-		publicKeyRing = "~/.gnupg/pubring.gpg"
-	}
-
-	if os.Getenv("SALT_SEC_KEYRING") != "" {
-		secretKeyRing, _ = filepath.Abs(os.Getenv("SALT_SEC_KEYRING"))
-	} else {
-		secretKeyRing = "~/.gnupg/secring.gpg"
-	}
-	slsFiles, count := sls.FindSlsFiles("./testdata/does_not_exist")
-	if count != 0 {
-		t.Errorf("File count was incorrect, got: %d, want: %d.",
-			len(slsFiles), 0)
-	}
-}
-
-func TestEmptyDir(t *testing.T) {
-	pgpKeyName = "Dev Salt Master"
-
-	if os.Getenv("SALT_SEC_KEYRING") != "" {
-		publicKeyRing, _ = filepath.Abs(os.Getenv("SALT_PUB_KEYRING"))
-	} else {
-		publicKeyRing = "~/.gnupg/pubring.gpg"
-	}
-
-	if os.Getenv("SALT_SEC_KEYRING") != "" {
-		secretKeyRing, _ = filepath.Abs(os.Getenv("SALT_SEC_KEYRING"))
-	} else {
-		secretKeyRing = "~/.gnupg/secring.gpg"
-	}
-	slsFiles, count := sls.FindSlsFiles("./testdata/empty")
-	if count != 0 {
-		t.Errorf("File count was incorrect, got: %d, want: %d.",
-			len(slsFiles), 0)
-	}
 }
 
 func TestReadSlsFile(t *testing.T) {
@@ -158,14 +103,17 @@ func TestReadIncludeFile(t *testing.T) {
 	} else {
 		secretKeyRing = "~/.gnupg/secring.gpg"
 	}
-	s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName)
-	err := s.ReadSlsFile("./testdata/inc.sls")
-	if err == nil {
-		t.Errorf("failed to throw error for include file")
+
+	slsFile := "./testdata/inc.sls"
+	p := pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
+	s := sls.New(slsFile, p, topLevelElement)
+	if !s.IsInclude {
+		t.Errorf("failed to detect include file")
 	}
-	err = s.ReadSlsFile("./testdata/new.sls")
-	if err != nil {
-		t.Errorf("threw error for non-include file")
+	slsFile = "./testdata/new.sls"
+	s = sls.New(slsFile, p, topLevelElement)
+	if s.IsInclude {
+		t.Errorf("bad status for non-include file")
 	}
 }
 
@@ -223,7 +171,10 @@ func TestEncryptSecret(t *testing.T) {
 		if strings.Contains(v.(string), pgpHeader) {
 			t.Errorf("YAML content is already encrypted.")
 		} else {
-			cipherText := p.EncryptSecret(v.(string))
+			cipherText, err := p.EncryptSecret(v.(string))
+			if err != nil {
+				t.Errorf("YAML encryption threw an error.")
+			}
 			if !strings.Contains(cipherText, pgpHeader) {
 				t.Errorf("YAML content was not encrypted.")
 			}
@@ -231,7 +182,7 @@ func TestEncryptSecret(t *testing.T) {
 	}
 }
 
-func TestRecurseEncryptSecret(t *testing.T) {
+func TestGetPath(t *testing.T) {
 	pgpKeyName = "Dev Salt Master"
 
 	if os.Getenv("SALT_SEC_KEYRING") != "" {
@@ -246,30 +197,36 @@ func TestRecurseEncryptSecret(t *testing.T) {
 		secretKeyRing = "~/.gnupg/secring.gpg"
 	}
 	topLevelElement = "secure_vars"
-	s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName)
 
-	recurseDir := "./testdata/test"
-	s.ProcessDir(recurseDir, "encrypt")
-	slsFiles, count := sls.FindSlsFiles(recurseDir)
-	if count == 0 {
-		t.Errorf("%s has no sls files", recurseDir)
+	file := "./testdata/test/bar.sls"
+	p := pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
+	s := sls.New(file, p, topLevelElement)
+
+	buffer, err := s.PerformAction("encrypt")
+	if err != nil {
+		t.Errorf("%s", err)
+	} else {
+		sls.WriteSlsFile(buffer, file)
 	}
-	for _, file := range slsFiles {
-		err := s.ReadSlsFile(file)
-		if err != nil {
-			t.Errorf("Returned error")
-		}
-		if s.GetValueFromPath(topLevelElement) == nil {
-			t.Errorf("YAML content is incorrect, got: %v.",
-				s.GetValueFromPath(topLevelElement))
-		}
-		secureVars := s.GetValueFromPath(topLevelElement)
-		for _, v := range secureVars.(map[interface{}]interface{}) {
-			if !strings.Contains(v.(string), pgpHeader) {
-				t.Errorf("YAML content was not encrypted.")
-			}
+
+	if s.GetValueFromPath(topLevelElement) == nil {
+		t.Errorf("YAML content is incorrect, got: %v.",
+			s.GetValueFromPath(topLevelElement))
+	}
+	secureVars := s.GetValueFromPath(topLevelElement)
+	for _, v := range secureVars.(map[interface{}]interface{}) {
+		if !strings.Contains(v.(string), pgpHeader) {
+			t.Errorf("YAML content was not encrypted.")
 		}
 	}
+
+	buffer, err = s.PerformAction("decrypt")
+	if err != nil {
+		t.Errorf("%s", err)
+	} else {
+		sls.WriteSlsFile(buffer, file)
+	}
+
 }
 
 func TestDecryptSecret(t *testing.T) {
@@ -298,7 +255,10 @@ func TestDecryptSecret(t *testing.T) {
 			len(yamlObj.Get(topLevelElement).(map[interface{}]interface{})), 1)
 	}
 	for _, v := range yamlObj.Get(topLevelElement).(map[interface{}]interface{}) {
-		cipherText := p.EncryptSecret(v.(string))
+		cipherText, err := p.EncryptSecret(v.(string))
+		if err != nil {
+			t.Errorf("got error: %s", err)
+		}
 		plainText, err := p.DecryptSecret(cipherText)
 		if err != nil {
 			t.Errorf("got error: %s", err)
@@ -308,47 +268,6 @@ func TestDecryptSecret(t *testing.T) {
 		}
 		if plainText == "" {
 			t.Errorf("decrypted content is empty")
-		}
-	}
-}
-
-func TestRecurseDecryptSecret(t *testing.T) {
-	pgpKeyName = "Dev Salt Master"
-
-	if os.Getenv("SALT_SEC_KEYRING") != "" {
-		publicKeyRing, _ = filepath.Abs(os.Getenv("SALT_PUB_KEYRING"))
-	} else {
-		publicKeyRing = "~/.gnupg/pubring.gpg"
-	}
-
-	if os.Getenv("SALT_SEC_KEYRING") != "" {
-		secretKeyRing, _ = filepath.Abs(os.Getenv("SALT_SEC_KEYRING"))
-	} else {
-		secretKeyRing = "~/.gnupg/secring.gpg"
-	}
-	topLevelElement = "secure_vars"
-	s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName)
-
-	recurseDir := "./testdata/test"
-	s.ProcessDir(recurseDir, "decrypt")
-	slsFiles, count := sls.FindSlsFiles(recurseDir)
-	if count == 0 {
-		t.Errorf("%s has no sls files", recurseDir)
-	}
-	for _, file := range slsFiles {
-		yamlObj, err := yaml.Open(file)
-		if err != nil {
-			t.Errorf("Returned error")
-		}
-		if len(yamlObj.Get(topLevelElement).(map[interface{}]interface{})) <= 0 {
-			t.Errorf("YAML content lenth is incorrect, got: %d, want: %d.",
-				len(yamlObj.Get(topLevelElement).(map[interface{}]interface{})), 2)
-		}
-		secureVars := yamlObj.Get(topLevelElement)
-		for _, v := range secureVars.(map[interface{}]interface{}) {
-			if strings.Contains(v.(string), pgpHeader) {
-				t.Errorf("YAML content is still encrypted.")
-			}
 		}
 	}
 }
@@ -367,12 +286,10 @@ func TestGetValueFromPath(t *testing.T) {
 	} else {
 		secretKeyRing = "~/.gnupg/secring.gpg"
 	}
-	s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName)
+
 	filePath := "./testdata/new.sls"
-	err := s.ReadSlsFile(filePath)
-	if err != nil {
-		t.Errorf("Error getting test file: %s", err)
-	}
+	p := pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
+	s := sls.New(filePath, p, topLevelElement)
 	val := s.GetValueFromPath("bar:baz")
 	if to.String(val) != "qux" {
 		t.Errorf("Content from path '%s' is wrong: %#v", filePath, val)
@@ -393,31 +310,28 @@ func TestNestedAndMultiLineFile(t *testing.T) {
 	} else {
 		secretKeyRing = "~/.gnupg/secring.gpg"
 	}
-	s := sls.New(secretNames, secretValues, "", publicKeyRing, secretKeyRing, pgpKeyName)
+
 	filePath := "./testdata/test.sls"
-	err := s.ReadSlsFile(filePath)
-	if err != nil {
-		t.Errorf("Error getting test file: %s", err)
-	}
-	buffer, err := s.CipherTextYamlBuffer(filePath)
+	p := pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
+	s := sls.New(filePath, p, topLevelElement)
+
+	buffer, err := s.PerformAction("encrypt")
 	if err != nil {
 		t.Errorf("%s", err)
 	} else {
 		sls.WriteSlsFile(buffer, filePath)
 	}
 
-	err = scanString(buffer.String(), 12, pgpHeader)
+	err = scanString(buffer.String(), 2, pgpHeader)
 	if err != nil {
 		t.Errorf("%s", err)
 	}
 
-	s = sls.New(secretNames, secretValues, "", publicKeyRing, secretKeyRing, pgpKeyName)
 	filePath = "./testdata/test.sls"
-	err = s.ReadSlsFile(filePath)
-	if err != nil {
-		t.Errorf("Error getting test file: %s", err)
-	}
-	buffer, err = s.PlainTextYamlBuffer(filePath)
+	p = pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
+	s = sls.New(filePath, p, topLevelElement)
+
+	buffer, err = s.PerformAction("decrypt")
 	if err != nil {
 		t.Errorf("%s", err)
 	} else {
@@ -444,13 +358,12 @@ func TestSetValueFromPath(t *testing.T) {
 	} else {
 		secretKeyRing = "~/.gnupg/secring.gpg"
 	}
-	s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName)
+
 	filePath := "./testdata/new.sls"
-	err := s.ReadSlsFile(filePath)
-	if err != nil {
-		t.Errorf("Error getting test file: %s", err)
-	}
-	err = s.SetValueFromPath("bar:baz", "foo")
+	p := pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
+	s := sls.New(filePath, p, topLevelElement)
+
+	err := s.SetValueFromPath("bar:baz", "foo")
 	if err != nil {
 		t.Errorf("Error setting value from path: %s", err)
 	}
@@ -476,25 +389,29 @@ func TestRotateFile(t *testing.T) {
 	}
 	topLevelElement = ""
 
-	s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName)
 	filePath := "./testdata/new.sls"
-	buffer, err := s.CipherTextYamlBuffer(filePath)
+	p := pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
+	s := sls.New(filePath, p, topLevelElement)
+
+	buffer, err := s.PerformAction("encrypt")
 	if err != nil {
 		t.Errorf("%s", err)
 	} else {
 		sls.WriteSlsFile(buffer, filePath)
 	}
 
-	limChan := make(chan bool, 1)
-	s.RotateFile(filePath, limChan)
-	<-limChan
-	close(limChan)
+	buffer, err = s.PerformAction("rotate")
+	if err != nil {
+		t.Errorf("%s", err)
+	} else {
+		sls.WriteSlsFile(buffer, filePath)
+	}
 
 	val := s.GetValueFromPath("bar:baz")
 	if !strings.Contains(val.(string), pgpHeader) {
 		t.Errorf("YAML content was not encrypted.")
 	}
-	buffer, err = s.PlainTextYamlBuffer(filePath)
+	buffer, err = s.PerformAction("decrypt")
 	if err != nil {
 		t.Errorf("%s", err)
 	} else {
@@ -518,20 +435,21 @@ func TestKeyInfo(t *testing.T) {
 	}
 	topLevelElement = ""
 
-	s := sls.New(secretNames, secretValues, topLevelElement, publicKeyRing, secretKeyRing, pgpKeyName)
 	filePath := "./testdata/new.sls"
-	buffer, err := s.CipherTextYamlBuffer(filePath)
+	p := pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
+	s := sls.New(filePath, p, topLevelElement)
+
+	buffer, err := s.PerformAction("encrypt")
 	if err != nil {
 		t.Errorf("%s", err)
 	} else {
 		sls.WriteSlsFile(buffer, filePath)
 	}
-	err = s.ReadSlsFile(filePath)
-	if err != nil {
-		t.Errorf("Error getting test file: %s", err)
-	}
 
-	buffer = s.PerformAction("validate")
+	buffer, err = s.PerformAction("validate")
+	if err != nil {
+		t.Errorf("%s", err)
+	}
 	if err = scanString(buffer.String(), 0, pgpHeader); err != nil {
 		t.Errorf("Found PGP data in buffer: %s", err)
 	}
@@ -539,12 +457,142 @@ func TestKeyInfo(t *testing.T) {
 		t.Errorf("Key name count in buffer: %s", err)
 	}
 
-	buffer, err = s.PlainTextYamlBuffer(filePath)
+	buffer, err = s.PerformAction("decrypt")
 	if err != nil {
 		t.Errorf("%s", err)
 	} else {
 		sls.WriteSlsFile(buffer, filePath)
 	}
+}
+
+func TestEncryptProcessDir(t *testing.T) {
+	pgpKeyName = "Salt Master"
+
+	if os.Getenv("SALT_SEC_KEYRING") != "" {
+		publicKeyRing, _ = filepath.Abs(os.Getenv("SALT_PUB_KEYRING"))
+	} else {
+		publicKeyRing = "~/.gnupg/pubring.gpg"
+	}
+
+	if os.Getenv("SALT_SEC_KEYRING") != "" {
+		secretKeyRing, _ = filepath.Abs(os.Getenv("SALT_SEC_KEYRING"))
+	} else {
+		secretKeyRing = "~/.gnupg/secring.gpg"
+	}
+	topLevelElement = ""
+
+	dirPath := "./testdata"
+	slsFiles, slsCount := utils.FindFilesByExt(dirPath, ".sls")
+
+	if len(slsFiles) != 6 {
+		t.Errorf("sls file list lenth is incorrect, got: %d, want: %d.",
+			len(slsFiles), 6)
+	}
+	if slsCount != 6 {
+		t.Errorf("sls file count is incorrect, got: %d, want: %d.",
+			slsCount, 6)
+	}
+
+	pk = pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
+	err := utils.ProcessDir(dirPath, ".sls", sls.Encrypt, "", topLevelElement, pk)
+	if err != nil {
+		t.Fatalf("utils.ProcessDir error: %s", err)
+	}
+
+	for n := 0; n < slsCount; n++ {
+		s := sls.New(slsFiles[n], pk, topLevelElement)
+		if s.IsInclude {
+			continue
+		}
+		var buf []byte
+		buf, err = ioutil.ReadFile(slsFiles[n])
+		if err != nil {
+			t.Fatalf("read file error: %s", err)
+		}
+		reader := strings.NewReader(string(buf))
+		scanner := bufio.NewScanner(reader)
+
+		found := hasPgpHeader(*scanner)
+		err = scanner.Err()
+		if err != nil {
+			t.Errorf("scanner error: %s", err)
+		}
+
+		if !found {
+			t.Errorf("%s does not contain PGP header", slsFiles[n])
+		}
+	}
+}
+
+func TestDecryptProcessDir(t *testing.T) {
+	pgpKeyName = "Salt Master"
+
+	if os.Getenv("SALT_SEC_KEYRING") != "" {
+		publicKeyRing, _ = filepath.Abs(os.Getenv("SALT_PUB_KEYRING"))
+	} else {
+		publicKeyRing = "~/.gnupg/pubring.gpg"
+	}
+
+	if os.Getenv("SALT_SEC_KEYRING") != "" {
+		secretKeyRing, _ = filepath.Abs(os.Getenv("SALT_SEC_KEYRING"))
+	} else {
+		secretKeyRing = "~/.gnupg/secring.gpg"
+	}
+	topLevelElement = ""
+
+	dirPath := "./testdata"
+	slsFiles, slsCount := utils.FindFilesByExt(dirPath, ".sls")
+
+	if len(slsFiles) != 6 {
+		t.Errorf("sls file list lenth is incorrect, got: %d, want: %d.",
+			len(slsFiles), 6)
+	}
+	if slsCount != 6 {
+		t.Errorf("sls file count is incorrect, got: %d, want: %d.",
+			slsCount, 6)
+	}
+
+	pk = pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
+	err := utils.ProcessDir(dirPath, ".sls", sls.Decrypt, "", topLevelElement, pk)
+	if err != nil {
+		t.Fatalf("utils.ProcessDir error: %s", err)
+	}
+
+	for n := 0; n < slsCount; n++ {
+		s := sls.New(slsFiles[n], pk, topLevelElement)
+		if s.IsInclude {
+			continue
+		}
+		var buf []byte
+		buf, err = ioutil.ReadFile(slsFiles[n])
+		if err != nil {
+			t.Fatalf("read file error: %s", err)
+		}
+		reader := strings.NewReader(string(buf))
+		scanner := bufio.NewScanner(reader)
+
+		found := hasPgpHeader(*scanner)
+		err = scanner.Err()
+		if err != nil {
+			t.Errorf("scanner error: %s", err)
+		}
+
+		if found {
+			t.Errorf("%s contains PGP header", slsFiles[n])
+		}
+	}
+}
+
+func hasPgpHeader(scanner bufio.Scanner) bool {
+	found := false
+	for scanner.Scan() {
+		txt := scanner.Text()
+		if strings.Contains(txt, pgpHeader) {
+			found = true
+			continue
+		}
+	}
+	return found
 }
 
 func scanString(buffer string, wantedCount int, term string) error {

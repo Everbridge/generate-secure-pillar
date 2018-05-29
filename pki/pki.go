@@ -46,8 +46,14 @@ func New(pgpKeyName string, publicKeyRing string, secretKeyRing string) Pki {
 	}
 	p.SecretKeyRing = secKeyRing
 
-	p.setSecKeyRing()
-	p.setPubKeyRing()
+	err = p.setSecKeyRing()
+	if err != nil {
+		logger.Fatalf("unable to Pki: %s", err)
+	}
+	err = p.setPubKeyRing()
+	if err != nil {
+		logger.Fatalf("unable to Pki: %s", err)
+	}
 
 	p.PublicKey = p.GetKeyByID(p.PubRing, p.PgpKeyName)
 	if p.PublicKey == nil {
@@ -57,80 +63,84 @@ func New(pgpKeyName string, publicKeyRing string, secretKeyRing string) Pki {
 	return p
 }
 
-func (p *Pki) setSecKeyRing() {
+func (p *Pki) setSecKeyRing() error {
 	secretKeyRing, err := p.ExpandTilde(p.SecretKeyRing)
 	if err != nil {
-		logger.Warnf("error reading secring: %s", err)
+		return fmt.Errorf("error reading secring: %s", err)
 	}
 	p.SecretKeyRing = secretKeyRing
 	privringFile, err := os.Open(secretKeyRing)
 	if err != nil {
-		logger.Warnf("unable to open secring: %s", err)
+		return fmt.Errorf("unable to open secring: %s", err)
 	}
 	privring, err := openpgp.ReadKeyRing(privringFile)
 	if err != nil {
-		logger.Warnf("cannot read private keys: %s", err)
+		return fmt.Errorf("cannot read private keys: %s", err)
 	} else if privring == nil {
-		logger.Warnf(fmt.Sprintf("%s is empty!", p.SecretKeyRing))
+		return fmt.Errorf("%s is empty", p.SecretKeyRing)
 	} else {
 		p.SecRing = privring
 	}
 	if err = privringFile.Close(); err != nil {
-		logger.Fatal("error closing secring: ", err)
+		return fmt.Errorf("error closing secring: %s", err)
 	}
+
+	return nil
 }
 
-func (p *Pki) setPubKeyRing() {
+func (p *Pki) setPubKeyRing() error {
 	publicKeyRing, err := p.ExpandTilde(p.PublicKeyRing)
 	if err != nil {
-		logger.Warnf("error reading pubring: %s", err)
+		return fmt.Errorf("error reading pubring: %s", err)
 	}
 	p.PublicKeyRing = publicKeyRing
 	pubringFile, err := os.Open(p.PublicKeyRing)
 	if err != nil {
-		logger.Fatal("cannot read public key ring: ", err)
+		return fmt.Errorf("cannot read public key ring: %s", err)
 	}
 	pubring, err := openpgp.ReadKeyRing(pubringFile)
 	if err != nil {
-		logger.Fatal("cannot read public keys: ", err)
+		return fmt.Errorf("cannot read public keys: %s", err)
 	}
 	p.PubRing = pubring
 	if err = pubringFile.Close(); err != nil {
-		logger.Fatal("error closing pubring: ", err)
+		return fmt.Errorf("error closing pubring: %s", err)
 	}
+
+	return nil
 }
 
 // EncryptSecret returns encrypted plainText
-func (p *Pki) EncryptSecret(plainText string) (cipherText string) {
+func (p *Pki) EncryptSecret(plainText string) (string, error) {
 	var memBuffer bytes.Buffer
 
 	hints := openpgp.FileHints{IsBinary: false, ModTime: time.Time{}}
 	writer := bufio.NewWriter(&memBuffer)
 	w, err := armor.Encode(writer, "PGP MESSAGE", nil)
 	if err != nil {
-		logger.Fatal("Encode error: ", err)
+		return plainText, fmt.Errorf("encode error: %s", err)
 	}
 
 	plainFile, err := openpgp.Encrypt(w, []*openpgp.Entity{p.PublicKey}, nil, &hints, nil)
 	if err != nil {
-		logger.Fatal("Encryption error: ", err)
+		return plainText, fmt.Errorf("encryption error: %s", err)
 	}
 
 	if _, err = fmt.Fprintf(plainFile, "%s", plainText); err != nil {
-		logger.Fatal(err)
+		return plainText, fmt.Errorf("encryption error: %s", err)
 	}
 
 	if err = plainFile.Close(); err != nil {
-		logger.Fatal("unable to close file: ", err)
+		return plainText, fmt.Errorf("encryption error: %s", err)
 	}
 	if err = w.Close(); err != nil {
-		logger.Fatal(err)
+		return plainText, fmt.Errorf("encryption error: %s", err)
 	}
 	if err = writer.Flush(); err != nil {
-		logger.Fatal("error flusing writer: ", err)
+		return plainText, fmt.Errorf("encryption error: %s", err)
 	}
 
-	return memBuffer.String()
+	return memBuffer.String(), nil
 }
 
 // DecryptSecret returns decrypted cipherText
