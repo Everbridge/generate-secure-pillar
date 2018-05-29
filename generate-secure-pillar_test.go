@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/Everbridge/generate-secure-pillar/pki"
 	"github.com/Everbridge/generate-secure-pillar/sls"
+	"github.com/Everbridge/generate-secure-pillar/utils"
 	yaml "github.com/esilva-everbridge/yaml"
 	"github.com/gosexy/to"
 )
@@ -461,6 +463,136 @@ func TestKeyInfo(t *testing.T) {
 	} else {
 		sls.WriteSlsFile(buffer, filePath)
 	}
+}
+
+func TestEncryptProcessDir(t *testing.T) {
+	pgpKeyName = "Salt Master"
+
+	if os.Getenv("SALT_SEC_KEYRING") != "" {
+		publicKeyRing, _ = filepath.Abs(os.Getenv("SALT_PUB_KEYRING"))
+	} else {
+		publicKeyRing = "~/.gnupg/pubring.gpg"
+	}
+
+	if os.Getenv("SALT_SEC_KEYRING") != "" {
+		secretKeyRing, _ = filepath.Abs(os.Getenv("SALT_SEC_KEYRING"))
+	} else {
+		secretKeyRing = "~/.gnupg/secring.gpg"
+	}
+	topLevelElement = ""
+
+	dirPath := "./testdata"
+	slsFiles, slsCount := utils.FindFilesByExt(dirPath, ".sls")
+
+	if len(slsFiles) != 6 {
+		t.Errorf("sls file list lenth is incorrect, got: %d, want: %d.",
+			len(slsFiles), 6)
+	}
+	if slsCount != 6 {
+		t.Errorf("sls file count is incorrect, got: %d, want: %d.",
+			slsCount, 6)
+	}
+
+	pk = pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
+	err := utils.ProcessDir(dirPath, ".sls", sls.Encrypt, "", topLevelElement, pk)
+	if err != nil {
+		t.Fatalf("utils.ProcessDir error: %s", err)
+	}
+
+	for n := 0; n < slsCount; n++ {
+		s := sls.New(slsFiles[n], pk, topLevelElement)
+		if s.IsInclude {
+			continue
+		}
+		var buf []byte
+		buf, err = ioutil.ReadFile(slsFiles[n])
+		if err != nil {
+			t.Fatalf("read file error: %s", err)
+		}
+		reader := strings.NewReader(string(buf))
+		scanner := bufio.NewScanner(reader)
+
+		found := hasPgpHeader(*scanner)
+		err = scanner.Err()
+		if err != nil {
+			t.Errorf("scanner error: %s", err)
+		}
+
+		if !found {
+			t.Errorf("%s does not contain PGP header", slsFiles[n])
+		}
+	}
+}
+
+func TestDecryptProcessDir(t *testing.T) {
+	pgpKeyName = "Salt Master"
+
+	if os.Getenv("SALT_SEC_KEYRING") != "" {
+		publicKeyRing, _ = filepath.Abs(os.Getenv("SALT_PUB_KEYRING"))
+	} else {
+		publicKeyRing = "~/.gnupg/pubring.gpg"
+	}
+
+	if os.Getenv("SALT_SEC_KEYRING") != "" {
+		secretKeyRing, _ = filepath.Abs(os.Getenv("SALT_SEC_KEYRING"))
+	} else {
+		secretKeyRing = "~/.gnupg/secring.gpg"
+	}
+	topLevelElement = ""
+
+	dirPath := "./testdata"
+	slsFiles, slsCount := utils.FindFilesByExt(dirPath, ".sls")
+
+	if len(slsFiles) != 6 {
+		t.Errorf("sls file list lenth is incorrect, got: %d, want: %d.",
+			len(slsFiles), 6)
+	}
+	if slsCount != 6 {
+		t.Errorf("sls file count is incorrect, got: %d, want: %d.",
+			slsCount, 6)
+	}
+
+	pk = pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
+	err := utils.ProcessDir(dirPath, ".sls", sls.Decrypt, "", topLevelElement, pk)
+	if err != nil {
+		t.Fatalf("utils.ProcessDir error: %s", err)
+	}
+
+	for n := 0; n < slsCount; n++ {
+		s := sls.New(slsFiles[n], pk, topLevelElement)
+		if s.IsInclude {
+			continue
+		}
+		var buf []byte
+		buf, err = ioutil.ReadFile(slsFiles[n])
+		if err != nil {
+			t.Fatalf("read file error: %s", err)
+		}
+		reader := strings.NewReader(string(buf))
+		scanner := bufio.NewScanner(reader)
+
+		found := hasPgpHeader(*scanner)
+		err = scanner.Err()
+		if err != nil {
+			t.Errorf("scanner error: %s", err)
+		}
+
+		if found {
+			t.Errorf("%s contains PGP header", slsFiles[n])
+		}
+	}
+}
+
+func hasPgpHeader(scanner bufio.Scanner) bool {
+	found := false
+	for scanner.Scan() {
+		txt := scanner.Text()
+		if strings.Contains(txt, pgpHeader) {
+			found = true
+			continue
+		}
+	}
+	return found
 }
 
 func scanString(buffer string, wantedCount int, term string) error {
