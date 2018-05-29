@@ -484,13 +484,9 @@ func TestEncryptProcessDir(t *testing.T) {
 	dirPath := "./testdata"
 	slsFiles, slsCount := utils.FindFilesByExt(dirPath, ".sls")
 
-	if len(slsFiles) != 6 {
-		t.Errorf("sls file list lenth is incorrect, got: %d, want: %d.",
-			len(slsFiles), 6)
-	}
 	if slsCount != 6 {
-		t.Errorf("sls file count is incorrect, got: %d, want: %d.",
-			slsCount, 6)
+		t.Errorf("sls file list lenth is incorrect, got: %d, count: %d, wanted: %d.",
+			len(slsFiles), slsCount, 6)
 	}
 
 	pk = pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
@@ -543,13 +539,9 @@ func TestDecryptProcessDir(t *testing.T) {
 	dirPath := "./testdata"
 	slsFiles, slsCount := utils.FindFilesByExt(dirPath, ".sls")
 
-	if len(slsFiles) != 6 {
-		t.Errorf("sls file list lenth is incorrect, got: %d, want: %d.",
-			len(slsFiles), 6)
-	}
 	if slsCount != 6 {
-		t.Errorf("sls file count is incorrect, got: %d, want: %d.",
-			slsCount, 6)
+		t.Errorf("sls file list lenth is incorrect, got: %d, count: %d, wanted: %d.",
+			len(slsFiles), slsCount, 6)
 	}
 
 	pk = pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
