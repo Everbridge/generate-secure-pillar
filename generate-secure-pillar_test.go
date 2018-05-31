@@ -564,13 +564,13 @@ func scanString(buffer string, wantedCount int, term string) error {
 }
 
 // Assert fails the test if the provided condition is false
-func Assert(tb testing.TB, condition bool, msg string, v ...interface{}) {
-	if !condition {
-		_, file, line, _ := runtime.Caller(1)
-		fmt.Printf("\033[31m%s:%d: "+msg+"\033[39m\n\n", append([]interface{}{filepath.Base(file), line}, v...)...)
-		tb.FailNow()
-	}
-}
+// func Assert(tb testing.TB, condition bool, msg string, v ...interface{}) {
+// 	if !condition {
+// 		_, file, line, _ := runtime.Caller(1)
+// 		fmt.Printf("\033[31m%s:%d: "+msg+"\033[39m\n\n", append([]interface{}{filepath.Base(file), line}, v...)...)
+// 		tb.FailNow()
+// 	}
+// }
 
 // Ok fails the test if the `err` is not nil
 func Ok(tb testing.TB, err error) {
