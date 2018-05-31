@@ -6,6 +6,8 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"reflect"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -42,18 +44,15 @@ func TestWriteSlsFile(t *testing.T) {
 	s.SetValueFromPath("secret", "text")
 
 	buffer, err := s.FormatBuffer("")
-	if err != nil {
-		t.Fatalf("FormatBuffer returned error")
-	}
+	Ok(t, err)
 	sls.WriteSlsFile(buffer, slsFile)
 
 	if _, err = os.Stat(slsFile); os.IsNotExist(err) {
 		t.Errorf("%s file was not written", slsFile)
 	}
 	yamlObj, err := yaml.Open(slsFile)
-	if err != nil {
-		t.Fatalf("Returned error")
-	}
+	Ok(t, err)
+
 	if yamlObj.Get("secret") == nil {
 		t.Errorf("YAML content is incorrect, missing key")
 	} else if yamlObj.Get("secret") != "text" {
@@ -80,9 +79,8 @@ func TestReadSlsFile(t *testing.T) {
 	}
 	topLevelElement = "secure_vars"
 	yamlObj, err := yaml.Open("./testdata/new.sls")
-	if err != nil {
-		t.Errorf("Returned error")
-	}
+	Ok(t, err)
+
 	if len(yamlObj.Get(topLevelElement).(map[interface{}]interface{})) != 3 {
 		t.Errorf("YAML content length is incorrect, got: %d, want: %d.",
 			len(yamlObj.Get(topLevelElement).(map[interface{}]interface{})), 3)
@@ -133,9 +131,8 @@ func TestReadBadFile(t *testing.T) {
 	}
 	topLevelElement = "secure_vars"
 	yamlObj, err := yaml.Open("/dev/null")
-	if err != nil {
-		t.Errorf("Returned error")
-	}
+	Ok(t, err)
+
 	if yamlObj.Get(topLevelElement) != nil {
 		t.Errorf("got YAML from /dev/nul???")
 	}
@@ -159,9 +156,8 @@ func TestEncryptSecret(t *testing.T) {
 	p := pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
 
 	yamlObj, err := yaml.Open("./testdata/new.sls")
-	if err != nil {
-		t.Errorf("Returned error")
-	}
+	Ok(t, err)
+
 	if len(yamlObj.Get(topLevelElement).(map[interface{}]interface{})) <= 0 {
 		t.Errorf("YAML content lenth is incorrect, got: %d, want: %d.",
 			len(yamlObj.Get(topLevelElement).(map[interface{}]interface{})), 1)
@@ -172,9 +168,8 @@ func TestEncryptSecret(t *testing.T) {
 			t.Errorf("YAML content is already encrypted.")
 		} else {
 			cipherText, err := p.EncryptSecret(v.(string))
-			if err != nil {
-				t.Errorf("YAML encryption threw an error.")
-			}
+			Ok(t, err)
+
 			if !strings.Contains(cipherText, pgpHeader) {
 				t.Errorf("YAML content was not encrypted.")
 			}
@@ -203,9 +198,8 @@ func TestGetPath(t *testing.T) {
 	s := sls.New(file, p, topLevelElement)
 
 	buffer, err := s.PerformAction("encrypt")
-	if err != nil {
-		t.Errorf("%s", err)
-	} else {
+	Ok(t, err)
+	if err == nil {
 		sls.WriteSlsFile(buffer, file)
 	}
 
@@ -221,9 +215,8 @@ func TestGetPath(t *testing.T) {
 	}
 
 	buffer, err = s.PerformAction("decrypt")
-	if err != nil {
-		t.Errorf("%s", err)
-	} else {
+	Ok(t, err)
+	if err == nil {
 		sls.WriteSlsFile(buffer, file)
 	}
 
@@ -247,22 +240,19 @@ func TestDecryptSecret(t *testing.T) {
 	p := pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
 
 	yamlObj, err := yaml.Open("./testdata/new.sls")
-	if err != nil {
-		t.Errorf("Returned error")
-	}
+	Ok(t, err)
+
 	if len(yamlObj.Get(topLevelElement).(map[interface{}]interface{})) <= 0 {
 		t.Errorf("YAML content lenth is incorrect, got: %d, want: %d.",
 			len(yamlObj.Get(topLevelElement).(map[interface{}]interface{})), 1)
 	}
 	for _, v := range yamlObj.Get(topLevelElement).(map[interface{}]interface{}) {
 		cipherText, err := p.EncryptSecret(v.(string))
-		if err != nil {
-			t.Errorf("got error: %s", err)
-		}
+		Ok(t, err)
+
 		plainText, err := p.DecryptSecret(cipherText)
-		if err != nil {
-			t.Errorf("got error: %s", err)
-		}
+		Ok(t, err)
+
 		if strings.Contains(plainText, pgpHeader) {
 			t.Errorf("YAML content was not decrypted.")
 		}
@@ -291,9 +281,7 @@ func TestGetValueFromPath(t *testing.T) {
 	p := pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
 	s := sls.New(filePath, p, topLevelElement)
 	val := s.GetValueFromPath("bar:baz")
-	if to.String(val) != "qux" {
-		t.Errorf("Content from path '%s' is wrong: %#v", filePath, val)
-	}
+	Equals(t, "qux", to.String(val))
 }
 
 func TestNestedAndMultiLineFile(t *testing.T) {
@@ -316,32 +304,26 @@ func TestNestedAndMultiLineFile(t *testing.T) {
 	s := sls.New(filePath, p, topLevelElement)
 
 	buffer, err := s.PerformAction("encrypt")
-	if err != nil {
-		t.Errorf("%s", err)
-	} else {
+	Ok(t, err)
+	if err == nil {
 		sls.WriteSlsFile(buffer, filePath)
 	}
 
 	err = scanString(buffer.String(), 2, pgpHeader)
-	if err != nil {
-		t.Errorf("%s", err)
-	}
+	Ok(t, err)
 
 	filePath = "./testdata/test.sls"
 	p = pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
 	s = sls.New(filePath, p, topLevelElement)
 
 	buffer, err = s.PerformAction("decrypt")
-	if err != nil {
-		t.Errorf("%s", err)
-	} else {
+	Ok(t, err)
+	if err == nil {
 		sls.WriteSlsFile(buffer, filePath)
 	}
 
 	err = scanString(buffer.String(), 0, pgpHeader)
-	if err != nil {
-		t.Errorf("%s", err)
-	}
+	Ok(t, err)
 }
 
 func TestSetValueFromPath(t *testing.T) {
@@ -364,13 +346,10 @@ func TestSetValueFromPath(t *testing.T) {
 	s := sls.New(filePath, p, topLevelElement)
 
 	err := s.SetValueFromPath("bar:baz", "foo")
-	if err != nil {
-		t.Errorf("Error setting value from path: %s", err)
-	}
+	Ok(t, err)
+
 	val := s.GetValueFromPath("bar:baz")
-	if to.String(val) != "foo" {
-		t.Errorf("Content from path '%s' is wrong: %#v", filePath, val)
-	}
+	Equals(t, "foo", to.String(val))
 }
 
 func TestRotateFile(t *testing.T) {
@@ -394,16 +373,14 @@ func TestRotateFile(t *testing.T) {
 	s := sls.New(filePath, p, topLevelElement)
 
 	buffer, err := s.PerformAction("encrypt")
-	if err != nil {
-		t.Errorf("%s", err)
-	} else {
+	Ok(t, err)
+	if err == nil {
 		sls.WriteSlsFile(buffer, filePath)
 	}
 
 	buffer, err = s.PerformAction("rotate")
-	if err != nil {
-		t.Errorf("%s", err)
-	} else {
+	Ok(t, err)
+	if err == nil {
 		sls.WriteSlsFile(buffer, filePath)
 	}
 
@@ -412,9 +389,8 @@ func TestRotateFile(t *testing.T) {
 		t.Errorf("YAML content was not encrypted.")
 	}
 	buffer, err = s.PerformAction("decrypt")
-	if err != nil {
-		t.Errorf("%s", err)
-	} else {
+	Ok(t, err)
+	if err == nil {
 		sls.WriteSlsFile(buffer, filePath)
 	}
 }
@@ -440,16 +416,14 @@ func TestKeyInfo(t *testing.T) {
 	s := sls.New(filePath, p, topLevelElement)
 
 	buffer, err := s.PerformAction("encrypt")
-	if err != nil {
-		t.Errorf("%s", err)
-	} else {
+	Ok(t, err)
+	if err == nil {
 		sls.WriteSlsFile(buffer, filePath)
 	}
 
 	buffer, err = s.PerformAction("validate")
-	if err != nil {
-		t.Errorf("%s", err)
-	}
+	Ok(t, err)
+
 	if err = scanString(buffer.String(), 0, pgpHeader); err != nil {
 		t.Errorf("Found PGP data in buffer: %s", err)
 	}
@@ -458,9 +432,8 @@ func TestKeyInfo(t *testing.T) {
 	}
 
 	buffer, err = s.PerformAction("decrypt")
-	if err != nil {
-		t.Errorf("%s", err)
-	} else {
+	Ok(t, err)
+	if err == nil {
 		sls.WriteSlsFile(buffer, filePath)
 	}
 }
@@ -483,17 +456,11 @@ func TestEncryptProcessDir(t *testing.T) {
 
 	dirPath := "./testdata"
 	slsFiles, slsCount := utils.FindFilesByExt(dirPath, ".sls")
-
-	if slsCount != 6 {
-		t.Errorf("sls file list lenth is incorrect, got: %d, count: %d, wanted: %d.",
-			len(slsFiles), slsCount, 6)
-	}
+	Equals(t, 6, slsCount)
 
 	pk = pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
 	err := utils.ProcessDir(dirPath, ".sls", sls.Encrypt, "", topLevelElement, pk)
-	if err != nil {
-		t.Fatalf("utils.ProcessDir error: %s", err)
-	}
+	Ok(t, err)
 
 	for n := 0; n < slsCount; n++ {
 		s := sls.New(slsFiles[n], pk, topLevelElement)
@@ -502,17 +469,14 @@ func TestEncryptProcessDir(t *testing.T) {
 		}
 		var buf []byte
 		buf, err = ioutil.ReadFile(slsFiles[n])
-		if err != nil {
-			t.Fatalf("read file error: %s", err)
-		}
+		Ok(t, err)
+
 		reader := strings.NewReader(string(buf))
 		scanner := bufio.NewScanner(reader)
 
 		found := hasPgpHeader(*scanner)
 		err = scanner.Err()
-		if err != nil {
-			t.Errorf("scanner error: %s", err)
-		}
+		Ok(t, err)
 
 		if !found {
 			t.Errorf("%s does not contain PGP header", slsFiles[n])
@@ -538,17 +502,11 @@ func TestDecryptProcessDir(t *testing.T) {
 
 	dirPath := "./testdata"
 	slsFiles, slsCount := utils.FindFilesByExt(dirPath, ".sls")
-
-	if slsCount != 6 {
-		t.Errorf("sls file list lenth is incorrect, got: %d, count: %d, wanted: %d.",
-			len(slsFiles), slsCount, 6)
-	}
+	Equals(t, 6, slsCount)
 
 	pk = pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
 	err := utils.ProcessDir(dirPath, ".sls", sls.Decrypt, "", topLevelElement, pk)
-	if err != nil {
-		t.Fatalf("utils.ProcessDir error: %s", err)
-	}
+	Ok(t, err)
 
 	for n := 0; n < slsCount; n++ {
 		s := sls.New(slsFiles[n], pk, topLevelElement)
@@ -557,17 +515,14 @@ func TestDecryptProcessDir(t *testing.T) {
 		}
 		var buf []byte
 		buf, err = ioutil.ReadFile(slsFiles[n])
-		if err != nil {
-			t.Fatalf("read file error: %s", err)
-		}
+		Ok(t, err)
+
 		reader := strings.NewReader(string(buf))
 		scanner := bufio.NewScanner(reader)
 
 		found := hasPgpHeader(*scanner)
 		err = scanner.Err()
-		if err != nil {
-			t.Errorf("scanner error: %s", err)
-		}
+		Ok(t, err)
 
 		if found {
 			t.Errorf("%s contains PGP header", slsFiles[n])
@@ -606,4 +561,31 @@ func scanString(buffer string, wantedCount int, term string) error {
 	}
 
 	return err
+}
+
+// Assert fails the test if the provided condition is false
+func Assert(tb testing.TB, condition bool, msg string, v ...interface{}) {
+	if !condition {
+		_, file, line, _ := runtime.Caller(1)
+		fmt.Printf("\033[31m%s:%d: "+msg+"\033[39m\n\n", append([]interface{}{filepath.Base(file), line}, v...)...)
+		tb.FailNow()
+	}
+}
+
+// Ok fails the test if the `err` is not nil
+func Ok(tb testing.TB, err error) {
+	if err != nil {
+		_, file, line, _ := runtime.Caller(1)
+		fmt.Printf("\033[31m%s:%d: Unexpected error: %s\033[39m\n\n", filepath.Base(file), line, err.Error())
+		tb.FailNow()
+	}
+}
+
+// Equals fails the test if exp is not equal to act
+func Equals(tb testing.TB, exp, act interface{}) {
+	if !reflect.DeepEqual(exp, act) {
+		_, file, line, _ := runtime.Caller(1)
+		fmt.Printf("\033[31m%s:%d:\n\n\tExpected: %#v\n\n\tGot: %#v\033[39m\n\n", filepath.Base(file), line, exp, act)
+		tb.FailNow()
+	}
 }
