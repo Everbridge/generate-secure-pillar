@@ -167,12 +167,12 @@ func (p *Pki) DecryptSecret(cipherText string) (plainText string, err error) {
 		return cipherText, fmt.Errorf("unable to read PGP message: %s", err)
 	}
 
-	bytes, err := ioutil.ReadAll(md.UnverifiedBody)
+	body, err := ioutil.ReadAll(md.UnverifiedBody)
 	if err != nil {
 		return cipherText, fmt.Errorf("unable to read message body: %s", err)
 	}
 
-	return string(bytes), err
+	return string(body), err
 }
 
 // GetKeyByID returns a keyring by the given ID
