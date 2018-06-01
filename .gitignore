@@ -17,3 +17,4 @@ foo/
 foo2.sls
 new.sls
 packages/*
+.idea
