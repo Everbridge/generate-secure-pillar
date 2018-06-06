@@ -7,6 +7,12 @@ pipeline {
       }
     }
     stage('build') {
+      agent {
+        dockerfile {
+          filename 'Dockerfile'
+        }
+
+      }
       steps {
         sh '''make clean
 make deps
