@@ -1,18 +1,10 @@
 pipeline {
-  agent {
-    docker {
-      image 'ubuntu:latest'
-    }
-
-  }
+  agent any
   stages {
-    stage('') {
+    stage('error') {
       steps {
         git(url: 'https://github.com/Everbridge/generate-secure-pillar.git', branch: 'master', changelog: true, poll: true)
       }
     }
-  }
-  environment {
-    JenkinsBuild = 'True'
   }
 }
