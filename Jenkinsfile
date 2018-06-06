@@ -1,9 +1,9 @@
 pipeline {
   agent any
   stages {
-    stage('error') {
+    stage('git') {
       steps {
-        git(url: 'https://github.com/Everbridge/generate-secure-pillar.git', branch: 'master', changelog: true, poll: true)
+        git(url: 'https://github.com/Everbridge/generate-secure-pillar.git', branch: 'jenkinstest', changelog: true, poll: true)
       }
     }
   }
