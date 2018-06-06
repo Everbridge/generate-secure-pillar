@@ -1,5 +1,10 @@
 pipeline {
-  agent any
+  agent {
+    dockerfile {
+      filename 'Dockerfile'
+    }
+
+  }
   stages {
     stage('git') {
       steps {
@@ -7,6 +12,12 @@ pipeline {
       }
     }
     stage('build') {
+      agent {
+        dockerfile {
+          filename 'Dockerfile'
+        }
+
+      }
       steps {
         sh '''make clean
 make deps
