@@ -8,7 +8,10 @@ pipeline {
     }
     stage('build') {
       steps {
-        sh '''ls -la
+        sh '''make clean
+make deps
+make check
+make test
 '''
       }
     }
