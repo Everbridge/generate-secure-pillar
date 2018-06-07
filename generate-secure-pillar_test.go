@@ -23,8 +23,6 @@ import (
 // pgpHeader header const
 const pgpHeader = "-----BEGIN PGP MESSAGE-----"
 
-var pwd string
-
 func TestMain(m *testing.M) {
 	initGPGDir()
 	retCode := m.Run()
