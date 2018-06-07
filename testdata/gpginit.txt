@@ -1,0 +1,10 @@
+%echo Generating a default key
+Key-Type: 1
+Key-Length: 2048
+Subkey-Type: 1
+Subkey-Length: 2048
+Name-Real: Test Salt Master
+Name-Comment: test key
+Expire-Date: 0
+%commit
+%echo done

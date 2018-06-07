@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"reflect"
 	"runtime"
@@ -16,24 +17,35 @@ import (
 	"github.com/Everbridge/generate-secure-pillar/utils"
 	yaml "github.com/esilva-everbridge/yaml"
 	"github.com/gosexy/to"
+	"github.com/prometheus/common/log"
 )
 
 // pgpHeader header const
 const pgpHeader = "-----BEGIN PGP MESSAGE-----"
 
+var pwd string
+
+func TestMain(m *testing.M) {
+	pwd, _ = filepath.Abs(filepath.Dir(os.Args[0]))
+	initGPGDir(pwd)
+	retCode := m.Run()
+	teardownGPGDir(pwd)
+	os.Exit(retCode)
+}
+
 func TestWriteSlsFile(t *testing.T) {
-	pgpKeyName = "Dev Salt Master"
+	pgpKeyName = "Test Salt Master"
 
 	if os.Getenv("SALT_SEC_KEYRING") != "" {
 		publicKeyRing, _ = filepath.Abs(os.Getenv("SALT_PUB_KEYRING"))
 	} else {
-		publicKeyRing = "~/.gnupg/pubring.gpg"
+		publicKeyRing = "./testdata/gnupg/pubring.gpg"
 	}
 
 	if os.Getenv("SALT_SEC_KEYRING") != "" {
 		secretKeyRing, _ = filepath.Abs(os.Getenv("SALT_SEC_KEYRING"))
 	} else {
-		secretKeyRing = "~/.gnupg/secring.gpg"
+		secretKeyRing = "./testdata/gnupg/secring.gpg"
 	}
 
 	slsFile := "./testdata/foo/foo.sls"
@@ -64,18 +76,18 @@ func TestWriteSlsFile(t *testing.T) {
 }
 
 func TestReadSlsFile(t *testing.T) {
-	pgpKeyName = "Dev Salt Master"
+	pgpKeyName = "Test Salt Master"
 
 	if os.Getenv("SALT_SEC_KEYRING") != "" {
 		publicKeyRing, _ = filepath.Abs(os.Getenv("SALT_PUB_KEYRING"))
 	} else {
-		publicKeyRing = "~/.gnupg/pubring.gpg"
+		publicKeyRing = "./testdata/gnupg/pubring.gpg"
 	}
 
 	if os.Getenv("SALT_SEC_KEYRING") != "" {
 		secretKeyRing, _ = filepath.Abs(os.Getenv("SALT_SEC_KEYRING"))
 	} else {
-		secretKeyRing = "~/.gnupg/secring.gpg"
+		secretKeyRing = "./testdata/gnupg/secring.gpg"
 	}
 	topLevelElement = "secure_vars"
 	yamlObj, err := yaml.Open("./testdata/new.sls")
@@ -88,18 +100,18 @@ func TestReadSlsFile(t *testing.T) {
 }
 
 func TestReadIncludeFile(t *testing.T) {
-	pgpKeyName = "Dev Salt Master"
+	pgpKeyName = "Test Salt Master"
 
 	if os.Getenv("SALT_SEC_KEYRING") != "" {
 		publicKeyRing, _ = filepath.Abs(os.Getenv("SALT_PUB_KEYRING"))
 	} else {
-		publicKeyRing = "~/.gnupg/pubring.gpg"
+		publicKeyRing = "./testdata/gnupg/pubring.gpg"
 	}
 
 	if os.Getenv("SALT_SEC_KEYRING") != "" {
 		secretKeyRing, _ = filepath.Abs(os.Getenv("SALT_SEC_KEYRING"))
 	} else {
-		secretKeyRing = "~/.gnupg/secring.gpg"
+		secretKeyRing = "./testdata/gnupg/secring.gpg"
 	}
 
 	slsFile := "./testdata/inc.sls"
@@ -116,18 +128,18 @@ func TestReadIncludeFile(t *testing.T) {
 }
 
 func TestReadBadFile(t *testing.T) {
-	pgpKeyName = "Dev Salt Master"
+	pgpKeyName = "Test Salt Master"
 
 	if os.Getenv("SALT_SEC_KEYRING") != "" {
 		publicKeyRing, _ = filepath.Abs(os.Getenv("SALT_PUB_KEYRING"))
 	} else {
-		publicKeyRing = "~/.gnupg/pubring.gpg"
+		publicKeyRing = "./testdata/gnupg/pubring.gpg"
 	}
 
 	if os.Getenv("SALT_SEC_KEYRING") != "" {
 		secretKeyRing, _ = filepath.Abs(os.Getenv("SALT_SEC_KEYRING"))
 	} else {
-		secretKeyRing = "~/.gnupg/secring.gpg"
+		secretKeyRing = "./testdata/gnupg/secring.gpg"
 	}
 	topLevelElement = "secure_vars"
 	yamlObj, err := yaml.Open("/dev/null")
@@ -139,18 +151,18 @@ func TestReadBadFile(t *testing.T) {
 }
 
 func TestEncryptSecret(t *testing.T) {
-	pgpKeyName = "Dev Salt Master"
+	pgpKeyName = "Test Salt Master"
 
 	if os.Getenv("SALT_SEC_KEYRING") != "" {
 		publicKeyRing, _ = filepath.Abs(os.Getenv("SALT_PUB_KEYRING"))
 	} else {
-		publicKeyRing = "~/.gnupg/pubring.gpg"
+		publicKeyRing = "./testdata/gnupg/pubring.gpg"
 	}
 
 	if os.Getenv("SALT_SEC_KEYRING") != "" {
 		secretKeyRing, _ = filepath.Abs(os.Getenv("SALT_SEC_KEYRING"))
 	} else {
-		secretKeyRing = "~/.gnupg/secring.gpg"
+		secretKeyRing = "./testdata/gnupg/secring.gpg"
 	}
 	topLevelElement = "secure_vars"
 	p := pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
@@ -178,18 +190,18 @@ func TestEncryptSecret(t *testing.T) {
 }
 
 func TestGetPath(t *testing.T) {
-	pgpKeyName = "Dev Salt Master"
+	pgpKeyName = "Test Salt Master"
 
 	if os.Getenv("SALT_SEC_KEYRING") != "" {
 		publicKeyRing, _ = filepath.Abs(os.Getenv("SALT_PUB_KEYRING"))
 	} else {
-		publicKeyRing = "~/.gnupg/pubring.gpg"
+		publicKeyRing = "./testdata/gnupg/pubring.gpg"
 	}
 
 	if os.Getenv("SALT_SEC_KEYRING") != "" {
 		secretKeyRing, _ = filepath.Abs(os.Getenv("SALT_SEC_KEYRING"))
 	} else {
-		secretKeyRing = "~/.gnupg/secring.gpg"
+		secretKeyRing = "./testdata/gnupg/secring.gpg"
 	}
 	topLevelElement = "secure_vars"
 
@@ -223,18 +235,18 @@ func TestGetPath(t *testing.T) {
 }
 
 func TestDecryptSecret(t *testing.T) {
-	pgpKeyName = "Dev Salt Master"
+	pgpKeyName = "Test Salt Master"
 
 	if os.Getenv("SALT_SEC_KEYRING") != "" {
 		publicKeyRing, _ = filepath.Abs(os.Getenv("SALT_PUB_KEYRING"))
 	} else {
-		publicKeyRing = "~/.gnupg/pubring.gpg"
+		publicKeyRing = "./testdata/gnupg/pubring.gpg"
 	}
 
 	if os.Getenv("SALT_SEC_KEYRING") != "" {
 		secretKeyRing, _ = filepath.Abs(os.Getenv("SALT_SEC_KEYRING"))
 	} else {
-		secretKeyRing = "~/.gnupg/secring.gpg"
+		secretKeyRing = "./testdata/gnupg/secring.gpg"
 	}
 	topLevelElement = "secure_vars"
 	p := pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
@@ -263,18 +275,18 @@ func TestDecryptSecret(t *testing.T) {
 }
 
 func TestGetValueFromPath(t *testing.T) {
-	pgpKeyName = "Dev Salt Master"
+	pgpKeyName = "Test Salt Master"
 
 	if os.Getenv("SALT_SEC_KEYRING") != "" {
 		publicKeyRing, _ = filepath.Abs(os.Getenv("SALT_PUB_KEYRING"))
 	} else {
-		publicKeyRing = "~/.gnupg/pubring.gpg"
+		publicKeyRing = "./testdata/gnupg/pubring.gpg"
 	}
 
 	if os.Getenv("SALT_SEC_KEYRING") != "" {
 		secretKeyRing, _ = filepath.Abs(os.Getenv("SALT_SEC_KEYRING"))
 	} else {
-		secretKeyRing = "~/.gnupg/secring.gpg"
+		secretKeyRing = "./testdata/gnupg/secring.gpg"
 	}
 
 	filePath := "./testdata/new.sls"
@@ -285,18 +297,18 @@ func TestGetValueFromPath(t *testing.T) {
 }
 
 func TestNestedAndMultiLineFile(t *testing.T) {
-	pgpKeyName = "Dev Salt Master"
+	pgpKeyName = "Test Salt Master"
 
 	if os.Getenv("SALT_SEC_KEYRING") != "" {
 		publicKeyRing, _ = filepath.Abs(os.Getenv("SALT_PUB_KEYRING"))
 	} else {
-		publicKeyRing = "~/.gnupg/pubring.gpg"
+		publicKeyRing = "./testdata/gnupg/pubring.gpg"
 	}
 
 	if os.Getenv("SALT_SEC_KEYRING") != "" {
 		secretKeyRing, _ = filepath.Abs(os.Getenv("SALT_SEC_KEYRING"))
 	} else {
-		secretKeyRing = "~/.gnupg/secring.gpg"
+		secretKeyRing = "./testdata/gnupg/secring.gpg"
 	}
 
 	filePath := "./testdata/test.sls"
@@ -327,18 +339,18 @@ func TestNestedAndMultiLineFile(t *testing.T) {
 }
 
 func TestSetValueFromPath(t *testing.T) {
-	pgpKeyName = "Dev Salt Master"
+	pgpKeyName = "Test Salt Master"
 
 	if os.Getenv("SALT_SEC_KEYRING") != "" {
 		publicKeyRing, _ = filepath.Abs(os.Getenv("SALT_PUB_KEYRING"))
 	} else {
-		publicKeyRing = "~/.gnupg/pubring.gpg"
+		publicKeyRing = "./testdata/gnupg/pubring.gpg"
 	}
 
 	if os.Getenv("SALT_SEC_KEYRING") != "" {
 		secretKeyRing, _ = filepath.Abs(os.Getenv("SALT_SEC_KEYRING"))
 	} else {
-		secretKeyRing = "~/.gnupg/secring.gpg"
+		secretKeyRing = "./testdata/gnupg/secring.gpg"
 	}
 
 	filePath := "./testdata/new.sls"
@@ -353,18 +365,18 @@ func TestSetValueFromPath(t *testing.T) {
 }
 
 func TestRotateFile(t *testing.T) {
-	pgpKeyName = "Dev Salt Master"
+	pgpKeyName = "Test Salt Master"
 
 	if os.Getenv("SALT_SEC_KEYRING") != "" {
 		publicKeyRing, _ = filepath.Abs(os.Getenv("SALT_PUB_KEYRING"))
 	} else {
-		publicKeyRing = "~/.gnupg/pubring.gpg"
+		publicKeyRing = "./testdata/gnupg/pubring.gpg"
 	}
 
 	if os.Getenv("SALT_SEC_KEYRING") != "" {
 		secretKeyRing, _ = filepath.Abs(os.Getenv("SALT_SEC_KEYRING"))
 	} else {
-		secretKeyRing = "~/.gnupg/secring.gpg"
+		secretKeyRing = "./testdata/gnupg/secring.gpg"
 	}
 	topLevelElement = ""
 
@@ -396,18 +408,18 @@ func TestRotateFile(t *testing.T) {
 }
 
 func TestKeyInfo(t *testing.T) {
-	pgpKeyName = "Salt Master"
+	pgpKeyName = "Test Salt Master"
 
 	if os.Getenv("SALT_SEC_KEYRING") != "" {
 		publicKeyRing, _ = filepath.Abs(os.Getenv("SALT_PUB_KEYRING"))
 	} else {
-		publicKeyRing = "~/.gnupg/pubring.gpg"
+		publicKeyRing = "./testdata/gnupg/pubring.gpg"
 	}
 
 	if os.Getenv("SALT_SEC_KEYRING") != "" {
 		secretKeyRing, _ = filepath.Abs(os.Getenv("SALT_SEC_KEYRING"))
 	} else {
-		secretKeyRing = "~/.gnupg/secring.gpg"
+		secretKeyRing = "./testdata/gnupg/secring.gpg"
 	}
 	topLevelElement = ""
 
@@ -439,18 +451,18 @@ func TestKeyInfo(t *testing.T) {
 }
 
 func TestEncryptProcessDir(t *testing.T) {
-	pgpKeyName = "Salt Master"
+	pgpKeyName = "Test Salt Master"
 
 	if os.Getenv("SALT_SEC_KEYRING") != "" {
 		publicKeyRing, _ = filepath.Abs(os.Getenv("SALT_PUB_KEYRING"))
 	} else {
-		publicKeyRing = "~/.gnupg/pubring.gpg"
+		publicKeyRing = "./testdata/gnupg/pubring.gpg"
 	}
 
 	if os.Getenv("SALT_SEC_KEYRING") != "" {
 		secretKeyRing, _ = filepath.Abs(os.Getenv("SALT_SEC_KEYRING"))
 	} else {
-		secretKeyRing = "~/.gnupg/secring.gpg"
+		secretKeyRing = "./testdata/gnupg/secring.gpg"
 	}
 	topLevelElement = ""
 
@@ -485,18 +497,18 @@ func TestEncryptProcessDir(t *testing.T) {
 }
 
 func TestDecryptProcessDir(t *testing.T) {
-	pgpKeyName = "Salt Master"
+	pgpKeyName = "Test Salt Master"
 
 	if os.Getenv("SALT_SEC_KEYRING") != "" {
 		publicKeyRing, _ = filepath.Abs(os.Getenv("SALT_PUB_KEYRING"))
 	} else {
-		publicKeyRing = "~/.gnupg/pubring.gpg"
+		publicKeyRing = "./testdata/gnupg/pubring.gpg"
 	}
 
 	if os.Getenv("SALT_SEC_KEYRING") != "" {
 		secretKeyRing, _ = filepath.Abs(os.Getenv("SALT_SEC_KEYRING"))
 	} else {
-		secretKeyRing = "~/.gnupg/secring.gpg"
+		secretKeyRing = "./testdata/gnupg/secring.gpg"
 	}
 	topLevelElement = ""
 
@@ -587,5 +599,27 @@ func Equals(tb testing.TB, exp, act interface{}) {
 		_, file, line, _ := runtime.Caller(1)
 		fmt.Printf("\033[31m%s:%d:\n\n\tExpected: %#v\n\n\tGot: %#v\033[39m\n\n", filepath.Base(file), line, exp, act)
 		tb.FailNow()
+	}
+}
+
+func initGPGDir(pwd string) {
+	teardownGPGDir(pwd)
+	cmd := exec.Command("/bin/bash", "-c", "./testdata/testkeys.sh")
+	out, err := cmd.CombinedOutput()
+	fmt.Printf("%s", string(out))
+	if err != nil {
+		log.Errorf("%s", err)
+	}
+}
+
+func teardownGPGDir(pwd string) {
+	err := filepath.Walk("./testdata/gnupg", func(path string, f os.FileInfo, err error) error {
+		if !f.IsDir() {
+			os.Remove(f.Name())
+		}
+		return nil
+	})
+	if err != nil {
+		logger.Fatal("error walking file path: ", err)
 	}
 }
