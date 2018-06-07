@@ -614,7 +614,7 @@ func initGPGDir(pwd string) {
 
 func teardownGPGDir(pwd string) {
 	err := filepath.Walk("./testdata/gnupg", func(path string, f os.FileInfo, err error) error {
-		if !f.IsDir() {
+		if !f.IsDir() && f.Name()[0:1] != "." {
 			os.Remove(f.Name())
 		}
 		return nil
