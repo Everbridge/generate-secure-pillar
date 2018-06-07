@@ -26,10 +26,9 @@ const pgpHeader = "-----BEGIN PGP MESSAGE-----"
 var pwd string
 
 func TestMain(m *testing.M) {
-	pwd, _ = filepath.Abs(filepath.Dir(os.Args[0]))
-	initGPGDir(pwd)
+	initGPGDir()
 	retCode := m.Run()
-	teardownGPGDir(pwd)
+	teardownGPGDir()
 	os.Exit(retCode)
 }
 
@@ -602,8 +601,8 @@ func Equals(tb testing.TB, exp, act interface{}) {
 	}
 }
 
-func initGPGDir(pwd string) {
-	teardownGPGDir(pwd)
+func initGPGDir() {
+	teardownGPGDir()
 	cmd := exec.Command("/bin/bash", "-c", "./testdata/testkeys.sh")
 	out, err := cmd.CombinedOutput()
 	fmt.Printf("%s", string(out))
@@ -612,14 +611,10 @@ func initGPGDir(pwd string) {
 	}
 }
 
-func teardownGPGDir(pwd string) {
-	err := filepath.Walk("./testdata/gnupg", func(path string, f os.FileInfo, err error) error {
-		if !f.IsDir() && f.Name()[0:1] != "." {
-			os.Remove(f.Name())
-		}
-		return nil
-	})
-	if err != nil {
-		logger.Fatal("error walking file path: ", err)
-	}
+func teardownGPGDir() {
+	_ = os.Remove("./testdata/gnupg/pubring.gpg")
+	_ = os.Remove("./testdata/gnupg/pubring.gpg~")
+	_ = os.Remove("./testdata/gnupg/random_seed")
+	_ = os.Remove("./testdata/gnupg/secring.gpg")
+	_ = os.Remove("./testdata/gnupg/trustdb.gpg")
 }
