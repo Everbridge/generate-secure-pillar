@@ -33,7 +33,7 @@ const Validate = "validate"
 // Rotate action
 const Rotate = "rotate"
 
-var logger *logrus.Logger
+var logger = logrus.New()
 
 // Sls sls data
 type Sls struct {
@@ -48,8 +48,6 @@ type Sls struct {
 
 // New returns a Sls object
 func New(filePath string, p pki.Pki, encPath string) Sls {
-	logger = logrus.New()
-
 	s := Sls{filePath, yaml.New(), &p, false, encPath, map[string]interface{}{}, nil}
 	if len(filePath) > 0 {
 		err := s.ReadSlsFile()
