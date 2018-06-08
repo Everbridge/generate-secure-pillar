@@ -151,7 +151,7 @@ func WriteSlsFile(buffer bytes.Buffer, outFilePath string) (int, error) {
 
 	var byteCount int
 	if stdOut {
-		byteCount, err = fmt.Fprintf(os.Stderr, fmt.Sprintf("%s\n", buffer.String()))
+		byteCount, err = fmt.Fprintf(os.Stdout, fmt.Sprintf("%s\n", buffer.String()))
 	} else {
 		byteCount, err = atomicWrite(fullPath, buffer)
 	}
