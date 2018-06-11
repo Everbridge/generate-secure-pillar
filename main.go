@@ -413,7 +413,7 @@ var appCommands = []cli.Command{
 
 func main() {
 	app := cli.NewApp()
-	app.Version = "1.0.362"
+	app.Version = "1.0.366"
 	app.Authors = []cli.Author{
 		{
 			Name:  "Ed Silva",
