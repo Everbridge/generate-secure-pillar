@@ -71,7 +71,7 @@ func ProcessDir(searchDir string, fileExt string, action string, outputFilePath 
 		case byteCount := <-resChan:
 			if action != sls.Validate && outputFilePath != os.Stdout.Name() {
 				logger.Infof("%d bytes written", byteCount)
-				logger.Infof("Finished processing %d files of %d\n", count, remaining)
+				logger.Infof("Finished processing %d files of %d\n", count-remaining+1, count)
 			}
 			remaining--
 		case err := <-errChan:
