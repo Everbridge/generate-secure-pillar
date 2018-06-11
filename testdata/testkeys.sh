@@ -5,7 +5,12 @@ set -x
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 echo $DIR
+
 GPG=`which gpg1`
+if [! -f $GPG]; then
+    exit -1;
+fi
+
 $GPG --homedir $DIR/gnupg/ --gen-key --batch < $DIR/gpginit.txt
 $GPG --homedir $DIR/gnupg/ --expert --armor --export | gpg1 --homedir $DIR/gnupg/ --import
 $GPG --homedir $DIR/gnupg/ --expert --armor --export-secret-key | gpg1 --homedir $DIR/gnupg/ --import
