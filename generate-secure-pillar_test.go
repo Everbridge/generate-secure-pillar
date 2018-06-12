@@ -16,7 +16,6 @@ import (
 	"github.com/Everbridge/generate-secure-pillar/sls"
 	"github.com/Everbridge/generate-secure-pillar/utils"
 	yaml "github.com/esilva-everbridge/yaml"
-	"github.com/gosexy/to"
 	"github.com/prometheus/common/log"
 )
 
@@ -290,7 +289,7 @@ func TestGetValueFromPath(t *testing.T) {
 	p := pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
 	s := sls.New(filePath, p, topLevelElement)
 	val := s.GetValueFromPath("bar:baz")
-	Equals(t, "qux", to.String(val))
+	Equals(t, "qux", val.(string))
 }
 
 func TestNestedAndMultiLineFile(t *testing.T) {
@@ -358,7 +357,7 @@ func TestSetValueFromPath(t *testing.T) {
 	Ok(t, err)
 
 	val := s.GetValueFromPath("bar:baz")
-	Equals(t, "foo", to.String(val))
+	Equals(t, "foo", val.(string))
 }
 
 func TestRotateFile(t *testing.T) {
