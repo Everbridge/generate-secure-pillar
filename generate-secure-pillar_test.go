@@ -142,7 +142,7 @@ func TestReadBadFile(t *testing.T) {
 	Ok(t, err)
 
 	if yamlObj.Get(topLevelElement) != nil {
-		t.Errorf("got YAML from /dev/nul???")
+		t.Errorf("got YAML from /dev/null???")
 	}
 }
 
