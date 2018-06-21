@@ -89,10 +89,8 @@ func TestReadSlsFile(t *testing.T) {
 	yamlObj, err := yaml.Open("./testdata/new.sls")
 	Ok(t, err)
 
-	if len(yamlObj.Get(topLevelElement).(map[interface{}]interface{})) != 3 {
-		t.Errorf("YAML content length is incorrect, got: %d, want: %d.",
-			len(yamlObj.Get(topLevelElement).(map[interface{}]interface{})), 3)
-	}
+	length := len(yamlObj.Get(topLevelElement).(map[interface{}]interface{}))
+	Assert(t, length == 3, fmt.Sprintf("YAML content length is incorrect, got: %d, want: %d.", length, 3), 3)
 }
 
 func TestReadIncludeFile(t *testing.T) {
@@ -113,14 +111,10 @@ func TestReadIncludeFile(t *testing.T) {
 	slsFile := "./testdata/inc.sls"
 	p := pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
 	s := sls.New(slsFile, p, topLevelElement)
-	if !s.IsInclude {
-		t.Errorf("failed to detect include file")
-	}
+	Assert(t, s.IsInclude, "failed to detect include file", s.IsInclude)
 	slsFile = "./testdata/new.sls"
 	s = sls.New(slsFile, p, topLevelElement)
-	if s.IsInclude {
-		t.Errorf("bad status for non-include file")
-	}
+	Assert(t, !s.IsInclude, "bad status for non-include file", s.IsInclude)
 }
 
 func TestReadBadFile(t *testing.T) {
@@ -140,10 +134,7 @@ func TestReadBadFile(t *testing.T) {
 	topLevelElement = "secure_vars"
 	yamlObj, err := yaml.Open("/dev/null")
 	Ok(t, err)
-
-	if yamlObj.Get(topLevelElement) != nil {
-		t.Errorf("got YAML from /dev/null???")
-	}
+	Assert(t, yamlObj.Get(topLevelElement) == nil, "got YAML from /dev/null???", yamlObj.Get(topLevelElement))
 }
 
 func TestEncryptSecret(t *testing.T) {
@@ -166,10 +157,9 @@ func TestEncryptSecret(t *testing.T) {
 	yamlObj, err := yaml.Open("./testdata/new.sls")
 	Ok(t, err)
 
-	if len(yamlObj.Get(topLevelElement).(map[interface{}]interface{})) <= 0 {
-		t.Errorf("YAML content lenth is incorrect, got: %d, want: %d.",
-			len(yamlObj.Get(topLevelElement).(map[interface{}]interface{})), 1)
-	}
+	length := len(yamlObj.Get(topLevelElement).(map[interface{}]interface{}))
+	Assert(t, length == 3, fmt.Sprintf("YAML content lenth is incorrect, got: %d, want: %d.", length, 3), 3)
+
 	secureVars := yamlObj.Get(topLevelElement)
 	for _, v := range secureVars.(map[interface{}]interface{}) {
 		if strings.Contains(v.(string), pgpHeader) {
@@ -177,10 +167,7 @@ func TestEncryptSecret(t *testing.T) {
 		} else {
 			cipherText, err := p.EncryptSecret(v.(string))
 			Ok(t, err)
-
-			if !strings.Contains(cipherText, pgpHeader) {
-				t.Errorf("YAML content was not encrypted.")
-			}
+			Assert(t, strings.Contains(cipherText, pgpHeader), "YAML content was not encrypted.", strings.Contains(cipherText, pgpHeader))
 		}
 	}
 }
@@ -217,9 +204,7 @@ func TestGetPath(t *testing.T) {
 	}
 	secureVars := s.GetValueFromPath(topLevelElement)
 	for _, v := range secureVars.(map[interface{}]interface{}) {
-		if !strings.Contains(v.(string), pgpHeader) {
-			t.Errorf("YAML content was not encrypted.")
-		}
+		Assert(t, strings.Contains(v.(string), pgpHeader), "YAML content was not encrypted.", strings.Contains(v.(string), pgpHeader))
 	}
 
 	buffer, err = s.PerformAction("decrypt")
@@ -227,7 +212,6 @@ func TestGetPath(t *testing.T) {
 	if err == nil {
 		sls.WriteSlsFile(buffer, file)
 	}
-
 }
 
 func TestDecryptSecret(t *testing.T) {
@@ -250,10 +234,8 @@ func TestDecryptSecret(t *testing.T) {
 	yamlObj, err := yaml.Open("./testdata/new.sls")
 	Ok(t, err)
 
-	if len(yamlObj.Get(topLevelElement).(map[interface{}]interface{})) <= 0 {
-		t.Errorf("YAML content lenth is incorrect, got: %d, want: %d.",
-			len(yamlObj.Get(topLevelElement).(map[interface{}]interface{})), 1)
-	}
+	length := len(yamlObj.Get(topLevelElement).(map[interface{}]interface{}))
+	Assert(t, length == 3, fmt.Sprintf("YAML content lenth is incorrect, got: %d, want: %d.", length, 3), 3)
 	for _, v := range yamlObj.Get(topLevelElement).(map[interface{}]interface{}) {
 		cipherText, err := p.EncryptSecret(v.(string))
 		Ok(t, err)
@@ -261,12 +243,8 @@ func TestDecryptSecret(t *testing.T) {
 		plainText, err := p.DecryptSecret(cipherText)
 		Ok(t, err)
 
-		if strings.Contains(plainText, pgpHeader) {
-			t.Errorf("YAML content was not decrypted.")
-		}
-		if plainText == "" {
-			t.Errorf("decrypted content is empty")
-		}
+		Assert(t, !strings.Contains(plainText, pgpHeader), "YAML content was not decrypted.", strings.Contains(plainText, pgpHeader))
+		Assert(t, plainText != "", "decrypted content is empty", plainText)
 	}
 }
 
@@ -393,9 +371,7 @@ func TestRotateFile(t *testing.T) {
 	}
 
 	val := s.GetValueFromPath("bar:baz")
-	if !strings.Contains(val.(string), pgpHeader) {
-		t.Errorf("YAML content was not encrypted.")
-	}
+	Assert(t, strings.Contains(val.(string), pgpHeader), "YAML content was not encrypted.", strings.Contains(val.(string), pgpHeader))
 	buffer, err = s.PerformAction("decrypt")
 	Ok(t, err)
 	if err == nil {
@@ -486,9 +462,7 @@ func TestEncryptProcessDir(t *testing.T) {
 		err = scanner.Err()
 		Ok(t, err)
 
-		if !found {
-			t.Errorf("%s does not contain PGP header", slsFiles[n])
-		}
+		Assert(t, found, fmt.Sprintf("%s does not contain PGP header", slsFiles[n]), slsFiles[n])
 	}
 }
 
@@ -532,9 +506,7 @@ func TestDecryptProcessDir(t *testing.T) {
 		err = scanner.Err()
 		Ok(t, err)
 
-		if found {
-			t.Errorf("%s contains PGP header", slsFiles[n])
-		}
+		Assert(t, !found, fmt.Sprintf("%s contains PGP header", slsFiles[n]), slsFiles[n])
 	}
 }
 
@@ -572,13 +544,13 @@ func scanString(buffer string, wantedCount int, term string) error {
 }
 
 // Assert fails the test if the provided condition is false
-// func Assert(tb testing.TB, condition bool, msg string, v ...interface{}) {
-// 	if !condition {
-// 		_, file, line, _ := runtime.Caller(1)
-// 		fmt.Printf("\033[31m%s:%d: "+msg+"\033[39m\n\n", append([]interface{}{filepath.Base(file), line}, v...)...)
-// 		tb.FailNow()
-// 	}
-// }
+func Assert(tb testing.TB, condition bool, msg string, v ...interface{}) {
+	if !condition {
+		_, file, line, _ := runtime.Caller(1)
+		fmt.Printf("\033[31m%s:%d: "+msg+"\033[39m\n\n", append([]interface{}{filepath.Base(file), line}, v...)...)
+		tb.FailNow()
+	}
+}
 
 // Ok fails the test if the `err` is not nil
 func Ok(tb testing.TB, err error) {
