@@ -31,10 +31,6 @@
 
 [[constraint]]
   branch = "master"
-  name = "github.com/gosexy/to"
-
-[[constraint]]
-  branch = "master"
   name = "github.com/keybase/go-crypto"
 
 [[constraint]]
