@@ -11,6 +11,7 @@ if [! -f $GPG]; then
     exit -1;
 fi
 
+mkdir -p $DIR/gnupg
 chmod 700 $DIR/gnupg
 $GPG --homedir $DIR/gnupg/ --gen-key --batch < $DIR/gpginit.txt
 $GPG --homedir $DIR/gnupg/ --expert --armor --export | gpg1 --homedir $DIR/gnupg/ --import
