@@ -101,6 +101,7 @@ func (s *Sls) ReadSlsFile() error {
 		return nil
 	}
 
+	// this could be called when creating a new file, so check the path
 	if _, statErr := os.Stat(s.FilePath); os.IsNotExist(statErr) {
 		dir := filepath.Dir(s.FilePath)
 		err := os.MkdirAll(dir, 0700)
