@@ -8,9 +8,9 @@ echo $DIR
 
 # find the gpg binary
 GPG=`which gpg1`
-if [! -f $GPG]; then
+if [[ ! -z $GPG ]]; then
     GPG=`which gpg`
-    if [! -f $GPG]; then
+    if [[ ! -f $GPG ]]; then
         echo "cannot find gnupg binary"
         exit -1;
     fi
