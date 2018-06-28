@@ -572,7 +572,7 @@ func Equals(tb testing.TB, exp, act interface{}) {
 
 func initGPGDir() {
 	teardownGPGDir()
-	cmd := exec.Command("/bin/bash", "-c", "./testdata/testkeys.sh")
+	cmd := exec.Command("./testdata/testkeys.sh")
 	out, err := cmd.CombinedOutput()
 	fmt.Printf("%s", string(out))
 	if err != nil {
