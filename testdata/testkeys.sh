@@ -8,9 +8,9 @@ echo $DIR
 
 # find the gpg binary
 GPG=`which gpg1`
-if [[ ! -z $GPG ]]; then
+if [[ ! -x $GPG ]]; then
     GPG=`which gpg`
-    if [[ ! -f $GPG ]]; then
+    if [[ ! -x $GPG ]]; then
         echo "cannot find gnupg binary"
         exit -1;
     fi
@@ -18,7 +18,7 @@ fi
 
 # test the gpg version (only works with gpg1)
 GPG_MAJOR_VERSION=`$GPG --version | head -1 | cut -d ' ' -f 3 | cut -d '.' -f 1`
-if [[ $GPG_MAJOR_VERSION > 1 ]]; then
+if [[ $GPG_MAJOR_VERSION != "1" ]]; then
     echo "GNUPGv1 required for tests"
     exit -1;
 fi
