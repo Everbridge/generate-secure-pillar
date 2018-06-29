@@ -1,5 +1,5 @@
 generate-secure-pillar
-.vscode
+.vs*
 bin/*
 Gopkg.lock
 vendor/*
