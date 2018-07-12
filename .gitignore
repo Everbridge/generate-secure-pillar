@@ -13,6 +13,7 @@ blah2.sls
 dec.sls
 enc.sls
 foo.sls
+foo.enc
 foo/
 foo2.sls
 new.sls
