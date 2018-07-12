@@ -8,7 +8,6 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
-	"reflect"
 	"time"
 
 	"github.com/keybase/go-crypto/openpgp"
@@ -47,13 +46,14 @@ func New(pgpKeyName string, publicKeyRing string, secretKeyRing string) Pki {
 
 	err = p.setSecKeyRing()
 	if err != nil {
-		logger.Fatalf("unable to Pki: %s", err)
+		logger.Warnf("Pki: %s", err)
 	}
 	err = p.setPubKeyRing()
 	if err != nil {
-		logger.Fatalf("unable to Pki: %s", err)
+		logger.Fatalf("Pki: %s", err)
 	}
 
+	// TODO: Something is goofy here sometimes when getting a key to decrypt
 	p.PublicKey = p.GetKeyByID(p.PubRing, p.PgpKeyName)
 	if p.PublicKey == nil {
 		logger.Fatalf("unable to find key '%s' in %s", p.PgpKeyName, p.PublicKeyRing)
@@ -157,6 +157,9 @@ func (p *Pki) DecryptSecret(cipherText string) (plainText string, err error) {
 
 	decbuf := bytes.NewBuffer([]byte(cipherText))
 	block, err := armor.Decode(decbuf)
+	if err != nil {
+		return cipherText, fmt.Errorf("Decode error: %s", err)
+	}
 	if block.Type != "PGP MESSAGE" {
 		return cipherText, fmt.Errorf("block type is not PGP MESSAGE: %s", err)
 	}
@@ -177,31 +180,33 @@ func (p *Pki) DecryptSecret(cipherText string) (plainText string, err error) {
 // GetKeyByID returns a keyring by the given ID
 func (p *Pki) GetKeyByID(keyring openpgp.EntityList, id interface{}) *openpgp.Entity {
 	for _, entity := range keyring {
-
-		idType := reflect.TypeOf(id).Kind()
-		switch idType {
-		case reflect.Uint64:
-			if entity.PrimaryKey.KeyId == id.(uint64) {
-				return entity
-			} else if entity.PrivateKey.KeyId == id.(uint64) {
+		for _, ident := range entity.Identities {
+			if checkMatch(id.(string), ident.Name) {
 				return entity
 			}
-		case reflect.String:
-			for _, ident := range entity.Identities {
-				if ident.Name == id.(string) {
-					return entity
-				}
-				if ident.UserId.Email == id.(string) {
-					return entity
-				}
-				if ident.UserId.Name == id.(string) {
-					return entity
-				}
+			if checkMatch(id.(string), ident.UserId.Email) {
+				return entity
+			}
+			if checkMatch(id.(string), ident.UserId.Name) {
+				return entity
+			}
+			if checkMatch(id.(string), ident.UserId.Id) {
+				return entity
 			}
 		}
 	}
 
 	return nil
+}
+
+func checkMatch(id string, ident string) bool {
+	// matches := ident == id
+	// if matches {
+	// 	fmt.Printf("IDENT: %#v\n", ident)
+	// 	fmt.Printf("ID: %#v\n", id)
+	// 	fmt.Printf("MATCH: %#v\n\n", matches)
+	// }
+	return id == ident
 }
 
 // ExpandTilde does exactly what it says on the tin
