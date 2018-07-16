@@ -23,6 +23,7 @@ type Pki struct {
 	SecretKeyRing string
 	PgpKeyName    string
 	PublicKey     *openpgp.Entity
+	SecretKey     *openpgp.Entity
 	PubRing       openpgp.EntityList
 	SecRing       openpgp.EntityList
 }
@@ -31,7 +32,7 @@ type Pki struct {
 func New(pgpKeyName string, publicKeyRing string, secretKeyRing string) Pki {
 	var err error
 
-	p := Pki{publicKeyRing, secretKeyRing, pgpKeyName, nil, nil, nil}
+	p := Pki{publicKeyRing, secretKeyRing, pgpKeyName, nil, nil, nil, nil}
 	publicKeyRing, err = p.ExpandTilde(p.PublicKeyRing)
 	if err != nil {
 		logger.Fatal("cannot expand public key ring path: ", err)
@@ -54,6 +55,9 @@ func New(pgpKeyName string, publicKeyRing string, secretKeyRing string) Pki {
 	}
 
 	// TODO: Something is goofy here sometimes when getting a key to decrypt
+	if p.SecRing != nil {
+		p.SecretKey = p.GetKeyByID(p.SecRing, p.PgpKeyName)
+	}
 	p.PublicKey = p.GetKeyByID(p.PubRing, p.PgpKeyName)
 	if p.PublicKey == nil {
 		logger.Fatalf("unable to find key '%s' in %s", p.PgpKeyName, p.PublicKeyRing)
