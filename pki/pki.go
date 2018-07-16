@@ -188,32 +188,22 @@ func (p *Pki) GetKeyByID(keyring openpgp.EntityList, id interface{}) *openpgp.En
 		}
 
 		for _, ident := range entity.Identities {
-			if checkMatch(id.(string), ident.Name) {
+			if id.(string) == ident.Name {
 				return entity
 			}
-			if checkMatch(id.(string), ident.UserId.Email) {
+			if id.(string) == ident.UserId.Email {
 				return entity
 			}
-			if checkMatch(id.(string), ident.UserId.Name) {
+			if id.(string) == ident.UserId.Name {
 				return entity
 			}
-			if checkMatch(id.(string), ident.UserId.Id) {
+			if id.(string) == ident.UserId.Id {
 				return entity
 			}
 		}
 	}
 
 	return nil
-}
-
-func checkMatch(id string, ident string) bool {
-	// matches := ident == id
-	// if matches {
-	// 	fmt.Printf("IDENT: %#v\n", ident)
-	// 	fmt.Printf("ID: %#v\n", id)
-	// 	fmt.Printf("MATCH: %#v\n\n", matches)
-	// }
-	return id == ident
 }
 
 // ExpandTilde does exactly what it says on the tin
