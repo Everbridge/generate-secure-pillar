@@ -180,6 +180,13 @@ func (p *Pki) DecryptSecret(cipherText string) (plainText string, err error) {
 // GetKeyByID returns a keyring by the given ID
 func (p *Pki) GetKeyByID(keyring openpgp.EntityList, id interface{}) *openpgp.Entity {
 	for _, entity := range keyring {
+		if entity.PrimaryKey != nil && entity.PrimaryKey.KeyIdString() == id.(string) {
+			return entity
+		}
+		if entity.PrivateKey != nil && entity.PrivateKey.KeyIdString() == id.(string) {
+			return entity
+		}
+
 		for _, ident := range entity.Identities {
 			if checkMatch(id.(string), ident.Name) {
 				return entity
