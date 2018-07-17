@@ -24,8 +24,8 @@ type Pki struct {
 	PgpKeyName    string
 	PublicKey     *openpgp.Entity
 	SecretKey     *openpgp.Entity
-	PubRing       openpgp.EntityList
-	SecRing       openpgp.EntityList
+	PubRing       *openpgp.EntityList
+	SecRing       *openpgp.EntityList
 }
 
 // New returns a pki object
@@ -38,25 +38,27 @@ func New(pgpKeyName string, publicKeyRing string, secretKeyRing string) Pki {
 		logger.Fatal("cannot expand public key ring path: ", err)
 	}
 	p.PublicKeyRing = publicKeyRing
+	p.PubRing, err = p.setKeyRing(p.PublicKeyRing)
+	if err != nil {
+		logger.Fatalf("Pki: %s", err)
+	}
 
 	secKeyRing, err := p.ExpandTilde(p.SecretKeyRing)
 	if err != nil {
 		logger.Fatal("cannot expand secret key ring path: ", err)
 	}
 	p.SecretKeyRing = secKeyRing
-
-	err = p.setSecKeyRing()
+	p.SecRing, err = p.setKeyRing(p.SecretKeyRing)
 	if err != nil {
 		logger.Warnf("Pki: %s", err)
-	}
-	err = p.setPubKeyRing()
-	if err != nil {
-		logger.Fatalf("Pki: %s", err)
 	}
 
 	// TODO: Something is goofy here sometimes when getting a key to decrypt
 	if p.SecRing != nil {
 		p.SecretKey = p.GetKeyByID(p.SecRing, p.PgpKeyName)
+		if p.SecretKey == nil {
+			logger.Warnf("unable to find key '%s' in %s", p.PgpKeyName, p.SecretKeyRing)
+		}
 	}
 	p.PublicKey = p.GetKeyByID(p.PubRing, p.PgpKeyName)
 	if p.PublicKey == nil {
@@ -66,51 +68,26 @@ func New(pgpKeyName string, publicKeyRing string, secretKeyRing string) Pki {
 	return p
 }
 
-func (p *Pki) setSecKeyRing() error {
-	secretKeyRing, err := p.ExpandTilde(p.SecretKeyRing)
+func (p *Pki) setKeyRing(keyRingPath string) (*openpgp.EntityList, error) {
+	keyRing, err := p.ExpandTilde(keyRingPath)
 	if err != nil {
-		return fmt.Errorf("error reading secring: %s", err)
+		return nil, fmt.Errorf("error reading secring: %s", err)
 	}
-	p.SecretKeyRing = secretKeyRing
-	privringFile, err := os.Open(secretKeyRing)
+	keyRingFile, err := os.Open(keyRing)
 	if err != nil {
-		return fmt.Errorf("unable to open secring: %s", err)
+		return nil, fmt.Errorf("unable to open key ring: %s", err)
 	}
-	privring, err := openpgp.ReadKeyRing(privringFile)
+	ring, err := openpgp.ReadKeyRing(keyRingFile)
 	if err != nil {
-		return fmt.Errorf("cannot read private keys: %s", err)
-	} else if privring == nil {
-		return fmt.Errorf("%s is empty", p.SecretKeyRing)
-	} else {
-		p.SecRing = privring
+		return nil, fmt.Errorf("cannot read private keys: %s", err)
+	} else if ring == nil {
+		return nil, fmt.Errorf("%s is empty", p.SecretKeyRing)
 	}
-	if err = privringFile.Close(); err != nil {
-		return fmt.Errorf("error closing secring: %s", err)
+	if err = keyRingFile.Close(); err != nil {
+		return &ring, fmt.Errorf("error closing secring: %s", err)
 	}
 
-	return nil
-}
-
-func (p *Pki) setPubKeyRing() error {
-	publicKeyRing, err := p.ExpandTilde(p.PublicKeyRing)
-	if err != nil {
-		return fmt.Errorf("error reading pubring: %s", err)
-	}
-	p.PublicKeyRing = publicKeyRing
-	pubringFile, err := os.Open(p.PublicKeyRing)
-	if err != nil {
-		return fmt.Errorf("cannot read public key ring: %s", err)
-	}
-	pubring, err := openpgp.ReadKeyRing(pubringFile)
-	if err != nil {
-		return fmt.Errorf("cannot read public keys: %s", err)
-	}
-	p.PubRing = pubring
-	if err = pubringFile.Close(); err != nil {
-		return fmt.Errorf("error closing pubring: %s", err)
-	}
-
-	return nil
+	return &ring, nil
 }
 
 // EncryptSecret returns encrypted plainText
@@ -182,12 +159,12 @@ func (p *Pki) DecryptSecret(cipherText string) (plainText string, err error) {
 }
 
 // GetKeyByID returns a keyring by the given ID
-func (p *Pki) GetKeyByID(keyring openpgp.EntityList, id interface{}) *openpgp.Entity {
-	for _, entity := range keyring {
-		if entity.PrimaryKey != nil && entity.PrimaryKey.KeyIdString() == id.(string) {
+func (p *Pki) GetKeyByID(keyring *openpgp.EntityList, id interface{}) *openpgp.Entity {
+	for _, entity := range *keyring {
+		if entity.PrivateKey != nil && entity.PrivateKey.KeyIdString() == id.(string) {
 			return entity
 		}
-		if entity.PrivateKey != nil && entity.PrivateKey.KeyIdString() == id.(string) {
+		if entity.PrimaryKey != nil && entity.PrimaryKey.KeyIdString() == id.(string) {
 			return entity
 		}
 
