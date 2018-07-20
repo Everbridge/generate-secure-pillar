@@ -56,9 +56,6 @@ func New(pgpKeyName string, publicKeyRing string, secretKeyRing string) Pki {
 	// TODO: Something is goofy here sometimes when getting a key to decrypt
 	if p.SecRing != nil {
 		p.SecretKey = p.GetKeyByID(p.SecRing, p.PgpKeyName)
-		if p.SecretKey == nil {
-			logger.Warnf("unable to find key '%s' in %s", p.PgpKeyName, p.SecretKeyRing)
-		}
 	}
 	p.PublicKey = p.GetKeyByID(p.PubRing, p.PgpKeyName)
 	if p.PublicKey == nil {
@@ -125,15 +122,8 @@ func (p *Pki) EncryptSecret(plainText string) (string, error) {
 
 // DecryptSecret returns decrypted cipherText
 func (p *Pki) DecryptSecret(cipherText string) (plainText string, err error) {
-	privringFile, err := os.Open(p.SecretKeyRing)
-	if err != nil {
-		return cipherText, fmt.Errorf("unable to open secring: %s", err)
-	}
-	privring, err := openpgp.ReadKeyRing(privringFile)
-	if err != nil {
-		return cipherText, fmt.Errorf("cannot read private keys: %s", err)
-	} else if privring == nil {
-		return cipherText, fmt.Errorf(fmt.Sprintf("%s is empty!", p.SecretKeyRing))
+	if p.SecRing == nil {
+		return cipherText, fmt.Errorf("no secring set")
 	}
 
 	decbuf := bytes.NewBuffer([]byte(cipherText))
@@ -145,7 +135,7 @@ func (p *Pki) DecryptSecret(cipherText string) (plainText string, err error) {
 		return cipherText, fmt.Errorf("block type is not PGP MESSAGE: %s", err)
 	}
 
-	md, err := openpgp.ReadMessage(block.Body, privring, nil, nil)
+	md, err := openpgp.ReadMessage(block.Body, p.SecRing, nil, nil)
 	if err != nil {
 		return cipherText, fmt.Errorf("unable to read PGP message: %s", err)
 	}
