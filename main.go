@@ -73,31 +73,6 @@ var dirFlag = cli.StringFlag{
 	Destination: &recurseDir,
 }
 
-var appFlags = []cli.Flag{
-	cli.StringFlag{
-		Name:        "pubring, pub",
-		Value:       defaultPubRing,
-		Usage:       "PGP public keyring",
-		Destination: &publicKeyRing,
-	},
-	cli.StringFlag{
-		Name:        "secring, sec",
-		Value:       defaultSecRing,
-		Usage:       "PGP private keyring",
-		Destination: &secretKeyRing,
-	},
-	cli.StringFlag{
-		Name:        "pgp_key, k",
-		Usage:       "PGP key name, email, or ID to use for encryption",
-		Destination: &pgpKeyName,
-	},
-	cli.StringFlag{
-		Name:        "element, e",
-		Usage:       "Name of the top level element under which encrypted key/value pairs are kept",
-		Destination: &topLevelElement,
-	},
-}
-
 var appHelp = fmt.Sprintf(`%s
 	CAVEAT: YAML files with include statements are not handled properly, so we skip them.
 	
@@ -412,6 +387,37 @@ var appCommands = []cli.Command{
 }
 
 func main() {
+	gpgHome := os.Getenv("GNUPGHOME")
+	if gpgHome != "" {
+		defaultPubRing = fmt.Sprintf("%s/pubring.gpg", gpgHome)
+		defaultSecRing = fmt.Sprintf("%s/secring.gpg", gpgHome)
+	}
+
+	var appFlags = []cli.Flag{
+		cli.StringFlag{
+			Name:        "pubring, pub",
+			Value:       defaultPubRing,
+			Usage:       "PGP public keyring",
+			Destination: &publicKeyRing,
+		},
+		cli.StringFlag{
+			Name:        "secring, sec",
+			Value:       defaultSecRing,
+			Usage:       "PGP private keyring",
+			Destination: &secretKeyRing,
+		},
+		cli.StringFlag{
+			Name:        "pgp_key, k",
+			Usage:       "PGP key name, email, or ID to use for encryption",
+			Destination: &pgpKeyName,
+		},
+		cli.StringFlag{
+			Name:        "element, e",
+			Usage:       "Name of the top level element under which encrypted key/value pairs are kept",
+			Destination: &topLevelElement,
+		},
+	}
+
 	app := cli.NewApp()
 	app.Version = "1.0.392"
 	app.Authors = []cli.Author{
