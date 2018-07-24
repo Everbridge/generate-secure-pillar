@@ -42,8 +42,8 @@ expect -c "spawn gpg --edit-key '<the PGP key id here>' trust quit; send \"5\ry\
 
 ## GLOBAL OPTIONS
 
-- --pubring value, --pub value  PGP public keyring (default: "~/.gnupg/pubring.gpg")
-- --secring value, --sec value  PGP private keyring (default: "~/.gnupg/secring.gpg")
+- --pubring value, --pub value  PGP public keyring (default: "~/.gnupg/pubring.gpg" or "$GNUPGHOME/pubring.gpg")
+- --secring value, --sec value  PGP private keyring (default: "~/.gnupg/secring.gpg" or "$GNUPGHOME/secring.gpg")
 - --pgp_key value, -k value     PGP key name, email, or ID to use for encryption
 - --debug                       adds line number info to log output
 - --element value, -e value     Name of the top level element under which encrypted key/value pairs are kept
