@@ -101,6 +101,7 @@ func (s *Sls) ReadSlsFile() error {
 		return nil
 	}
 
+	// this could be called when creating a new file, so check the path
 	if _, statErr := os.Stat(s.FilePath); os.IsNotExist(statErr) {
 		dir := filepath.Dir(s.FilePath)
 		err := os.MkdirAll(dir, 0700)
@@ -151,7 +152,7 @@ func WriteSlsFile(buffer bytes.Buffer, outFilePath string) (int, error) {
 
 	var byteCount int
 	if stdOut {
-		byteCount, err = fmt.Fprintf(os.Stderr, fmt.Sprintf("%s\n", buffer.String()))
+		byteCount, err = fmt.Fprintf(os.Stdout, fmt.Sprintf("%s\n", buffer.String()))
 	} else {
 		byteCount, err = atomicWrite(fullPath, buffer)
 	}

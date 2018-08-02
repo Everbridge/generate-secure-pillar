@@ -8,7 +8,6 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
-	"reflect"
 	"time"
 
 	"github.com/keybase/go-crypto/openpgp"
@@ -24,36 +23,40 @@ type Pki struct {
 	SecretKeyRing string
 	PgpKeyName    string
 	PublicKey     *openpgp.Entity
-	PubRing       openpgp.EntityList
-	SecRing       openpgp.EntityList
+	SecretKey     *openpgp.Entity
+	PubRing       *openpgp.EntityList
+	SecRing       *openpgp.EntityList
 }
 
 // New returns a pki object
 func New(pgpKeyName string, publicKeyRing string, secretKeyRing string) Pki {
 	var err error
 
-	p := Pki{publicKeyRing, secretKeyRing, pgpKeyName, nil, nil, nil}
+	p := Pki{publicKeyRing, secretKeyRing, pgpKeyName, nil, nil, nil, nil}
 	publicKeyRing, err = p.ExpandTilde(p.PublicKeyRing)
 	if err != nil {
 		logger.Fatal("cannot expand public key ring path: ", err)
 	}
 	p.PublicKeyRing = publicKeyRing
+	p.PubRing, err = p.setKeyRing(p.PublicKeyRing)
+	if err != nil {
+		logger.Fatalf("Pki: %s", err)
+	}
 
 	secKeyRing, err := p.ExpandTilde(p.SecretKeyRing)
 	if err != nil {
 		logger.Fatal("cannot expand secret key ring path: ", err)
 	}
 	p.SecretKeyRing = secKeyRing
-
-	err = p.setSecKeyRing()
+	p.SecRing, err = p.setKeyRing(p.SecretKeyRing)
 	if err != nil {
-		logger.Fatalf("unable to Pki: %s", err)
-	}
-	err = p.setPubKeyRing()
-	if err != nil {
-		logger.Fatalf("unable to Pki: %s", err)
+		logger.Warnf("Pki: %s", err)
 	}
 
+	// TODO: Something is goofy here sometimes when getting a key to decrypt
+	if p.SecRing != nil {
+		p.SecretKey = p.GetKeyByID(p.SecRing, p.PgpKeyName)
+	}
 	p.PublicKey = p.GetKeyByID(p.PubRing, p.PgpKeyName)
 	if p.PublicKey == nil {
 		logger.Fatalf("unable to find key '%s' in %s", p.PgpKeyName, p.PublicKeyRing)
@@ -62,51 +65,26 @@ func New(pgpKeyName string, publicKeyRing string, secretKeyRing string) Pki {
 	return p
 }
 
-func (p *Pki) setSecKeyRing() error {
-	secretKeyRing, err := p.ExpandTilde(p.SecretKeyRing)
+func (p *Pki) setKeyRing(keyRingPath string) (*openpgp.EntityList, error) {
+	keyRing, err := p.ExpandTilde(keyRingPath)
 	if err != nil {
-		return fmt.Errorf("error reading secring: %s", err)
+		return nil, fmt.Errorf("error reading secring: %s", err)
 	}
-	p.SecretKeyRing = secretKeyRing
-	privringFile, err := os.Open(secretKeyRing)
+	keyRingFile, err := os.Open(keyRing)
 	if err != nil {
-		return fmt.Errorf("unable to open secring: %s", err)
+		return nil, fmt.Errorf("unable to open key ring: %s", err)
 	}
-	privring, err := openpgp.ReadKeyRing(privringFile)
+	ring, err := openpgp.ReadKeyRing(keyRingFile)
 	if err != nil {
-		return fmt.Errorf("cannot read private keys: %s", err)
-	} else if privring == nil {
-		return fmt.Errorf("%s is empty", p.SecretKeyRing)
-	} else {
-		p.SecRing = privring
+		return nil, fmt.Errorf("cannot read private keys: %s", err)
+	} else if ring == nil {
+		return nil, fmt.Errorf("%s is empty", p.SecretKeyRing)
 	}
-	if err = privringFile.Close(); err != nil {
-		return fmt.Errorf("error closing secring: %s", err)
+	if err = keyRingFile.Close(); err != nil {
+		return &ring, fmt.Errorf("error closing secring: %s", err)
 	}
 
-	return nil
-}
-
-func (p *Pki) setPubKeyRing() error {
-	publicKeyRing, err := p.ExpandTilde(p.PublicKeyRing)
-	if err != nil {
-		return fmt.Errorf("error reading pubring: %s", err)
-	}
-	p.PublicKeyRing = publicKeyRing
-	pubringFile, err := os.Open(p.PublicKeyRing)
-	if err != nil {
-		return fmt.Errorf("cannot read public key ring: %s", err)
-	}
-	pubring, err := openpgp.ReadKeyRing(pubringFile)
-	if err != nil {
-		return fmt.Errorf("cannot read public keys: %s", err)
-	}
-	p.PubRing = pubring
-	if err = pubringFile.Close(); err != nil {
-		return fmt.Errorf("error closing pubring: %s", err)
-	}
-
-	return nil
+	return &ring, nil
 }
 
 // EncryptSecret returns encrypted plainText
@@ -144,24 +122,20 @@ func (p *Pki) EncryptSecret(plainText string) (string, error) {
 
 // DecryptSecret returns decrypted cipherText
 func (p *Pki) DecryptSecret(cipherText string) (plainText string, err error) {
-	privringFile, err := os.Open(p.SecretKeyRing)
-	if err != nil {
-		return cipherText, fmt.Errorf("unable to open secring: %s", err)
-	}
-	privring, err := openpgp.ReadKeyRing(privringFile)
-	if err != nil {
-		return cipherText, fmt.Errorf("cannot read private keys: %s", err)
-	} else if privring == nil {
-		return cipherText, fmt.Errorf(fmt.Sprintf("%s is empty!", p.SecretKeyRing))
+	if p.SecRing == nil {
+		return cipherText, fmt.Errorf("no secring set")
 	}
 
 	decbuf := bytes.NewBuffer([]byte(cipherText))
 	block, err := armor.Decode(decbuf)
+	if err != nil {
+		return cipherText, fmt.Errorf("Decode error: %s", err)
+	}
 	if block.Type != "PGP MESSAGE" {
 		return cipherText, fmt.Errorf("block type is not PGP MESSAGE: %s", err)
 	}
 
-	md, err := openpgp.ReadMessage(block.Body, privring, nil, nil)
+	md, err := openpgp.ReadMessage(block.Body, p.SecRing, nil, nil)
 	if err != nil {
 		return cipherText, fmt.Errorf("unable to read PGP message: %s", err)
 	}
@@ -175,33 +149,40 @@ func (p *Pki) DecryptSecret(cipherText string) (plainText string, err error) {
 }
 
 // GetKeyByID returns a keyring by the given ID
-func (p *Pki) GetKeyByID(keyring openpgp.EntityList, id interface{}) *openpgp.Entity {
-	for _, entity := range keyring {
+func (p *Pki) GetKeyByID(keyring *openpgp.EntityList, id interface{}) *openpgp.Entity {
+	for _, entity := range *keyring {
+		if entity.PrivateKey != nil && entity.PrivateKey.KeyIdString() == id.(string) {
+			return entity
+		}
+		if entity.PrimaryKey != nil && entity.PrimaryKey.KeyIdString() == id.(string) {
+			return entity
+		}
 
-		idType := reflect.TypeOf(id).Kind()
-		switch idType {
-		case reflect.Uint64:
-			if entity.PrimaryKey.KeyId == id.(uint64) {
-				return entity
-			} else if entity.PrivateKey.KeyId == id.(uint64) {
-				return entity
-			}
-		case reflect.String:
-			for _, ident := range entity.Identities {
-				if ident.Name == id.(string) {
-					return entity
-				}
-				if ident.UserId.Email == id.(string) {
-					return entity
-				}
-				if ident.UserId.Name == id.(string) {
-					return entity
-				}
-			}
+		if checkIdentities(id.(string), entity) {
+			return entity
 		}
 	}
 
 	return nil
+}
+
+func checkIdentities(id string, entity *openpgp.Entity) bool {
+	for _, ident := range entity.Identities {
+		if id == ident.Name {
+			return true
+		}
+		if id == ident.UserId.Email {
+			return true
+		}
+		if id == ident.UserId.Name {
+			return true
+		}
+		if id == ident.UserId.Id {
+			return true
+		}
+	}
+
+	return false
 }
 
 // ExpandTilde does exactly what it says on the tin
