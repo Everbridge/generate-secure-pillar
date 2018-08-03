@@ -1,7 +1,7 @@
 pipeline {
   agent {
-    dockerfile {
-      filename 'Dockerfile'
+    docker {
+      image 'golang:latest'
     }
 
   }
@@ -19,7 +19,11 @@ pipeline {
 
       }
       steps {
-        sh '''make clean
+        sh '''apt-get install -y make
+go get -u github.com/golang/dep/cmd/dep
+go get -u github.com/alecthomas/gometalinter
+gometalinter --install
+dep ensure
 make deps
 make check
 make test
