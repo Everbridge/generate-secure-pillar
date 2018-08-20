@@ -9,7 +9,7 @@
 
    generate-secure-pillar [global options] command [command options] [arguments...]
 
-## VERSION 1.0.402
+## VERSION 1.0.396
 
 ## AUTHOR
 
@@ -23,9 +23,10 @@ brew install generate-secure-pillar
 ```
 
 ## Config File Usage
+
 A config file can be used to set default values, an example file is created if there isn't one already with commented out values:
 
-```
+``` shell
 # default_key: Salt Master
 # gnupg_home: ~/.gnupg
 # default_pub_ring: ~/.gnupg/pubring.gpg
