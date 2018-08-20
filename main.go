@@ -1,16 +1,26 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
+	"io/ioutil"
 	"os"
+	"os/user"
+	"path/filepath"
 
 	"github.com/Everbridge/generate-secure-pillar/pki"
 	"github.com/Everbridge/generate-secure-pillar/sls"
 	"github.com/Everbridge/generate-secure-pillar/utils"
+	yaml "gopkg.in/yaml.v2"
 
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
+
+// GSPConfig config data
+type GSPConfig map[string]string
+
+var gspConfig GSPConfig
 
 var logger = logrus.New()
 
@@ -27,6 +37,7 @@ var yamlPath string
 var updateInPlace bool
 var pk pki.Pki
 
+var defaultKeyName = ""
 var defaultPubRing = "~/.gnupg/pubring.gpg"
 var defaultSecRing = "~/.gnupg/secring.gpg"
 
@@ -387,6 +398,24 @@ var appCommands = []cli.Command{
 }
 
 func main() {
+	readConfigFile()
+	if gspConfig != nil {
+		if gspConfig["default_key"] != "" {
+			defaultKeyName = gspConfig["default_key"]
+		}
+		if gspConfig["gnupg_home"] != "" {
+			defaultPubRing = fmt.Sprintf("%s/pubring.gpg", gspConfig["gnupg_home"])
+			defaultSecRing = fmt.Sprintf("%s/secring.gpg", gspConfig["gnupg_home"])
+		} else {
+			if gspConfig["default_pub_ring"] != "" {
+				defaultPubRing = gspConfig["default_pub_ring"]
+			}
+			if gspConfig["default_sec_ring"] != "" {
+				defaultSecRing = gspConfig["default_sec_ring"]
+			}
+		}
+	}
+
 	gpgHome := os.Getenv("GNUPGHOME")
 	if gpgHome != "" {
 		defaultPubRing = fmt.Sprintf("%s/pubring.gpg", gpgHome)
@@ -408,6 +437,7 @@ func main() {
 		},
 		cli.StringFlag{
 			Name:        "pgp_key, k",
+			Value:       defaultKeyName,
 			Usage:       "PGP key name, email, or ID to use for encryption",
 			Destination: &pgpKeyName,
 		},
@@ -438,5 +468,49 @@ func main() {
 	err := app.Run(os.Args)
 	if err != nil {
 		logger.Fatal(err)
+	}
+}
+
+func createConfigPath() string {
+	var usr, _ = user.Current()
+	configFile := filepath.Join(usr.HomeDir, ".config/generate-secure-pillar/config.yaml")
+	dir := filepath.Dir(configFile)
+	err := os.MkdirAll(dir, 0700)
+	if err != nil {
+		logger.Warnf("error creating config file path: %s", err)
+	}
+
+	return configFile
+}
+
+func readConfigFile() {
+	configFile := createConfigPath()
+	filename, err := filepath.Abs(configFile)
+	if err != nil {
+		logger.Fatal(err)
+	}
+	var yamlData []byte
+
+	if _, err = os.Stat(filename); !os.IsNotExist(err) {
+		yamlData, err = ioutil.ReadFile(filename)
+		if err != nil {
+			logger.Fatal("error reading config file: ", err)
+		}
+
+		err = yaml.Unmarshal(yamlData, &gspConfig)
+		if err != nil {
+			logger.Fatal(fmt.Sprintf("Unable to parse %s: %s\n", filename, err))
+		}
+	} else {
+		// create a default example file
+		var buffer bytes.Buffer
+		buffer.WriteString("# default_key: Salt Master\n")
+		buffer.WriteString("# gnupg_home: ~/.gnupg\n")
+		buffer.WriteString("# default_pub_ring: ~/.gnupg/pubring.gpg\n")
+		buffer.WriteString("# default_sec_ring: ~/.gnupg/secring.gpg\n")
+		err := ioutil.WriteFile(configFile, buffer.Bytes(), 0644)
+		if err != nil {
+			logger.Warn("can't write default config file: %s", err)
+		}
 	}
 }
