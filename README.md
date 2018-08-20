@@ -22,7 +22,7 @@ brew tap esilva-everbridge/homebrew-generate-secure-pillar
 brew install generate-secure-pillar
 ```
 
-## Config File Usage
+## CONFIG FILE USAGE
 
 A config file can be used to set default values, an example file is created if there isn't one already with commented out values:
 
