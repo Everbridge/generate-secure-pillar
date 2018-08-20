@@ -9,7 +9,7 @@
 
    generate-secure-pillar [global options] command [command options] [arguments...]
 
-## VERSION 1.0.400
+## VERSION 1.0.396
 
 ## AUTHOR
 
@@ -20,6 +20,16 @@
 ``` shell
 brew tap esilva-everbridge/homebrew-generate-secure-pillar
 brew install generate-secure-pillar
+```
+
+## Config File Usage
+A config file can be used to set default values, an example file is created if there isn't one already with commented out values:
+
+```
+# default_key: Salt Master
+# gnupg_home: ~/.gnupg
+# default_pub_ring: ~/.gnupg/pubring.gpg
+# default_sec_ring: ~/.gnupg/secring.gpg
 ```
 
 ## ABOUT PGP KEYS
