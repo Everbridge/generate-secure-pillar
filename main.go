@@ -18,9 +18,9 @@ import (
 )
 
 // GSPConfig config data
-type GSPConfig map[string]string
+// type GSPConfig map[string]string
 
-var gspConfig GSPConfig
+// var gspConfig GSPConfig
 
 var logger = logrus.New()
 
@@ -398,7 +398,7 @@ var appCommands = []cli.Command{
 }
 
 func main() {
-	readConfigFile()
+	gspConfig := readConfigFile()
 	if gspConfig != nil {
 		if gspConfig["default_key"] != "" {
 			defaultKeyName = gspConfig["default_key"]
@@ -483,7 +483,8 @@ func createConfigPath() string {
 	return configFile
 }
 
-func readConfigFile() {
+func readConfigFile() map[string]string {
+	var gspConfig map[string]string
 	configFile := createConfigPath()
 	filename, err := filepath.Abs(configFile)
 	if err != nil {
@@ -513,4 +514,5 @@ func readConfigFile() {
 			logger.Warn("can't write default config file: %s", err)
 		}
 	}
+	return gspConfig
 }
