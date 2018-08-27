@@ -24,8 +24,8 @@ const pgpHeader = "-----BEGIN PGP MESSAGE-----"
 
 func TestMain(m *testing.M) {
 	initGPGDir()
+	defer teardownGPGDir()
 	retCode := m.Run()
-	teardownGPGDir()
 	os.Exit(retCode)
 }
 
