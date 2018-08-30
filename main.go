@@ -17,10 +17,20 @@ import (
 	"github.com/urfave/cli"
 )
 
-// GSPConfig config data
-// type GSPConfig map[string]string
+// GSPProfile config data
+type GSPProfile struct {
+	Name           string `yaml:"name"`
+	Default        bool   `yaml:"default"`
+	DefaultKey     string `yaml:"default_key"`
+	GnupgHome      string `yaml:"gnupg_home"`
+	DefaultPubRing string `yaml:"default_pub_ring"`
+	DefaultSecRing string `yaml:"default_sec_ring"`
+}
 
-// var gspConfig GSPConfig
+// GSPConfig config data
+type GSPConfig struct {
+	Profiles []GSPProfile `yaml:"profiles"`
+}
 
 var logger = logrus.New()
 
@@ -37,6 +47,7 @@ var yamlPath string
 var updateInPlace bool
 var pk pki.Pki
 
+var defaultProfileName = ""
 var defaultKeyName = ""
 var defaultPubRing = "~/.gnupg/pubring.gpg"
 var defaultSecRing = "~/.gnupg/secring.gpg"
@@ -88,6 +99,9 @@ var appHelp = fmt.Sprintf(`%s
 	CAVEAT: YAML files with include statements are not handled properly, so we skip them.
 	
 	EXAMPLES:
+	# specify a config profile and create a new file
+	$ generate-secure-pillar --profile dev create --name secret_name1 --value secret_value1 --name secret_name2 --value secret_value2 --outfile new.sls
+
 	# create a new sls file
 	$ generate-secure-pillar -k "Salt Master" create --name secret_name1 --value secret_value1 --name secret_name2 --value secret_value2 --outfile new.sls
 	
@@ -134,6 +148,7 @@ var appCommands = []cli.Command{
 		Aliases: []string{"c"},
 		Usage:   "create a new sls file",
 		Action: func(c *cli.Context) error {
+			setProfile()
 			pk = pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
 			s := sls.New(outputFilePath, pk, topLevelElement)
 			err := s.ProcessYaml(secretNames, secretValues)
@@ -161,6 +176,7 @@ var appCommands = []cli.Command{
 		Aliases: []string{"u"},
 		Usage:   "update the value of the given key in the given file",
 		Action: func(c *cli.Context) error {
+			setProfile()
 			if inputFilePath != os.Stdin.Name() {
 				outputFilePath = inputFilePath
 			}
@@ -202,6 +218,7 @@ var appCommands = []cli.Command{
 					updateFlag,
 				},
 				Action: func(c *cli.Context) error {
+					setProfile()
 					pk = pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
 					s := sls.New(inputFilePath, pk, topLevelElement)
 					if inputFilePath != os.Stdin.Name() && updateInPlace {
@@ -218,6 +235,7 @@ var appCommands = []cli.Command{
 					dirFlag,
 				},
 				Action: func(c *cli.Context) error {
+					setProfile()
 					pk = pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
 					err := utils.ProcessDir(recurseDir, ".sls", "encrypt", outputFilePath, topLevelElement, pk)
 					if err != nil {
@@ -237,6 +255,7 @@ var appCommands = []cli.Command{
 					},
 				},
 				Action: func(c *cli.Context) error {
+					setProfile()
 					pk = pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
 					s := sls.New(inputFilePath, pk, topLevelElement)
 					utils.PathAction(&s, yamlPath, "encrypt")
@@ -263,6 +282,7 @@ var appCommands = []cli.Command{
 					updateFlag,
 				},
 				Action: func(c *cli.Context) error {
+					setProfile()
 					pk = pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
 					s := sls.New(inputFilePath, pk, topLevelElement)
 					if inputFilePath != os.Stdin.Name() && updateInPlace {
@@ -279,6 +299,7 @@ var appCommands = []cli.Command{
 					dirFlag,
 				},
 				Action: func(c *cli.Context) error {
+					setProfile()
 					pk = pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
 					err := utils.ProcessDir(recurseDir, ".sls", "decrypt", outputFilePath, topLevelElement, pk)
 					if err != nil {
@@ -298,6 +319,7 @@ var appCommands = []cli.Command{
 					},
 				},
 				Action: func(c *cli.Context) error {
+					setProfile()
 					pk = pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
 					s := sls.New(inputFilePath, pk, topLevelElement)
 					utils.PathAction(&s, yamlPath, "decrypt")
@@ -320,6 +342,7 @@ var appCommands = []cli.Command{
 			},
 		},
 		Action: func(c *cli.Context) error {
+			setProfile()
 			if inputFilePath != "" {
 				pk = pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
 				s := sls.New(inputFilePath, pk, topLevelElement)
@@ -351,6 +374,7 @@ var appCommands = []cli.Command{
 					outputFlag,
 				},
 				Action: func(c *cli.Context) error {
+					setProfile()
 					pk = pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
 					s := sls.New(inputFilePath, pk, topLevelElement)
 					buffer, err := s.PerformAction("validate")
@@ -367,6 +391,7 @@ var appCommands = []cli.Command{
 					dirFlag,
 				},
 				Action: func(c *cli.Context) error {
+					setProfile()
 					pk = pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
 					err := utils.ProcessDir(recurseDir, ".sls", "validate", outputFilePath, topLevelElement, pk)
 					if err != nil {
@@ -386,6 +411,7 @@ var appCommands = []cli.Command{
 					},
 				},
 				Action: func(c *cli.Context) error {
+					setProfile()
 					pk = pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
 					s := sls.New(inputFilePath, pk, topLevelElement)
 					utils.PathAction(&s, yamlPath, "validate")
@@ -398,24 +424,6 @@ var appCommands = []cli.Command{
 }
 
 func main() {
-	gspConfig := readConfigFile()
-	if gspConfig != nil {
-		if gspConfig["default_key"] != "" {
-			defaultKeyName = gspConfig["default_key"]
-		}
-		if gspConfig["gnupg_home"] != "" {
-			defaultPubRing = fmt.Sprintf("%s/pubring.gpg", gspConfig["gnupg_home"])
-			defaultSecRing = fmt.Sprintf("%s/secring.gpg", gspConfig["gnupg_home"])
-		} else {
-			if gspConfig["default_pub_ring"] != "" {
-				defaultPubRing = gspConfig["default_pub_ring"]
-			}
-			if gspConfig["default_sec_ring"] != "" {
-				defaultSecRing = gspConfig["default_sec_ring"]
-			}
-		}
-	}
-
 	gpgHome := os.Getenv("GNUPGHOME")
 	if gpgHome != "" {
 		defaultPubRing = fmt.Sprintf("%s/pubring.gpg", gpgHome)
@@ -423,6 +431,11 @@ func main() {
 	}
 
 	var appFlags = []cli.Flag{
+		cli.StringFlag{
+			Name:        "profile, prof",
+			Usage:       "default profile to use in the config file",
+			Destination: &defaultProfileName,
+		},
 		cli.StringFlag{
 			Name:        "pubring, pub",
 			Value:       defaultPubRing,
@@ -471,6 +484,30 @@ func main() {
 	}
 }
 
+func setProfile() {
+	profile := readConfigFile()
+	if profile.Name != "" {
+		setDefaultsFromProfile(profile)
+	}
+}
+
+func setDefaultsFromProfile(profile GSPProfile) {
+	if profile.DefaultKey != "" {
+		pgpKeyName = profile.DefaultKey
+	}
+	if profile.GnupgHome != "" {
+		defaultPubRing = fmt.Sprintf("%s/pubring.gpg", profile.GnupgHome)
+		defaultSecRing = fmt.Sprintf("%s/secring.gpg", profile.GnupgHome)
+	} else {
+		if profile.DefaultPubRing != "" {
+			defaultPubRing = profile.DefaultPubRing
+		}
+		if profile.DefaultSecRing != "" {
+			defaultSecRing = profile.DefaultSecRing
+		}
+	}
+}
+
 func createConfigPath() string {
 	var usr, _ = user.Current()
 	configFile := filepath.Join(usr.HomeDir, ".config/generate-secure-pillar/config.yaml")
@@ -483,36 +520,57 @@ func createConfigPath() string {
 	return configFile
 }
 
-func readConfigFile() map[string]string {
-	var gspConfig map[string]string
+func readConfigFile() GSPProfile {
+	var profile GSPProfile
 	configFile := createConfigPath()
 	filename, err := filepath.Abs(configFile)
 	if err != nil {
 		logger.Fatal(err)
 	}
-	var yamlData []byte
 
 	if _, err = os.Stat(filename); !os.IsNotExist(err) {
-		yamlData, err = ioutil.ReadFile(filename)
-		if err != nil {
-			logger.Fatal("error reading config file: ", err)
-		}
-
-		err = yaml.Unmarshal(yamlData, &gspConfig)
-		if err != nil {
-			logger.Fatal(fmt.Sprintf("Unable to parse %s: %s\n", filename, err))
+		if pgpKeyName == "" {
+			var gspConfig = readConfigYaml(filename)
+			for _, p := range gspConfig.Profiles {
+				if defaultProfileName != "" {
+					if p.Name == defaultProfileName {
+						profile = p
+					}
+				} else {
+					if p.Default {
+						profile = p
+					}
+				}
+			}
 		}
 	} else {
 		// create a default example file
 		var buffer bytes.Buffer
-		buffer.WriteString("# default_key: Salt Master\n")
-		buffer.WriteString("# gnupg_home: ~/.gnupg\n")
-		buffer.WriteString("# default_pub_ring: ~/.gnupg/pubring.gpg\n")
-		buffer.WriteString("# default_sec_ring: ~/.gnupg/secring.gpg\n")
+		buffer.WriteString("# profiles:\n")
+		buffer.WriteString("#   - name: dev:\n")
+		buffer.WriteString("#     default: true\n")
+		buffer.WriteString("#     default_key: Dev Salt Master\n")
+		buffer.WriteString("#     gnupg_home: ~/.gnupg\n")
+		buffer.WriteString("#     default_pub_ring: ~/.gnupg/pubring.gpg\n")
+		buffer.WriteString("#     default_sec_ring: ~/.gnupg/secring.gpg\n")
 		err := ioutil.WriteFile(configFile, buffer.Bytes(), 0644)
 		if err != nil {
 			logger.Warn("can't write default config file: %s", err)
 		}
+	}
+	return profile
+}
+
+func readConfigYaml(filename string) GSPConfig {
+	var gspConfig GSPConfig
+	yamlData, err := ioutil.ReadFile(filename)
+	if err != nil {
+		logger.Fatal("error reading config file: ", err)
+	}
+
+	err = yaml.Unmarshal(yamlData, &gspConfig)
+	if err != nil {
+		logger.Fatal(fmt.Sprintf("Unable to parse %s: %s\n", filename, err))
 	}
 	return gspConfig
 }
