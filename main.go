@@ -471,7 +471,7 @@ func main() {
 	}
 
 	app := cli.NewApp()
-	app.Version = "1.0.404"
+	app.Version = "1.0.416"
 	app.Authors = []cli.Author{
 		{
 			Name:  "Ed Silva",
