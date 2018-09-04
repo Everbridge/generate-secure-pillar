@@ -16,7 +16,6 @@ import (
 	"github.com/Everbridge/generate-secure-pillar/sls"
 	"github.com/Everbridge/generate-secure-pillar/utils"
 	yaml "github.com/esilva-everbridge/yaml"
-	"github.com/prometheus/common/log"
 )
 
 // pgpHeader header const
@@ -403,11 +402,8 @@ func Equals(tb testing.TB, exp, act interface{}) {
 func initGPGDir() {
 	teardownGPGDir()
 	cmd := exec.Command("./testdata/testkeys.sh")
-	out, err := cmd.CombinedOutput()
+	out, _ := cmd.CombinedOutput()
 	fmt.Printf("%s", string(out))
-	if err != nil {
-		log.Errorf("%s", err)
-	}
 }
 
 func teardownGPGDir() {
