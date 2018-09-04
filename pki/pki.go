@@ -17,6 +17,9 @@ import (
 
 var logger = logrus.New()
 
+// PGPHeader header const
+const PGPHeader string = "-----BEGIN PGP MESSAGE-----"
+
 // Pki pki info
 type Pki struct {
 	PublicKeyRing string

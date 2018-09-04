@@ -18,9 +18,6 @@ import (
 	yaml "github.com/esilva-everbridge/yaml"
 )
 
-// pgpHeader header const
-const pgpHeader = "-----BEGIN PGP MESSAGE-----"
-
 func TestMain(m *testing.M) {
 	initGPGDir()
 	defer teardownGPGDir()
@@ -99,12 +96,12 @@ func TestEncryptSecret(t *testing.T) {
 
 	secureVars := yamlObj.Get(topLevelElement)
 	for _, v := range secureVars.(map[interface{}]interface{}) {
-		if strings.Contains(v.(string), pgpHeader) {
+		if strings.Contains(v.(string), pki.PGPHeader) {
 			t.Errorf("YAML content is already encrypted.")
 		} else {
 			cipherText, err := p.EncryptSecret(v.(string))
 			Ok(t, err)
-			Assert(t, strings.Contains(cipherText, pgpHeader), "YAML content was not encrypted.", strings.Contains(cipherText, pgpHeader))
+			Assert(t, strings.Contains(cipherText, pki.PGPHeader), "YAML content was not encrypted.", strings.Contains(cipherText, pki.PGPHeader))
 		}
 	}
 }
@@ -129,7 +126,7 @@ func TestGetPath(t *testing.T) {
 	}
 	secureVars := s.GetValueFromPath(topLevelElement)
 	for _, v := range secureVars.(map[interface{}]interface{}) {
-		Assert(t, strings.Contains(v.(string), pgpHeader), "YAML content was not encrypted.", strings.Contains(v.(string), pgpHeader))
+		Assert(t, strings.Contains(v.(string), pki.PGPHeader), "YAML content was not encrypted.", strings.Contains(v.(string), pki.PGPHeader))
 	}
 
 	buffer, err = s.PerformAction("decrypt")
@@ -156,7 +153,7 @@ func TestDecryptSecret(t *testing.T) {
 		plainText, err := p.DecryptSecret(cipherText)
 		Ok(t, err)
 
-		Assert(t, !strings.Contains(plainText, pgpHeader), "YAML content was not decrypted.", strings.Contains(plainText, pgpHeader))
+		Assert(t, !strings.Contains(plainText, pki.PGPHeader), "YAML content was not decrypted.", strings.Contains(plainText, pki.PGPHeader))
 		Assert(t, plainText != "", "decrypted content is empty", plainText)
 	}
 }
@@ -184,7 +181,7 @@ func TestNestedAndMultiLineFile(t *testing.T) {
 		sls.WriteSlsFile(buffer, filePath)
 	}
 
-	err = scanString(buffer.String(), 2, pgpHeader)
+	err = scanString(buffer.String(), 2, pki.PGPHeader)
 	Ok(t, err)
 
 	filePath = "./testdata/test.sls"
@@ -197,7 +194,7 @@ func TestNestedAndMultiLineFile(t *testing.T) {
 		sls.WriteSlsFile(buffer, filePath)
 	}
 
-	err = scanString(buffer.String(), 0, pgpHeader)
+	err = scanString(buffer.String(), 0, pki.PGPHeader)
 	Ok(t, err)
 }
 
@@ -236,7 +233,7 @@ func TestRotateFile(t *testing.T) {
 	}
 
 	val := s.GetValueFromPath("bar:baz")
-	Assert(t, strings.Contains(val.(string), pgpHeader), "YAML content was not encrypted.", strings.Contains(val.(string), pgpHeader))
+	Assert(t, strings.Contains(val.(string), pki.PGPHeader), "YAML content was not encrypted.", strings.Contains(val.(string), pki.PGPHeader))
 	buffer, err = s.PerformAction("decrypt")
 	Ok(t, err)
 	if err == nil {
@@ -261,7 +258,7 @@ func TestKeyInfo(t *testing.T) {
 	buffer, err = s.PerformAction("validate")
 	Ok(t, err)
 
-	if err = scanString(buffer.String(), 0, pgpHeader); err != nil {
+	if err = scanString(buffer.String(), 0, pki.PGPHeader); err != nil {
 		t.Errorf("Found PGP data in buffer: %s", err)
 	}
 	if err = scanString(buffer.String(), 5, pgpKeyName); err != nil {
@@ -343,7 +340,7 @@ func hasPgpHeader(scanner bufio.Scanner) bool {
 	found := false
 	for scanner.Scan() {
 		txt := scanner.Text()
-		if strings.Contains(txt, pgpHeader) {
+		if strings.Contains(txt, pki.PGPHeader) {
 			found = true
 			continue
 		}

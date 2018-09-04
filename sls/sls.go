@@ -18,9 +18,6 @@ import (
 	yamlv2 "gopkg.in/yaml.v2"
 )
 
-// pgpHeader header const
-const pgpHeader = "-----BEGIN PGP MESSAGE-----"
-
 // Encrypt action
 const Encrypt = "encrypt"
 
@@ -471,7 +468,7 @@ func (s *Sls) rotateVal(strVal string) (string, error) {
 }
 
 func isEncrypted(str string) bool {
-	return strings.Contains(str, pgpHeader)
+	return strings.Contains(str, pki.PGPHeader)
 }
 
 func (s *Sls) keyInfo(val string) (string, error) {
