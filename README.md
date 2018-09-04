@@ -24,13 +24,18 @@ brew install generate-secure-pillar
 
 ## CONFIG FILE USAGE
 
-A config file can be used to set default values, an example file is created if there isn't one already with commented out values:
+A config file can be used to set default values, an example file is created, if there isn't one already, with commented out values.
+Profiles can be specified and selected via a command line option.
 
 ``` shell
-# default_key: Salt Master
-# gnupg_home: ~/.gnupg
-# default_pub_ring: ~/.gnupg/pubring.gpg
-# default_sec_ring: ~/.gnupg/secring.gpg
+profiles:
+  - name: dev
+    default: true
+    default_key: Dev Salt Master
+    gnupg_home: ~/.gnupg
+    default_pub_ring: ~/.gnupg/pubring.gpg
+    default_sec_ring: ~/.gnupg/secring.gpg
+...
 ```
 
 ## ABOUT PGP KEYS
@@ -56,6 +61,7 @@ expect -c "spawn gpg --edit-key '<the PGP key id here>' trust quit; send \"5\ry\
 
 ## GLOBAL OPTIONS
 
+- --profile value, --prof value default profile to use in the config file
 - --pubring value, --pub value  PGP public keyring (default: "~/.gnupg/pubring.gpg" or "$GNUPGHOME/pubring.gpg")
 - --secring value, --sec value  PGP private keyring (default: "~/.gnupg/secring.gpg" or "$GNUPGHOME/secring.gpg")
 - --pgp_key value, -k value     PGP key name, email, or ID to use for encryption
