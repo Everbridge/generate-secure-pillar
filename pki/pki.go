@@ -70,7 +70,7 @@ func (p *Pki) setKeyRing(keyRingPath string) (*openpgp.EntityList, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error reading secring: %s", err)
 	}
-	keyRingFile, err := os.Open(keyRing)
+	keyRingFile, err := os.Open(filepath.Clean(keyRing))
 	if err != nil {
 		return nil, fmt.Errorf("unable to open key ring: %s", err)
 	}
@@ -205,7 +205,7 @@ func (p *Pki) KeyUsedForEncryptedFile(file string) (string, error) {
 		return "", err
 	}
 
-	in, err := os.Open(filePath)
+	in, err := os.Open(filepath.Clean(filePath))
 	if err != nil {
 		return "", err
 	}

@@ -120,7 +120,7 @@ func (s *Sls) ReadSlsFile() error {
 	}
 
 	var buf []byte
-	buf, err = ioutil.ReadFile(fullPath)
+	buf, err = ioutil.ReadFile(filepath.Clean(fullPath))
 	if err != nil {
 		return err
 	}
@@ -201,7 +201,7 @@ func copyFile(src string, dst string) error {
 		return err
 	}
 
-	fsrc, err := os.Open(src)
+	fsrc, err := os.Open(filepath.Clean(src))
 	if err != nil {
 		return err
 	}
@@ -249,7 +249,10 @@ func (s *Sls) FormatBuffer(action string) (bytes.Buffer, error) {
 	}
 
 	if action != Validate {
-		buffer.WriteString("#!yaml|gpg\n\n")
+		_, err = buffer.WriteString("#!yaml|gpg\n\n")
+		if err != nil {
+			return buffer, fmt.Errorf("%s format error: %s", s.FilePath, err)
+		}
 	}
 	_, err = buffer.WriteString(string(out))
 

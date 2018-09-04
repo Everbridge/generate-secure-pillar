@@ -17,6 +17,16 @@ import (
 	"github.com/urfave/cli"
 )
 
+const configExample = `
+# profiles:
+#   - name: dev
+#     default: true
+#     default_key: Dev Salt Master
+#     gnupg_home: ~/.gnupg
+#     default_pub_ring: ~/.gnupg/pubring.gpg
+#     default_sec_ring: ~/.gnupg/secring.gpg
+`
+
 // GSPProfile config data
 type GSPProfile struct {
 	Name           string `yaml:"name"`
@@ -148,8 +158,8 @@ var appCommands = []cli.Command{
 		Aliases: []string{"c"},
 		Usage:   "create a new sls file",
 		Action: func(c *cli.Context) error {
-			setProfile()
-			pk = pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
+			keyName, pubRing, secRing := getProfileVars()
+			pk = pki.New(keyName, pubRing, secRing)
 			s := sls.New(outputFilePath, pk, topLevelElement)
 			err := s.ProcessYaml(secretNames, secretValues)
 			if err != nil {
@@ -176,11 +186,11 @@ var appCommands = []cli.Command{
 		Aliases: []string{"u"},
 		Usage:   "update the value of the given key in the given file",
 		Action: func(c *cli.Context) error {
-			setProfile()
 			if inputFilePath != os.Stdin.Name() {
 				outputFilePath = inputFilePath
 			}
-			pk = pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
+			keyName, pubRing, secRing := getProfileVars()
+			pk = pki.New(keyName, pubRing, secRing)
 			s := sls.New(inputFilePath, pk, topLevelElement)
 			err := s.ProcessYaml(secretNames, secretValues)
 			if err != nil {
@@ -218,8 +228,8 @@ var appCommands = []cli.Command{
 					updateFlag,
 				},
 				Action: func(c *cli.Context) error {
-					setProfile()
-					pk = pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
+					keyName, pubRing, secRing := getProfileVars()
+					pk = pki.New(keyName, pubRing, secRing)
 					s := sls.New(inputFilePath, pk, topLevelElement)
 					if inputFilePath != os.Stdin.Name() && updateInPlace {
 						outputFilePath = inputFilePath
@@ -235,8 +245,8 @@ var appCommands = []cli.Command{
 					dirFlag,
 				},
 				Action: func(c *cli.Context) error {
-					setProfile()
-					pk = pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
+					keyName, pubRing, secRing := getProfileVars()
+					pk = pki.New(keyName, pubRing, secRing)
 					err := utils.ProcessDir(recurseDir, ".sls", "encrypt", outputFilePath, topLevelElement, pk)
 					if err != nil {
 						logger.Warnf("encrypt: %s", err)
@@ -255,8 +265,8 @@ var appCommands = []cli.Command{
 					},
 				},
 				Action: func(c *cli.Context) error {
-					setProfile()
-					pk = pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
+					keyName, pubRing, secRing := getProfileVars()
+					pk = pki.New(keyName, pubRing, secRing)
 					s := sls.New(inputFilePath, pk, topLevelElement)
 					utils.PathAction(&s, yamlPath, "encrypt")
 
@@ -282,8 +292,8 @@ var appCommands = []cli.Command{
 					updateFlag,
 				},
 				Action: func(c *cli.Context) error {
-					setProfile()
-					pk = pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
+					keyName, pubRing, secRing := getProfileVars()
+					pk = pki.New(keyName, pubRing, secRing)
 					s := sls.New(inputFilePath, pk, topLevelElement)
 					if inputFilePath != os.Stdin.Name() && updateInPlace {
 						outputFilePath = inputFilePath
@@ -299,8 +309,8 @@ var appCommands = []cli.Command{
 					dirFlag,
 				},
 				Action: func(c *cli.Context) error {
-					setProfile()
-					pk = pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
+					keyName, pubRing, secRing := getProfileVars()
+					pk = pki.New(keyName, pubRing, secRing)
 					err := utils.ProcessDir(recurseDir, ".sls", "decrypt", outputFilePath, topLevelElement, pk)
 					if err != nil {
 						logger.Warnf("decrypt: %s", err)
@@ -319,8 +329,8 @@ var appCommands = []cli.Command{
 					},
 				},
 				Action: func(c *cli.Context) error {
-					setProfile()
-					pk = pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
+					keyName, pubRing, secRing := getProfileVars()
+					pk = pki.New(keyName, pubRing, secRing)
 					s := sls.New(inputFilePath, pk, topLevelElement)
 					utils.PathAction(&s, yamlPath, "decrypt")
 
@@ -342,14 +352,13 @@ var appCommands = []cli.Command{
 			},
 		},
 		Action: func(c *cli.Context) error {
-			setProfile()
+			keyName, pubRing, secRing := getProfileVars()
+			pk = pki.New(keyName, pubRing, secRing)
 			if inputFilePath != "" {
-				pk = pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
 				s := sls.New(inputFilePath, pk, topLevelElement)
 				buf, err := s.PerformAction("rotate")
 				utils.SafeWrite(buf, outputFilePath, err)
 			} else {
-				pk = pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
 				err := utils.ProcessDir(recurseDir, ".sls", "rotate", outputFilePath, topLevelElement, pk)
 				if err != nil {
 					logger.Warnf("rotate: %s", err)
@@ -374,8 +383,8 @@ var appCommands = []cli.Command{
 					outputFlag,
 				},
 				Action: func(c *cli.Context) error {
-					setProfile()
-					pk = pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
+					keyName, pubRing, secRing := getProfileVars()
+					pk = pki.New(keyName, pubRing, secRing)
 					s := sls.New(inputFilePath, pk, topLevelElement)
 					buffer, err := s.PerformAction("validate")
 					if err != nil {
@@ -391,8 +400,8 @@ var appCommands = []cli.Command{
 					dirFlag,
 				},
 				Action: func(c *cli.Context) error {
-					setProfile()
-					pk = pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
+					keyName, pubRing, secRing := getProfileVars()
+					pk = pki.New(keyName, pubRing, secRing)
 					err := utils.ProcessDir(recurseDir, ".sls", "validate", outputFilePath, topLevelElement, pk)
 					if err != nil {
 						logger.Warnf("keys: %s", err)
@@ -411,8 +420,8 @@ var appCommands = []cli.Command{
 					},
 				},
 				Action: func(c *cli.Context) error {
-					setProfile()
-					pk = pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
+					keyName, pubRing, secRing := getProfileVars()
+					pk = pki.New(keyName, pubRing, secRing)
 					s := sls.New(inputFilePath, pk, topLevelElement)
 					utils.PathAction(&s, yamlPath, "validate")
 
@@ -484,28 +493,36 @@ func main() {
 	}
 }
 
-func setProfile() {
+func getProfileVars() (keyName string, pubRing string, secRing string) {
 	profile := readConfigFile()
 	if profile.Name != "" {
-		setDefaultsFromProfile(profile)
+		return setDefaultsFromProfile(profile)
 	}
+
+	return defaultKeyName, defaultPubRing, defaultSecRing
 }
 
-func setDefaultsFromProfile(profile GSPProfile) {
+func setDefaultsFromProfile(profile GSPProfile) (keyName string, pubRing string, secRing string) {
+	keyName = defaultKeyName
+	pubRing = defaultPubRing
+	secRing = defaultSecRing
+
 	if profile.DefaultKey != "" {
-		pgpKeyName = profile.DefaultKey
+		keyName = profile.DefaultKey
 	}
 	if profile.GnupgHome != "" {
-		defaultPubRing = fmt.Sprintf("%s/pubring.gpg", profile.GnupgHome)
-		defaultSecRing = fmt.Sprintf("%s/secring.gpg", profile.GnupgHome)
+		pubRing = fmt.Sprintf("%s/pubring.gpg", profile.GnupgHome)
+		secRing = fmt.Sprintf("%s/secring.gpg", profile.GnupgHome)
 	} else {
 		if profile.DefaultPubRing != "" {
-			defaultPubRing = profile.DefaultPubRing
+			pubRing = profile.DefaultPubRing
 		}
 		if profile.DefaultSecRing != "" {
-			defaultSecRing = profile.DefaultSecRing
+			secRing = profile.DefaultSecRing
 		}
 	}
+
+	return keyName, pubRing, secRing
 }
 
 func createConfigPath() string {
@@ -546,13 +563,10 @@ func readConfigFile() GSPProfile {
 	} else {
 		// create a default example file
 		var buffer bytes.Buffer
-		buffer.WriteString("# profiles:\n")
-		buffer.WriteString("#   - name: dev:\n")
-		buffer.WriteString("#     default: true\n")
-		buffer.WriteString("#     default_key: Dev Salt Master\n")
-		buffer.WriteString("#     gnupg_home: ~/.gnupg\n")
-		buffer.WriteString("#     default_pub_ring: ~/.gnupg/pubring.gpg\n")
-		buffer.WriteString("#     default_sec_ring: ~/.gnupg/secring.gpg\n")
+		_, err = buffer.WriteString(configExample)
+		if err != nil {
+			logger.Warnf("can't write to buffer: %s", err)
+		}
 		err := ioutil.WriteFile(configFile, buffer.Bytes(), 0644)
 		if err != nil {
 			logger.Warnf("can't write default config file: %s", err)
@@ -563,7 +577,7 @@ func readConfigFile() GSPProfile {
 
 func readConfigYaml(filename string) GSPConfig {
 	var gspConfig GSPConfig
-	yamlData, err := ioutil.ReadFile(filename)
+	yamlData, err := ioutil.ReadFile(filepath.Clean(filename))
 	if err != nil {
 		logger.Fatal("error reading config file: ", err)
 	}
