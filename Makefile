@@ -19,9 +19,7 @@ SRC = $(shell find . -type f -name '*.go' -not -path "./vendor/*")
 
 RELEASER := $(shell command -v goreleaser 2> /dev/null)
 METALINT := $(shell command -v gometalinter 2> /dev/null)
-DEP := $(shell command -v dep 2> /dev/null)
 FPM := $(shell command -v fpm 2> /dev/null)
-DEP_INIT := $(shell test -d ./vendor 2> /dev/null)
 
 BRANCH := `git rev-parse --abbrev-ref HEAD`
 
@@ -85,14 +83,8 @@ test:
 	@go test -v
 
 deps:
-ifndef DEP
-	@echo "'dep' is not installed, cannot ensure dependencies are installed"
-else
-ifdef DEP_INIT
-	@dep init
-endif
-	@dep ensure -update
-endif
+	@go mod tidy
+	@go mod verify
 
 mac: GOOS = darwin
 mac: GOARCH = amd64
@@ -111,7 +103,7 @@ packages: deb pkg
 deb: GOOS = linux
 deb: GOARCH = amd64
 deb: ubuntu
-ifndef DEP
+ifndef FPM
 	@echo "'fpm' is not installed, cannot make packages"
 else
 	@fpm -n $(TARGET) -s dir -t deb -a $(GOARCH) -p $(TARGET)_$(VERSION)_$(GOARCH).deb --deb-no-default-config-files ./bin/$(GOARCH)/$(GOOS)/$(TARGET)=/usr/local/bin/$(TARGET)
@@ -121,7 +113,7 @@ endif
 pkg: GOOS = darwin
 pkg: GOARCH = amd64
 pkg: mac
-ifndef DEP
+ifndef FPM
 	@echo "'fpm' is not installed, cannot make packages"
 else
 	@fpm -n $(TARGET) -s dir -t osxpkg -a $(GOARCH) -p $(TARGET)-$(VERSION)-$(GOARCH).pkg ./bin/$(GOARCH)/$(GOOS)/$(TARGET)=/usr/local/bin/$(TARGET)
