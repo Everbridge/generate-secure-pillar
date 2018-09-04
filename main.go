@@ -555,7 +555,7 @@ func readConfigFile() GSPProfile {
 		buffer.WriteString("#     default_sec_ring: ~/.gnupg/secring.gpg\n")
 		err := ioutil.WriteFile(configFile, buffer.Bytes(), 0644)
 		if err != nil {
-			logger.Warn("can't write default config file: %s", err)
+			logger.Warnf("can't write default config file: %s", err)
 		}
 	}
 	return profile
