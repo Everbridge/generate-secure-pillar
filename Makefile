@@ -83,6 +83,7 @@ test:
 	@go test -v
 
 deps:
+	@go mod init | true
 	@go mod tidy
 	@go mod verify
 
