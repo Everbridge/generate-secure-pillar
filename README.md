@@ -78,6 +78,10 @@ expect -c "spawn gpg --edit-key '<the PGP key id here>' trust quit; send \"5\ry\
 
 ## EXAMPLES
 
+### specify a config profile and create a new file
+
+```$ generate-secure-pillar --profile dev create --name secret_name1 --value secret_value1 --name secret_name2 --value secret_value2 --outfile new.sls```
+
 ### create a new sls file
 
 ```$ generate-secure-pillar -k "Salt Master" create --name secret_name1 --value secret_value1 --name secret_name2 --value secret_value2 --outfile new.sls```
