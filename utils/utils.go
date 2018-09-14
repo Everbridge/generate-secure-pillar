@@ -13,6 +13,10 @@ import (
 
 var logger = logrus.New()
 
+func init() {
+	logger.Out = os.Stdout
+}
+
 // SafeWrite checks that there is no error priot to trying to write a file
 func SafeWrite(buffer bytes.Buffer, outputFilePath string, err error) {
 	if err != nil {

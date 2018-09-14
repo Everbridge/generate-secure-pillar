@@ -433,6 +433,8 @@ var appCommands = []cli.Command{
 }
 
 func main() {
+	logger.Out = os.Stdout
+
 	gpgHome := os.Getenv("GNUPGHOME")
 	if gpgHome != "" {
 		defaultPubRing = fmt.Sprintf("%s/pubring.gpg", gpgHome)

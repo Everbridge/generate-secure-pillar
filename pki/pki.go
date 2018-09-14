@@ -33,6 +33,7 @@ type Pki struct {
 
 // New returns a pki object
 func New(pgpKeyName string, publicKeyRing string, secretKeyRing string) Pki {
+	logger.Out = os.Stdout
 	var err error
 
 	p := Pki{publicKeyRing, secretKeyRing, pgpKeyName, nil, nil, nil, nil}

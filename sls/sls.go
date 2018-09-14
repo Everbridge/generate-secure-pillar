@@ -45,6 +45,7 @@ type Sls struct {
 
 // New returns a Sls object
 func New(filePath string, p pki.Pki, encPath string) Sls {
+	logger.Out = os.Stdout
 	s := Sls{filePath, yaml.New(), &p, false, encPath, map[string]interface{}{}, nil}
 	if len(filePath) > 0 {
 		err := s.ReadSlsFile()
