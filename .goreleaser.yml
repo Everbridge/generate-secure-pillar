@@ -86,9 +86,6 @@ nfpm:
   # Default is empty.
   license: MIT
 
-  dependencies:
-    - gnupg1
-
   # Formats to be generated.
   formats:
     - deb
