@@ -73,7 +73,7 @@ ifndef METALINT
 else
 	@echo "running 'gometalinter ./...'"
 	@gometalinter --install 2>&1 >/dev/null
-	@gometalinter --deadline=60s --vendor ./...
+	@gometalinter --deadline=60s --vendor --exclude ../../../../pkg/mod/ ./...
 endif
 
 run: install
