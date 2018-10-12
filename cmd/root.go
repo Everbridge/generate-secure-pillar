@@ -32,7 +32,6 @@ import (
 )
 
 var logger = logrus.New()
-
 var inputFilePath string
 var outputFilePath = os.Stdout.Name()
 var cfgFile string
@@ -91,9 +90,6 @@ var rootCmd = &cobra.Command{
 	# show the PGP Key ID used for an element at a path in a file
 	$ generate-secure-pillar keys path --path "some:yaml:path" --file new.sls
 `,
-	// Uncomment the following line if your bare application
-	// has an action associated with it:
-	//	Run: func(cmd *cobra.Command, args []string) { },
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -118,7 +114,7 @@ func init() {
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.config/generate-secure-pillar/config.yaml)")
 	rootCmd.PersistentFlags().StringVar(&profile, "profile", "", "config file (default is $HOME/.config/generate-secure-pillar/config.yaml)")
-	rootCmd.PersistentFlags().StringVarP(&pgpKeyName, "pgp_key", "k", "", "PGP key name, email, or ID to use for encryption")
+	rootCmd.PersistentFlags().StringVarP(&pgpKeyName, "pgp_key", "k", pgpKeyName, "PGP key name, email, or ID to use for encryption")
 	rootCmd.PersistentFlags().StringVar(&publicKeyRing, "pubring", publicKeyRing, "PGP public keyring")
 	rootCmd.PersistentFlags().StringVar(&secretKeyRing, "secring", secretKeyRing, "PGP private keyring")
 	rootCmd.PersistentFlags().StringVarP(&topLevelElement, "element", "e", "", "Name of the top level element under which encrypted key/value pairs are kept")
@@ -138,16 +134,18 @@ func initConfig() {
 		}
 
 		// Search config in home directory with name ".generate-secure-pillar" (without extension).
-		viper.AddConfigPath(home)
-		viper.SetConfigName(".generate-secure-pillar")
+		viper.AddConfigPath(fmt.Sprintf("%s/.config/generate-secure-pillar/", home))
+		viper.SetConfigName("config")
 	}
 
 	viper.AutomaticEnv() // read in environment variables that match
 
 	// If a config file is found, read it in.
-	if err := viper.ReadInConfig(); err == nil {
-		fmt.Println("Using config file:", viper.ConfigFileUsed())
+	err := viper.ReadInConfig() // Find and read the config file
+	if err != nil {             // Handle errors reading the config file
+		logger.Fatalf("Fatal error config file: %s", err)
 	}
+	readProfile()
 }
 
 func getPki() pki.Pki {
@@ -155,4 +153,23 @@ func getPki() pki.Pki {
 	pubRing := rootCmd.Flag("pubring").Value.String()
 	secRing := rootCmd.Flag("secring").Value.String()
 	return pki.New(keyName, pubRing, secRing)
+}
+
+func readProfile() {
+	profiles := viper.Get("profiles")
+	profName := rootCmd.Flag("profile").Value.String()
+
+	for _, prof := range profiles.([]interface{}) {
+		p := prof.(map[interface{}]interface{})
+		if p["default"] == true || profName == p["name"] {
+			gpgHome := p["gnupg_home"].(string)
+			if gpgHome != "" {
+				publicKeyRing = fmt.Sprintf("%s/pubring.gpg", gpgHome)
+				secretKeyRing = fmt.Sprintf("%s/secring.gpg", gpgHome)
+			}
+			if p["default_key"] != nil {
+				pgpKeyName = p["default_key"].(string)
+			}
+		}
+	}
 }
