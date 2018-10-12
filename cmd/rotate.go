@@ -18,30 +18,39 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package main
+package cmd
 
 import (
-	"os"
-
-	"github.com/Everbridge/generate-secure-pillar/cmd"
-	"github.com/sirupsen/logrus"
+	"github.com/Everbridge/generate-secure-pillar/sls"
+	"github.com/Everbridge/generate-secure-pillar/utils"
+	"github.com/spf13/cobra"
 )
 
-const configExample = `
-# profiles:
-#   - name: dev
-#     default: true
-#     default_key: Dev Salt Master
-#     gnupg_home: ~/.gnupg
-#     default_pub_ring: ~/.gnupg/pubring.gpg
-#     default_sec_ring: ~/.gnupg/secring.gpg
-`
+// rotateCmd represents the rotate command
+var rotateCmd = &cobra.Command{
+	Use:   "rotate",
+	Short: "decrypt existing files and re-encrypt with a new key",
+	Run: func(cmd *cobra.Command, args []string) {
+		pk := getPki()
+		recurseDir = cmd.Flag("dir").Value.String()
+		inputFilePath = cmd.Flag("file").Value.String()
 
-var logger = logrus.New()
+		if inputFilePath != "" {
+			s := sls.New(inputFilePath, pk, topLevelElement)
+			buf, err := s.PerformAction("rotate")
+			utils.SafeWrite(buf, outputFilePath, err)
+		} else {
+			recurseDir = cmd.Flag("dir").Value.String()
+			err := utils.ProcessDir(recurseDir, ".sls", "rotate", outputFilePath, topLevelElement, pk)
+			if err != nil {
+				logger.Warnf("rotate: %s", err)
+			}
+		}
+	},
+}
 
-func main() {
-	logger.Out = os.Stdout
-
-	cmd.Execute()
-	// app.Version = "1.0.427"
+func init() {
+	rootCmd.AddCommand(rotateCmd)
+	rotateCmd.PersistentFlags().StringP("dir", "d", "", "recurse over all .sls files in the given directory")
+	rotateCmd.PersistentFlags().StringP("file", "f", "", "input file (defaults to STDIN)")
 }
