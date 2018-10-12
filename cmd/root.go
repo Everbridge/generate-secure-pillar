@@ -38,7 +38,7 @@ var cfgFile string
 var profile string
 var pgpKeyName string
 var publicKeyRing = "~/.gnupg/pubring.gpg"
-var secretKeyRing = "~/.gnupg/secring.gpg"
+var privateKeyRing = "~/.gnupg/secring.gpg"
 var updateInPlace bool
 var topLevelElement string
 var recurseDir string
@@ -90,7 +90,12 @@ var rootCmd = &cobra.Command{
 	# show the PGP Key ID used for an element at a path in a file
 	$ generate-secure-pillar keys path --path "some:yaml:path" --file new.sls
 `,
+	Version: "1.0.427",
 }
+
+const all = "all"
+const recurse = "recurse"
+const path = "path"
 
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
@@ -109,14 +114,15 @@ func init() {
 	gpgHome := os.Getenv("GNUPGHOME")
 	if gpgHome != "" {
 		publicKeyRing = fmt.Sprintf("%s/pubring.gpg", gpgHome)
-		secretKeyRing = fmt.Sprintf("%s/secring.gpg", gpgHome)
+		privateKeyRing = fmt.Sprintf("%s/secring.gpg", gpgHome)
 	}
 
+	rootCmd.PersistentFlags().BoolP("version", "v", false, "print the version")
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.config/generate-secure-pillar/config.yaml)")
 	rootCmd.PersistentFlags().StringVar(&profile, "profile", "", "config file (default is $HOME/.config/generate-secure-pillar/config.yaml)")
 	rootCmd.PersistentFlags().StringVarP(&pgpKeyName, "pgp_key", "k", pgpKeyName, "PGP key name, email, or ID to use for encryption")
 	rootCmd.PersistentFlags().StringVar(&publicKeyRing, "pubring", publicKeyRing, "PGP public keyring")
-	rootCmd.PersistentFlags().StringVar(&secretKeyRing, "secring", secretKeyRing, "PGP private keyring")
+	rootCmd.PersistentFlags().StringVar(&privateKeyRing, "secring", privateKeyRing, "PGP private keyring")
 	rootCmd.PersistentFlags().StringVarP(&topLevelElement, "element", "e", "", "Name of the top level element under which encrypted key/value pairs are kept")
 }
 
@@ -166,7 +172,7 @@ func readProfile() {
 				gpgHome := p["gnupg_home"].(string)
 				if gpgHome != "" {
 					publicKeyRing = fmt.Sprintf("%s/pubring.gpg", gpgHome)
-					secretKeyRing = fmt.Sprintf("%s/secring.gpg", gpgHome)
+					privateKeyRing = fmt.Sprintf("%s/secring.gpg", gpgHome)
 				}
 				if p["default_key"] != nil {
 					pgpKeyName = p["default_key"].(string)

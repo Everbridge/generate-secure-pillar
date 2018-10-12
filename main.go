@@ -21,27 +21,10 @@
 package main
 
 import (
-	"os"
-
 	"github.com/Everbridge/generate-secure-pillar/cmd"
-	"github.com/sirupsen/logrus"
 )
 
-const configExample = `
-# profiles:
-#   - name: dev
-#     default: true
-#     default_key: Dev Salt Master
-#     gnupg_home: ~/.gnupg
-#     default_pub_ring: ~/.gnupg/pubring.gpg
-#     default_sec_ring: ~/.gnupg/secring.gpg
-`
-
-var logger = logrus.New()
-
 func main() {
-	logger.Out = os.Stdout
-
 	cmd.Execute()
 	// app.Version = "1.0.427"
 }

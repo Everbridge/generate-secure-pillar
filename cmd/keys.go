@@ -44,20 +44,20 @@ var keysCmd = &cobra.Command{
 
 		// process args
 		switch args[0] {
-		case "all":
+		case all:
 			s := sls.New(inputFilePath, pk, topLevelElement)
 			buffer, err := s.PerformAction("validate")
 			if err != nil {
 				logger.Fatal(err)
 			}
 			fmt.Printf("%s\n", buffer.String())
-		case "recurse":
+		case recurse:
 			recurseDir = cmd.Flag("dir").Value.String()
 			err := utils.ProcessDir(recurseDir, ".sls", "validate", outputFilePath, topLevelElement, pk)
 			if err != nil {
 				logger.Warnf("keys: %s", err)
 			}
-		case "path":
+		case path:
 			yamlPath = cmd.Flag("path").Value.String()
 			s := sls.New(inputFilePath, pk, topLevelElement)
 			utils.PathAction(&s, yamlPath, "validate")

@@ -46,20 +46,20 @@ var encryptCmd = &cobra.Command{
 
 		// process args
 		switch args[0] {
-		case "all":
+		case all:
 			s := sls.New(inputFilePath, pk, topLevelElement)
 			if inputFilePath != os.Stdin.Name() && updateInPlace {
 				outputFilePath = inputFilePath
 			}
 			buffer, err := s.PerformAction("encrypt")
 			utils.SafeWrite(buffer, outputFilePath, err)
-		case "recurse":
+		case recurse:
 			recurseDir = cmd.Flag("dir").Value.String()
 			err := utils.ProcessDir(recurseDir, ".sls", "encrypt", outputFilePath, topLevelElement, pk)
 			if err != nil {
 				logger.Warnf("encrypt: %s", err)
 			}
-		case "path":
+		case path:
 			yamlPath = cmd.Flag("path").Value.String()
 			s := sls.New(inputFilePath, pk, topLevelElement)
 			utils.PathAction(&s, yamlPath, "encrypt")
