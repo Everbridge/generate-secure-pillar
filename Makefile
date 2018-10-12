@@ -23,6 +23,8 @@ FPM := $(shell command -v fpm 2> /dev/null)
 
 BRANCH := `git rev-parse --abbrev-ref HEAD`
 
+GOROOT := `go env GOROOT`
+
 .PHONY: all build clean install uninstall fmt simplify check run
 
 all: build install
@@ -73,7 +75,7 @@ ifndef METALINT
 else
 	@echo "running 'gometalinter ./...'"
 	@gometalinter --install 2>&1 >/dev/null
-	@gometalinter --deadline=60s --vendor --exclude ../../../../pkg/mod/ ./...
+	@gometalinter -e $(GOROOT) --disable=gotype --deadline=60s --vendor --exclude ../../../../pkg/mod/ ./...
 endif
 
 run: install
