@@ -57,7 +57,9 @@ func TestWriteSlsFile(t *testing.T) {
 	p := pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
 	s := sls.New(slsFile, p, topLevelElement)
 
-	s.SetValueFromPath("secret", "text")
+	secText := "secret"
+	valType := "text"
+	s.SetValueFromPath(secText, valType)
 
 	buffer, err := s.FormatBuffer("")
 	Ok(t, err)
@@ -69,11 +71,11 @@ func TestWriteSlsFile(t *testing.T) {
 	yamlObj, err := yaml.Open(slsFile)
 	Ok(t, err)
 
-	if yamlObj.Get("secret") == nil {
+	if yamlObj.Get(secText) == nil {
 		t.Errorf("YAML content is incorrect, missing key")
-	} else if yamlObj.Get("secret") != "text" {
+	} else if yamlObj.Get(secText) != valType {
 		t.Errorf("YAML content is incorrect, got: %s, want: %s.",
-			yamlObj.Get("secret"), "text")
+			yamlObj.Get(secText), valType)
 	}
 	os.Remove(slsFile)
 	os.Remove("./testdata/foo/")
@@ -436,7 +438,7 @@ func teardownGPGDir() {
 	_ = os.Remove("./testdata/gnupg/trustdb.gpg")
 }
 
-func getTestKeyRings() (string, string, string) {
+func getTestKeyRings() (pgpKeyName string, publicKeyRing string, secretKeyRing string) {
 	pgpKeyName = "Test Salt Master"
 	if os.Getenv("SALT_SEC_KEYRING") != "" {
 		publicKeyRing, _ = filepath.Abs(os.Getenv("SALT_PUB_KEYRING"))

@@ -18,7 +18,7 @@ LDFLAGS=-ldflags "-X=main.Version=$(VERSION) -X=main.Build=$(BUILD)"
 SRC = $(shell find . -type f -name '*.go' -not -path "./vendor/*")
 
 RELEASER := $(shell command -v goreleaser 2> /dev/null)
-METALINT := $(shell command -v gometalinter 2> /dev/null)
+REVIVE := $(shell command -v revive 2> /dev/null)
 FPM := $(shell command -v fpm 2> /dev/null)
 
 BRANCH := `git rev-parse --abbrev-ref HEAD`
@@ -69,13 +69,12 @@ simplify:
 
 check:
 	@test -z $(shell gofmt -l main.go | tee /dev/stderr) || echo "[WARN] Fix formatting issues with 'make fmt'"
-ifndef METALINT
-	@echo "running 'go lint .'"
+ifndef REVIVE
+	@echo "running 'golint .'"
 	@golint .
 else
-	@echo "running 'gometalinter ./...'"
-	@gometalinter --install 2>&1 >/dev/null
-	@gometalinter -e $(GOROOT) --disable=gotype --deadline=60s --vendor --exclude ../../../../pkg/mod/ ./...
+	@echo "running 'revive ./...'"
+	@revive --formatter friendly ./...
 endif
 
 run: install
