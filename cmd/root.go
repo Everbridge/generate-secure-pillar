@@ -48,47 +48,48 @@ var yamlPath string
 var rootCmd = &cobra.Command{
 	Use:   "generate-secure-pillar",
 	Short: "Create and update encrypted content or decrypt encrypted content.",
-	Long: `	EXAMPLES:
-	# specify a config profile and create a new file
-	$ generate-secure-pillar --profile dev create --name secret_name1 --value secret_value1 --name secret_name2 --value secret_value2 --outfile new.sls
+	Long: `
+Examples:
+# specify a config profile and create a new file
+$ generate-secure-pillar --profile dev create --name secret_name1 --value secret_value1 --name secret_name2 --value secret_value2 --outfile new.sls
 
-	# create a new sls file
-	$ generate-secure-pillar -k "Salt Master" create --name secret_name1 --value secret_value1 --name secret_name2 --value secret_value2 --outfile new.sls
-	
-	# add to the new file
-	$ generate-secure-pillar -k "Salt Master" update --name new_secret_name --value new_secret_value --file new.sls
-	
-	# update an existing value
-	$ generate-secure-pillar -k "Salt Master" update --name secret_name --value secret_value3 --file new.sls
-	
-	# encrypt all plain text values in a file
-	$ generate-secure-pillar -k "Salt Master" encrypt all --file us1.sls --outfile us1.sls
-	# or use --update flag
-	$ generate-secure-pillar -k "Salt Master" encrypt all --file us1.sls --update
-	
-	# encrypt all plain text values in a file under the element 'secret_stuff'
-	$ generate-secure-pillar -k "Salt Master" --element secret_stuff encrypt all --file us1.sls --outfile us1.sls
-	
-	# recurse through all sls files, encrypting all values
-	$ generate-secure-pillar -k "Salt Master" encrypt recurse -d /path/to/pillar/secure/stuff
-	
-	# recurse through all sls files, decrypting all values (requires imported private key)
-	$ generate-secure-pillar decrypt recurse -d /path/to/pillar/secure/stuff
-	
-	# decrypt a specific existing value (requires imported private key)
-	$ generate-secure-pillar decrypt path --path "some:yaml:path" --file new.sls
-	
-	# decrypt all files and re-encrypt with given key (requires imported private key)
-	$ generate-secure-pillar -k "New Salt Master Key" rotate -d /path/to/pillar/secure/stuff
+# create a new sls file
+$ generate-secure-pillar -k "Salt Master" create --name secret_name1 --value secret_value1 --name secret_name2 --value secret_value2 --outfile new.sls
 
-	# show all PGP key IDs used in a file
-	$ generate-secure-pillar keys all --file us1.sls
+# add to the new file
+$ generate-secure-pillar -k "Salt Master" update --name new_secret_name --value new_secret_value --file new.sls
 
-	# show all keys used in all files in a given directory
-	$ generate-secure-pillar keys recurse -d /path/to/pillar/secure/stuff
+# update an existing value
+$ generate-secure-pillar -k "Salt Master" update --name secret_name --value secret_value3 --file new.sls
 
-	# show the PGP Key ID used for an element at a path in a file
-	$ generate-secure-pillar keys path --path "some:yaml:path" --file new.sls
+# encrypt all plain text values in a file
+$ generate-secure-pillar -k "Salt Master" encrypt all --file us1.sls --outfile us1.sls
+# or use --update flag
+$ generate-secure-pillar -k "Salt Master" encrypt all --file us1.sls --update
+
+# encrypt all plain text values in a file under the element 'secret_stuff'
+$ generate-secure-pillar -k "Salt Master" --element secret_stuff encrypt all --file us1.sls --outfile us1.sls
+
+# recurse through all sls files, encrypting all values
+$ generate-secure-pillar -k "Salt Master" encrypt recurse -d /path/to/pillar/secure/stuff
+
+# recurse through all sls files, decrypting all values (requires imported private key)
+$ generate-secure-pillar decrypt recurse -d /path/to/pillar/secure/stuff
+
+# decrypt a specific existing value (requires imported private key)
+$ generate-secure-pillar decrypt path --path "some:yaml:path" --file new.sls
+
+# decrypt all files and re-encrypt with given key (requires imported private key)
+$ generate-secure-pillar -k "New Salt Master Key" rotate -d /path/to/pillar/secure/stuff
+
+# show all PGP key IDs used in a file
+$ generate-secure-pillar keys all --file us1.sls
+
+# show all keys used in all files in a given directory
+$ generate-secure-pillar keys recurse -d /path/to/pillar/secure/stuff
+
+# show the PGP Key ID used for an element at a path in a file
+$ generate-secure-pillar keys path --path "some:yaml:path" --file new.sls
 `,
 	Version: "1.0.441",
 }
