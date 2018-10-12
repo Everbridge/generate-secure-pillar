@@ -159,16 +159,18 @@ func readProfile() {
 	profiles := viper.Get("profiles")
 	profName := rootCmd.Flag("profile").Value.String()
 
-	for _, prof := range profiles.([]interface{}) {
-		p := prof.(map[interface{}]interface{})
-		if p["default"] == true || profName == p["name"] {
-			gpgHome := p["gnupg_home"].(string)
-			if gpgHome != "" {
-				publicKeyRing = fmt.Sprintf("%s/pubring.gpg", gpgHome)
-				secretKeyRing = fmt.Sprintf("%s/secring.gpg", gpgHome)
-			}
-			if p["default_key"] != nil {
-				pgpKeyName = p["default_key"].(string)
+	if profName != "" || pgpKeyName == "" {
+		for _, prof := range profiles.([]interface{}) {
+			p := prof.(map[interface{}]interface{})
+			if p["default"] == true || profName == p["name"] {
+				gpgHome := p["gnupg_home"].(string)
+				if gpgHome != "" {
+					publicKeyRing = fmt.Sprintf("%s/pubring.gpg", gpgHome)
+					secretKeyRing = fmt.Sprintf("%s/secring.gpg", gpgHome)
+				}
+				if p["default_key"] != nil {
+					pgpKeyName = p["default_key"].(string)
+				}
 			}
 		}
 	}
