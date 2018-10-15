@@ -26,5 +26,4 @@ import (
 
 func main() {
 	cmd.Execute()
-	// app.Version = "1.0.427"
 }
