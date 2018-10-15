@@ -10,7 +10,7 @@ TARGET := $(shell echo $${PWD\#\#*/})
 BUILD := `git rev-parse HEAD`
 # always add one to the commit number to fix an off by one bug
 # as the release makes a commit prior to publishing
-COMMIT := `git rev-list HEAD | wc -l | sed 's/^ *//g' | awk '{print $1 + 1}'`
+COMMIT := $(shell git rev-list HEAD | wc -l | sed 's/^ *//g' | awk '{print $$1 + 1}')
 VERSION := 1.0.$(COMMIT)
 
 # Use linker flags to provide version/build settings to the target
