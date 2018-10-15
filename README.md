@@ -35,6 +35,12 @@ profiles:
     gnupg_home: ~/.gnupg
     default_pub_ring: ~/.gnupg/pubring.gpg
     default_sec_ring: ~/.gnupg/secring.gpg
+  - name: prod
+    default: false
+    default_key: Prod Salt Master
+    gnupg_home: ~/.gnupg
+    default_pub_ring: ~/.gnupg/pubring.gpg
+    default_sec_ring: ~/.gnupg/secring.gpg
 ...
 ```
 
