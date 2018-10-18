@@ -2,6 +2,7 @@ module github.com/Everbridge/generate-secure-pillar
 
 require (
 	github.com/BurntSushi/toml v0.3.1 // indirect
+	github.com/andreyvit/diff v0.0.0-20170406064948-c7f18ee00883
 	github.com/esilva-everbridge/dig v0.0.0-20180223224648-c61b8cdf35b7 // indirect
 	github.com/esilva-everbridge/yaml v0.0.0-20180228212815-c24d151cf388
 	github.com/golang/protobuf v1.2.0 // indirect
@@ -15,6 +16,7 @@ require (
 	github.com/onsi/ginkgo v1.6.0 // indirect
 	github.com/onsi/gomega v1.4.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/sergi/go-diff v1.0.0 // indirect
 	github.com/sirupsen/logrus v1.0.6
 	github.com/spf13/cobra v0.0.3
 	github.com/spf13/pflag v1.0.3 // indirect

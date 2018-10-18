@@ -73,5 +73,5 @@ func init() {
 	encryptCmd.PersistentFlags().StringP("dir", "d", "", "recurse over all .sls files in the given directory")
 	encryptCmd.PersistentFlags().StringP("file", "f", os.Stdin.Name(), "input file (defaults to STDIN)")
 	encryptCmd.PersistentFlags().StringP("outfile", "o", os.Stdout.Name(), "output file (defaults to STDOUT)")
-	encryptCmd.PersistentFlags().BoolP("update", "u", false, "update the input file")
+	encryptCmd.PersistentFlags().BoolVarP(&updateInPlace, "update", "u", false, "update the input file")
 }

@@ -1,0 +1,33 @@
+key: |
+  FD7C05161A7034C7: Salt Master
+list:
+- |
+  FD7C05161A7034C7: Salt Master
+- |
+  FD7C05161A7034C7: Salt Master
+- |
+  FD7C05161A7034C7: Salt Master
+secure_vars:
+  api_key: |
+    FD7C05161A7034C7: Salt Master
+  password: |
+    FD7C05161A7034C7: Salt Master
+stuff:
+  flinstones:
+    barney: |
+      FD7C05161A7034C7: Salt Master
+    fred: |
+      FD7C05161A7034C7: Salt Master
+sub:
+  list:
+  - |
+    FD7C05161A7034C7: Salt Master
+  - |
+    FD7C05161A7034C7: Salt Master
+  - |
+    FD7C05161A7034C7: Salt Master
+this:
+  is:
+    a.multi-line.example: |
+      FD7C05161A7034C7: Salt Master
+

@@ -22,12 +22,15 @@ package main
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"runtime"
 	"strings"
 	"testing"
@@ -35,6 +38,7 @@ import (
 	"github.com/Everbridge/generate-secure-pillar/pki"
 	"github.com/Everbridge/generate-secure-pillar/sls"
 	"github.com/Everbridge/generate-secure-pillar/utils"
+	"github.com/andreyvit/diff"
 	yaml "github.com/esilva-everbridge/yaml"
 )
 
@@ -42,12 +46,77 @@ var pgpKeyName string
 var publicKeyRing string
 var secretKeyRing string
 var topLevelElement string
+var update = flag.Bool("update", false, "update golden files")
 
 func TestMain(m *testing.M) {
 	initGPGDir()
 	defer teardownGPGDir()
 	retCode := m.Run()
 	os.Exit(retCode)
+}
+
+func TestCliArgs(t *testing.T) {
+	pgpKeyName, publicKeyRing, secretKeyRing = getTestKeyRings()
+	topLevelElement = ""
+	binaryName := "generate-secure-pillar"
+
+	// set up: encrypt the test sls files
+	dirPath, err := filepath.Abs("./testdata")
+	os.Setenv("GNUPGHOME", dirPath+"/gnupg")
+	_, slsCount := utils.FindFilesByExt(dirPath, ".sls")
+	Equals(t, 6, slsCount)
+	pk := pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
+	err = utils.ProcessDir(dirPath, ".sls", sls.Decrypt, "", topLevelElement, pk)
+	Ok(t, err)
+	defer utils.ProcessDir(dirPath, ".sls", sls.Decrypt, "", topLevelElement, pk)
+
+	tests := []struct {
+		name    string
+		args    []string
+		fixture string
+	}{
+		{"no arguments", []string{}, "no-args.golden"},
+		{"encrypt recurse", []string{"encrypt", "recurse", "-d", dirPath}, "encrypt-recurse.golden"},
+		{"keys recurse", []string{"keys", "recurse", "-d", dirPath}, "keys-recurse.golden"},
+		{"decrypt recurse", []string{"decrypt", "recurse", "-d", dirPath}, "decrypt-recurse.golden"},
+		{"encrypt file", []string{"encrypt", "all", "-f", dirPath + "/test.sls", "-u"}, "encrypt-file.golden"},
+		{"keys file", []string{"keys", "all", "-f", dirPath + "/test.sls"}, "keys-file.golden"},
+		{"decrypt file", []string{"decrypt", "all", "-f", dirPath + "/test.sls", "-u"}, "decrypt-file.golden"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dir, err := os.Getwd()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			cmd := exec.Command(path.Join(dir, binaryName), tt.args...)
+			output, err := cmd.CombinedOutput()
+			if err != nil {
+				t.Fatalf("%s:\n%s", err, output)
+			}
+
+			// due to the way the output is generated we skip the recursive output
+			if !strings.Contains(tt.name, "recurse") {
+				actual := string(output)
+
+				// need to remove timestamps
+				reg := regexp.MustCompile(`(?m)time=\".*?\"\s`)
+				actual = reg.ReplaceAllString(actual, "")
+				if *update {
+					writeFixture(t, tt.fixture, []byte(actual))
+				}
+
+				expected := loadFixture(t, tt.fixture)
+				expected = reg.ReplaceAllString(expected, "")
+
+				if a, e := strings.TrimSpace(actual), strings.TrimSpace(expected); a != e {
+					t.Errorf("Output error:\n%v", diff.LineDiff(e, a))
+				}
+			}
+		})
+	}
 }
 
 func TestWriteSlsFile(t *testing.T) {
@@ -453,4 +522,29 @@ func getTestKeyRings() (pgpKeyName string, publicKeyRing string, secretKeyRing s
 	}
 
 	return pgpKeyName, publicKeyRing, secretKeyRing
+}
+
+func fixturePath(t *testing.T, fixture string) string {
+	_, filename, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatalf("problems recovering caller information")
+	}
+
+	return filepath.Join(filepath.Dir(filename), fixture)
+}
+
+func writeFixture(t *testing.T, fixture string, content []byte) {
+	err := ioutil.WriteFile(fixturePath(t, fixture), content, 0644)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func loadFixture(t *testing.T, fixture string) string {
+	content, err := ioutil.ReadFile(fixturePath(t, fixture))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return string(content)
 }

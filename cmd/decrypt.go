@@ -73,5 +73,5 @@ func init() {
 	decryptCmd.PersistentFlags().StringP("dir", "d", "", "recurse over all .sls files in the given directory")
 	decryptCmd.PersistentFlags().StringP("file", "f", os.Stdin.Name(), "input file (defaults to STDIN)")
 	decryptCmd.PersistentFlags().StringP("outfile", "o", os.Stdout.Name(), "output file (defaults to STDOUT)")
-	decryptCmd.PersistentFlags().BoolP("update", "u", false, "update the input file")
+	decryptCmd.PersistentFlags().BoolVarP(&updateInPlace, "update", "u", false, "update the input file")
 }
