@@ -34,7 +34,7 @@ var updateCmd = &cobra.Command{
 	Use:   "update",
 	Short: "update the value of the given key in the given file",
 	Run: func(cmd *cobra.Command, args []string) {
-		inputFilePath, err := filepath.Abs(cmd.Flag("file").Value.String())
+		inputFilePath, err := filepath.Abs(inputFilePath)
 		if err != nil {
 			logger.Fatal(err)
 		}
@@ -63,7 +63,7 @@ var updateCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(updateCmd)
-	updateCmd.PersistentFlags().StringP("file", "f", os.Stdin.Name(), "input file (defaults to STDIN)")
+	updateCmd.PersistentFlags().StringVarP(&inputFilePath, "file", "f", os.Stdin.Name(), "input file (defaults to STDIN)")
 	updateCmd.PersistentFlags().StringArrayP("name", "n", nil, "secret name(s)")
 	updateCmd.PersistentFlags().StringArrayP("value", "s", nil, "secret value(s)")
 }

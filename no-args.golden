@@ -1,5 +1,10 @@
+Create and update encrypted content or decrypt encrypted content.
+
+Usage:
+  generate-secure-pillar [command]
 
 Examples:
+
 # specify a config profile and create a new file
 $ generate-secure-pillar --profile dev create --name secret_name1 --value secret_value1 --name secret_name2 --value secret_value2 --outfile new.sls
 
@@ -41,8 +46,6 @@ $ generate-secure-pillar keys recurse -d /path/to/pillar/secure/stuff
 # show the PGP Key ID used for an element at a path in a file
 $ generate-secure-pillar keys path --path "some:yaml:path" --file new.sls
 
-Usage:
-  generate-secure-pillar [command]
 
 Available Commands:
   create      create a new sls file

@@ -32,15 +32,12 @@ var rotateCmd = &cobra.Command{
 	Short: "decrypt existing files and re-encrypt with a new key",
 	Run: func(cmd *cobra.Command, args []string) {
 		pk := getPki()
-		recurseDir = cmd.Flag("dir").Value.String()
-		inputFilePath = cmd.Flag("file").Value.String()
 
 		if inputFilePath != "" {
 			s := sls.New(inputFilePath, pk, topLevelElement)
 			buf, err := s.PerformAction("rotate")
 			utils.SafeWrite(buf, outputFilePath, err)
 		} else {
-			recurseDir = cmd.Flag("dir").Value.String()
 			err := utils.ProcessDir(recurseDir, ".sls", "rotate", outputFilePath, topLevelElement, pk)
 			if err != nil {
 				logger.Warnf("rotate: %s", err)
@@ -51,6 +48,6 @@ var rotateCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(rotateCmd)
-	rotateCmd.PersistentFlags().StringP("dir", "d", "", "recurse over all .sls files in the given directory")
-	rotateCmd.PersistentFlags().StringP("file", "f", "", "input file (defaults to STDIN)")
+	rotateCmd.PersistentFlags().StringVarP(&recurseDir, "dir", "d", "", "recurse over all .sls files in the given directory")
+	rotateCmd.PersistentFlags().StringVarP(&inputFilePath, "file", "f", "", "input file (defaults to STDIN)")
 }

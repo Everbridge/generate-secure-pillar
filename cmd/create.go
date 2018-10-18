@@ -34,7 +34,7 @@ var createCmd = &cobra.Command{
 	Use:   "create",
 	Short: "create a new sls file",
 	Run: func(cmd *cobra.Command, args []string) {
-		outputFilePath, err := filepath.Abs(cmd.Flag("outfile").Value.String())
+		outputFilePath, err := filepath.Abs(outputFilePath)
 		if err != nil {
 			logger.Fatal(err)
 		}
@@ -59,7 +59,7 @@ var createCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(createCmd)
-	createCmd.PersistentFlags().StringP("outfile", "o", os.Stdout.Name(), "output file (defaults to STDOUT)")
+	createCmd.PersistentFlags().StringVarP(&outputFilePath, "outfile", "o", os.Stdout.Name(), "output file (defaults to STDOUT)")
 	createCmd.PersistentFlags().StringArrayP("name", "n", nil, "secret name(s)")
 	createCmd.PersistentFlags().StringArrayP("value", "s", nil, "secret value(s)")
 }

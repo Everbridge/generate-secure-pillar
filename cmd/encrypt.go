@@ -35,11 +35,11 @@ var encryptCmd = &cobra.Command{
 	Short: "perform encryption operations",
 	Run: func(cmd *cobra.Command, args []string) {
 		pk := getPki()
-		outputFilePath, err := filepath.Abs(cmd.Flag("outfile").Value.String())
+		outputFilePath, err := filepath.Abs(outputFilePath)
 		if err != nil {
 			logger.Fatal(err)
 		}
-		inputFilePath, err := filepath.Abs(cmd.Flag("file").Value.String())
+		inputFilePath, err := filepath.Abs(inputFilePath)
 		if err != nil {
 			logger.Fatal(err)
 		}
@@ -54,13 +54,11 @@ var encryptCmd = &cobra.Command{
 			buffer, err := s.PerformAction("encrypt")
 			utils.SafeWrite(buffer, outputFilePath, err)
 		case recurse:
-			recurseDir = cmd.Flag("dir").Value.String()
 			err := utils.ProcessDir(recurseDir, ".sls", "encrypt", outputFilePath, topLevelElement, pk)
 			if err != nil {
 				logger.Warnf("encrypt: %s", err)
 			}
 		case path:
-			yamlPath = cmd.Flag("path").Value.String()
 			s := sls.New(inputFilePath, pk, topLevelElement)
 			utils.PathAction(&s, yamlPath, "encrypt")
 		}
@@ -69,9 +67,9 @@ var encryptCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(encryptCmd)
-	encryptCmd.PersistentFlags().StringP("path", "p", "", "YAML path to encrypt")
-	encryptCmd.PersistentFlags().StringP("dir", "d", "", "recurse over all .sls files in the given directory")
-	encryptCmd.PersistentFlags().StringP("file", "f", os.Stdin.Name(), "input file (defaults to STDIN)")
-	encryptCmd.PersistentFlags().StringP("outfile", "o", os.Stdout.Name(), "output file (defaults to STDOUT)")
+	encryptCmd.PersistentFlags().StringVarP(&yamlPath, "path", "p", "", "YAML path to encrypt")
+	encryptCmd.PersistentFlags().StringVarP(&recurseDir, "dir", "d", "", "recurse over all .sls files in the given directory")
+	encryptCmd.PersistentFlags().StringVarP(&inputFilePath, "file", "f", os.Stdin.Name(), "input file (defaults to STDIN)")
+	encryptCmd.PersistentFlags().StringVarP(&outputFilePath, "outfile", "o", os.Stdout.Name(), "output file (defaults to STDOUT)")
 	encryptCmd.PersistentFlags().BoolVarP(&updateInPlace, "update", "u", false, "update the input file")
 }

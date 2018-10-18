@@ -48,8 +48,7 @@ var yamlPath string
 var rootCmd = &cobra.Command{
 	Use:   "generate-secure-pillar",
 	Short: "Create and update encrypted content or decrypt encrypted content.",
-	Long: `
-Examples:
+	Example: `
 # specify a config profile and create a new file
 $ generate-secure-pillar --profile dev create --name secret_name1 --value secret_value1 --name secret_name2 --value secret_value2 --outfile new.sls
 
@@ -156,10 +155,7 @@ func initConfig() {
 }
 
 func getPki() pki.Pki {
-	keyName := rootCmd.Flag("pgp_key").Value.String()
-	pubRing := rootCmd.Flag("pubring").Value.String()
-	secRing := rootCmd.Flag("secring").Value.String()
-	return pki.New(keyName, pubRing, secRing)
+	return pki.New(pgpKeyName, publicKeyRing, privateKeyRing)
 }
 
 func readProfile() {

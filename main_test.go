@@ -46,10 +46,13 @@ var pgpKeyName string
 var publicKeyRing string
 var secretKeyRing string
 var topLevelElement string
-var update = flag.Bool("update", false, "update golden files")
+var update = flag.Bool("update", true, "update golden files")
+var dirPath string
 
 func TestMain(m *testing.M) {
 	initGPGDir()
+	dirPath, _ = filepath.Abs("./testdata")
+	os.Setenv("GNUPGHOME", dirPath+"/gnupg")
 	defer teardownGPGDir()
 	retCode := m.Run()
 	os.Exit(retCode)
@@ -61,13 +64,9 @@ func TestCliArgs(t *testing.T) {
 	binaryName := "generate-secure-pillar"
 
 	// set up: encrypt the test sls files
-	dirPath, err := filepath.Abs("./testdata")
-	os.Setenv("GNUPGHOME", dirPath+"/gnupg")
 	_, slsCount := utils.FindFilesByExt(dirPath, ".sls")
 	Equals(t, 6, slsCount)
 	pk := pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
-	err = utils.ProcessDir(dirPath, ".sls", sls.Decrypt, "", topLevelElement, pk)
-	Ok(t, err)
 	defer utils.ProcessDir(dirPath, ".sls", sls.Decrypt, "", topLevelElement, pk)
 
 	tests := []struct {
@@ -76,11 +75,13 @@ func TestCliArgs(t *testing.T) {
 		fixture string
 	}{
 		{"no arguments", []string{}, "no-args.golden"},
-		{"encrypt recurse", []string{"encrypt", "recurse", "-d", dirPath}, "encrypt-recurse.golden"},
-		{"keys recurse", []string{"keys", "recurse", "-d", dirPath}, "keys-recurse.golden"},
-		{"decrypt recurse", []string{"decrypt", "recurse", "-d", dirPath}, "decrypt-recurse.golden"},
+		{"encrypt recurse", []string{"encrypt", "recurse", "-d", dirPath}, ""},
+		{"keys recurse", []string{"keys", "recurse", "-d", dirPath}, ""},
+		{"decrypt recurse", []string{"decrypt", "recurse", "-d", dirPath}, ""},
 		{"encrypt file", []string{"encrypt", "all", "-f", dirPath + "/test.sls", "-u"}, "encrypt-file.golden"},
 		{"keys file", []string{"keys", "all", "-f", dirPath + "/test.sls"}, "keys-file.golden"},
+		{"keys path", []string{"keys", "path", "-f", dirPath + "/test.sls", "-p", "key"}, "keys-path.golden"},
+		{"decrypt path", []string{"decrypt", "path", "-f", dirPath + "/test.sls", "-p", "key", "-u"}, "decrypt-file.golden"},
 		{"decrypt file", []string{"decrypt", "all", "-f", dirPath + "/test.sls", "-u"}, "decrypt-file.golden"},
 	}
 
@@ -98,7 +99,7 @@ func TestCliArgs(t *testing.T) {
 			}
 
 			// due to the way the output is generated we skip the recursive output
-			if !strings.Contains(tt.name, "recurse") {
+			if !strings.Contains(tt.name, "recurse") || tt.fixture != "" {
 				actual := string(output)
 
 				// need to remove timestamps

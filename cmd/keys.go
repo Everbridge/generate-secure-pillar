@@ -37,7 +37,7 @@ var keysCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		pk := getPki()
 		outputFilePath = os.Stdout.Name()
-		inputFilePath, err := filepath.Abs(cmd.Flag("file").Value.String())
+		inputFilePath, err := filepath.Abs(inputFilePath)
 		if err != nil {
 			logger.Fatal(err)
 		}
@@ -52,13 +52,11 @@ var keysCmd = &cobra.Command{
 			}
 			fmt.Printf("%s\n", buffer.String())
 		case recurse:
-			recurseDir = cmd.Flag("dir").Value.String()
 			err := utils.ProcessDir(recurseDir, ".sls", "validate", outputFilePath, topLevelElement, pk)
 			if err != nil {
 				logger.Warnf("keys: %s", err)
 			}
 		case path:
-			yamlPath = cmd.Flag("path").Value.String()
 			s := sls.New(inputFilePath, pk, topLevelElement)
 			utils.PathAction(&s, yamlPath, "validate")
 		}
@@ -67,7 +65,7 @@ var keysCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(keysCmd)
-	keysCmd.PersistentFlags().StringP("path", "p", "", "YAML path to examine")
-	keysCmd.PersistentFlags().StringP("dir", "d", "", "recurse over all .sls files in the given directory")
-	keysCmd.PersistentFlags().StringP("file", "f", os.Stdin.Name(), "input file (defaults to STDIN)")
+	keysCmd.PersistentFlags().StringVarP(&yamlPath, "path", "p", "", "YAML path to examine")
+	keysCmd.PersistentFlags().StringVarP(&recurseDir, "dir", "d", "", "recurse over all .sls files in the given directory")
+	keysCmd.PersistentFlags().StringVarP(&inputFilePath, "file", "f", os.Stdin.Name(), "input file (defaults to STDIN)")
 }
