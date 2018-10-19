@@ -1,0 +1,6 @@
+level=warning msg="testdata/inc.sls contains include directives"
+level=info msg="wrote out to file: 'testdata/test/bar.sls'"
+level=info msg="wrote out to file: 'testdata/test/foo.sls'"
+level=info msg="wrote out to file: 'testdata/test/baz.sls'"
+level=info msg="wrote out to file: 'testdata/new.sls'"
+level=info msg="wrote out to file: 'testdata/test.sls'"

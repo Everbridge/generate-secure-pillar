@@ -46,7 +46,7 @@ var pgpKeyName string
 var publicKeyRing string
 var secretKeyRing string
 var topLevelElement string
-var update = flag.Bool("update", false, "update golden files")
+var update = flag.Bool("update", true, "update golden files")
 var dirPath string
 
 func TestMain(m *testing.M) {
@@ -74,9 +74,9 @@ func TestCliArgs(t *testing.T) {
 		count   int
 	}{
 		{"no arguments", []string{}, "no-args.golden", 0},
-		{"encrypt recurse", []string{"-k", "Test Salt Master", "encrypt", "recurse", "-d", dirPath}, "", 0},
+		{"encrypt recurse", []string{"-k", "Test Salt Master", "encrypt", "recurse", "-d", dirPath}, "encrypt-recurse.golden", 0},
 		{"keys recurse", []string{"-k", "Test Salt Master", "keys", "recurse", "-d", dirPath}, "keys-recurse.golden", 23},
-		{"decrypt recurse", []string{"-k", "Test Salt Master", "decrypt", "recurse", "-d", dirPath}, "", 0},
+		{"decrypt recurse", []string{"-k", "Test Salt Master", "decrypt", "recurse", "-d", dirPath}, "decrypt-recurse.golden", 0},
 		{"encrypt file", []string{"-k", "Test Salt Master", "encrypt", "all", "-f", dirPath + "/test.sls", "-u"}, "encrypt-file.golden", 0},
 		{"keys file", []string{"-k", "Test Salt Master", "keys", "all", "-f", dirPath + "/test.sls"}, "keys-file.golden", 12},
 		{"keys path", []string{"-k", "Test Salt Master", "keys", "path", "-f", dirPath + "/test.sls", "-p", "key"}, "keys-path.golden", 1},
@@ -103,7 +103,6 @@ func TestCliArgs(t *testing.T) {
 				writeFixture(t, tt.fixture, []byte(actual))
 			}
 
-			// due to the way the output is generated we skip the recursive output
 			switch tt.name {
 			case "keys file":
 			case "keys path":
@@ -112,11 +111,7 @@ func TestCliArgs(t *testing.T) {
 				if actualCount != tt.count {
 					t.Errorf("Key name count error, expected %d got %d", tt.count, actualCount)
 				}
-
-			case "no arguments":
-			case "encrypt file":
-			case "decrypt path":
-			case "decrypt file":
+			default:
 				expected := getExpected(t, tt.fixture)
 
 				if *update {
