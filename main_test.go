@@ -46,7 +46,7 @@ var pgpKeyName string
 var publicKeyRing string
 var secretKeyRing string
 var topLevelElement string
-var update = flag.Bool("update", true, "update golden files")
+var update = flag.Bool("update", false, "update golden files")
 var dirPath string
 
 func TestMain(m *testing.M) {
@@ -75,7 +75,7 @@ func TestCliArgs(t *testing.T) {
 	}{
 		{"no arguments", []string{}, "no-args.golden", 0},
 		{"encrypt recurse", []string{"-k", "Test Salt Master", "encrypt", "recurse", "-d", dirPath}, "", 0},
-		{"keys recurse", []string{"-k", "Test Salt Master", "keys", "recurse", "-d", dirPath}, "keys-recurse.golden", 0},
+		{"keys recurse", []string{"-k", "Test Salt Master", "keys", "recurse", "-d", dirPath}, "keys-recurse.golden", 23},
 		{"decrypt recurse", []string{"-k", "Test Salt Master", "decrypt", "recurse", "-d", dirPath}, "", 0},
 		{"encrypt file", []string{"-k", "Test Salt Master", "encrypt", "all", "-f", dirPath + "/test.sls", "-u"}, "encrypt-file.golden", 0},
 		{"keys file", []string{"-k", "Test Salt Master", "keys", "all", "-f", dirPath + "/test.sls"}, "keys-file.golden", 12},
@@ -104,7 +104,19 @@ func TestCliArgs(t *testing.T) {
 			}
 
 			// due to the way the output is generated we skip the recursive output
-			if (!strings.Contains(tt.name, "recurse") && !strings.Contains(tt.name, "keys")) || tt.fixture != "" {
+			switch tt.name {
+			case "keys file":
+			case "keys path":
+			case "keys recurse":
+				actualCount := keyNameCount(actual, "Test Salt Master")
+				if actualCount != tt.count {
+					t.Errorf("Key name count error, expected %d got %d", tt.count, actualCount)
+				}
+
+			case "no arguments":
+			case "encrypt file":
+			case "decrypt path":
+			case "decrypt file":
 				expected := getExpected(t, tt.fixture)
 
 				if *update {
@@ -113,11 +125,6 @@ func TestCliArgs(t *testing.T) {
 
 				if a, e := strings.TrimSpace(actual), strings.TrimSpace(expected); a != e {
 					t.Errorf("Output error:\n%v", diff.LineDiff(e, a))
-				}
-			} else if strings.Contains(tt.name, "keys") {
-				actualCount := keyNameCount(actual, "Test Salt Master")
-				if actualCount != tt.count {
-					t.Errorf("Key name count error, expected %d got %d", tt.count, actualCount)
 				}
 			}
 		})

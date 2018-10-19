@@ -2,69 +2,69 @@ level=warning msg="testdata/inc.sls contains include directives"
 /Users/ed.silva/gocode/src/github.com/Everbridge/generate-secure-pillar/testdata/test/bar.sls:
 secure_vars:
   bar: |
-    8FE4480DF6602731: Test Salt Master (test key)
+    5874A0604976A753: Test Salt Master (test key)
   foo: |
-    8FE4480DF6602731: Test Salt Master (test key)
+    5874A0604976A753: Test Salt Master (test key)
 
 /Users/ed.silva/gocode/src/github.com/Everbridge/generate-secure-pillar/testdata/test/baz.sls:
 secure_vars:
   bar: |
-    8FE4480DF6602731: Test Salt Master (test key)
+    5874A0604976A753: Test Salt Master (test key)
   foo: |
-    8FE4480DF6602731: Test Salt Master (test key)
+    5874A0604976A753: Test Salt Master (test key)
 
 /Users/ed.silva/gocode/src/github.com/Everbridge/generate-secure-pillar/testdata/test/foo.sls:
 secure_vars:
   bar: |
-    8FE4480DF6602731: Test Salt Master (test key)
+    5874A0604976A753: Test Salt Master (test key)
   foo: |
-    8FE4480DF6602731: Test Salt Master (test key)
+    5874A0604976A753: Test Salt Master (test key)
 
 /Users/ed.silva/gocode/src/github.com/Everbridge/generate-secure-pillar/testdata/new.sls:
 bar:
   baz: |
-    8FE4480DF6602731: Test Salt Master (test key)
+    5874A0604976A753: Test Salt Master (test key)
 foo: |
-  8FE4480DF6602731: Test Salt Master (test key)
+  5874A0604976A753: Test Salt Master (test key)
 secure_vars:
   aaa: |
-    8FE4480DF6602731: Test Salt Master (test key)
+    5874A0604976A753: Test Salt Master (test key)
   bbb: |
-    8FE4480DF6602731: Test Salt Master (test key)
+    5874A0604976A753: Test Salt Master (test key)
   zzz: |
-    8FE4480DF6602731: Test Salt Master (test key)
+    5874A0604976A753: Test Salt Master (test key)
 
 /Users/ed.silva/gocode/src/github.com/Everbridge/generate-secure-pillar/testdata/test.sls:
 key: |
-  8FE4480DF6602731: Test Salt Master (test key)
+  5874A0604976A753: Test Salt Master (test key)
 list:
 - |
-  8FE4480DF6602731: Test Salt Master (test key)
+  5874A0604976A753: Test Salt Master (test key)
 - |
-  8FE4480DF6602731: Test Salt Master (test key)
+  5874A0604976A753: Test Salt Master (test key)
 - |
-  8FE4480DF6602731: Test Salt Master (test key)
+  5874A0604976A753: Test Salt Master (test key)
 secure_vars:
   api_key: |
-    8FE4480DF6602731: Test Salt Master (test key)
+    5874A0604976A753: Test Salt Master (test key)
   password: |
-    8FE4480DF6602731: Test Salt Master (test key)
+    5874A0604976A753: Test Salt Master (test key)
 stuff:
   flinstones:
     barney: |
-      8FE4480DF6602731: Test Salt Master (test key)
+      5874A0604976A753: Test Salt Master (test key)
     fred: |
-      8FE4480DF6602731: Test Salt Master (test key)
+      5874A0604976A753: Test Salt Master (test key)
 sub:
   list:
   - |
-    8FE4480DF6602731: Test Salt Master (test key)
+    5874A0604976A753: Test Salt Master (test key)
   - |
-    8FE4480DF6602731: Test Salt Master (test key)
+    5874A0604976A753: Test Salt Master (test key)
   - |
-    8FE4480DF6602731: Test Salt Master (test key)
+    5874A0604976A753: Test Salt Master (test key)
 this:
   is:
     a.multi-line.example: |
-      8FE4480DF6602731: Test Salt Master (test key)
+      5874A0604976A753: Test Salt Master (test key)
 
