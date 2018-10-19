@@ -114,10 +114,6 @@ func TestCliArgs(t *testing.T) {
 					t.Errorf("Key name count error, expected %d got %d", tt.count, actualCount)
 				}
 
-			// case "no arguments":
-			// case "encrypt file":
-			// case "decrypt path":
-			// case "decrypt file":
 			default:
 				expected := getExpected(t, tt.fixture)
 
