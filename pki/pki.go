@@ -149,6 +149,9 @@ func (p *Pki) DecryptSecret(cipherText string) (plainText string, err error) {
 	if p.SecRing == nil {
 		return cipherText, fmt.Errorf("no secring set")
 	}
+	if p.SecretKey == nil {
+		return cipherText, fmt.Errorf("unable to load PGP secret key for '%s'", p.PgpKeyName)
+	}
 
 	decbuf := bytes.NewBuffer([]byte(cipherText))
 	block, err := armor.Decode(decbuf)

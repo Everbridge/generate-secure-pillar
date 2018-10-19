@@ -1,33 +1,33 @@
 key: |
-  FD7C05161A7034C7: Salt Master
+  8FE4480DF6602731: Test Salt Master (test key)
 list:
 - |
-  FD7C05161A7034C7: Salt Master
+  8FE4480DF6602731: Test Salt Master (test key)
 - |
-  FD7C05161A7034C7: Salt Master
+  8FE4480DF6602731: Test Salt Master (test key)
 - |
-  FD7C05161A7034C7: Salt Master
+  8FE4480DF6602731: Test Salt Master (test key)
 secure_vars:
   api_key: |
-    FD7C05161A7034C7: Salt Master
+    8FE4480DF6602731: Test Salt Master (test key)
   password: |
-    FD7C05161A7034C7: Salt Master
+    8FE4480DF6602731: Test Salt Master (test key)
 stuff:
   flinstones:
     barney: |
-      FD7C05161A7034C7: Salt Master
+      8FE4480DF6602731: Test Salt Master (test key)
     fred: |
-      FD7C05161A7034C7: Salt Master
+      8FE4480DF6602731: Test Salt Master (test key)
 sub:
   list:
   - |
-    FD7C05161A7034C7: Salt Master
+    8FE4480DF6602731: Test Salt Master (test key)
   - |
-    FD7C05161A7034C7: Salt Master
+    8FE4480DF6602731: Test Salt Master (test key)
   - |
-    FD7C05161A7034C7: Salt Master
+    8FE4480DF6602731: Test Salt Master (test key)
 this:
   is:
     a.multi-line.example: |
-      FD7C05161A7034C7: Salt Master
+      8FE4480DF6602731: Test Salt Master (test key)
 

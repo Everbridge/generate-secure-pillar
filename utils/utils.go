@@ -111,19 +111,23 @@ func ProcessDir(searchDir string, fileExt string, action string, outputFilePath 
 func applyActionAndWrite(file string, action string, pk *pki.Pki, topLevelElement string, errChan chan error) int {
 	s := sls.New(file, *pk, topLevelElement)
 	if s.IsInclude || s.Error != nil {
+		if s.Error != nil {
+			logger.Warnf("%s", s.Error)
+		}
 		return 0
 	}
 
 	buf, err := s.PerformAction(action)
 	if buf.Len() > 0 && err != nil && action != sls.Validate {
 		logger.Warnf("%s", err)
-	}
-	if err != nil && action == sls.Validate {
+	} else if err != nil && action == sls.Validate {
 		logger.Warnf("%s", err)
-	}
-
-	if action == sls.Validate {
+	} else if action == sls.Validate {
 		fmt.Printf("%s:\n%s\n", s.FilePath, buf.String())
+		return 0
+	} else if buf.Len() == 0 {
+		err = fmt.Errorf("zero length buffer produced by '%s' for file '%s'", action, file)
+		handleErr(err, errChan)
 		return 0
 	}
 

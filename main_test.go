@@ -51,8 +51,6 @@ var dirPath string
 
 func TestMain(m *testing.M) {
 	initGPGDir()
-	dirPath, _ = filepath.Abs("./testdata")
-	os.Setenv("GNUPGHOME", dirPath+"/gnupg")
 	defer teardownGPGDir()
 	retCode := m.Run()
 	os.Exit(retCode)
@@ -73,18 +71,20 @@ func TestCliArgs(t *testing.T) {
 		name    string
 		args    []string
 		fixture string
+		count   int
 	}{
-		{"no arguments", []string{}, "no-args.golden"},
-		{"encrypt recurse", []string{"encrypt", "recurse", "-d", dirPath}, ""},
-		{"keys recurse", []string{"keys", "recurse", "-d", dirPath}, ""},
-		{"decrypt recurse", []string{"decrypt", "recurse", "-d", dirPath}, ""},
-		{"encrypt file", []string{"encrypt", "all", "-f", dirPath + "/test.sls", "-u"}, "encrypt-file.golden"},
-		{"keys file", []string{"keys", "all", "-f", dirPath + "/test.sls"}, "keys-file.golden"},
-		{"keys path", []string{"keys", "path", "-f", dirPath + "/test.sls", "-p", "key"}, "keys-path.golden"},
-		{"decrypt path", []string{"decrypt", "path", "-f", dirPath + "/test.sls", "-p", "key", "-u"}, "decrypt-file.golden"},
-		{"decrypt file", []string{"decrypt", "all", "-f", dirPath + "/test.sls", "-u"}, "decrypt-file.golden"},
+		{"no arguments", []string{}, "no-args.golden", 0},
+		{"encrypt recurse", []string{"-k", "Test Salt Master", "encrypt", "recurse", "-d", dirPath}, "", 0},
+		{"keys recurse", []string{"-k", "Test Salt Master", "keys", "recurse", "-d", dirPath}, "keys-recurse.golden", 0},
+		{"decrypt recurse", []string{"-k", "Test Salt Master", "decrypt", "recurse", "-d", dirPath}, "", 0},
+		{"encrypt file", []string{"-k", "Test Salt Master", "encrypt", "all", "-f", dirPath + "/test.sls", "-u"}, "encrypt-file.golden", 0},
+		{"keys file", []string{"-k", "Test Salt Master", "keys", "all", "-f", dirPath + "/test.sls"}, "keys-file.golden", 12},
+		{"keys path", []string{"-k", "Test Salt Master", "keys", "path", "-f", dirPath + "/test.sls", "-p", "key"}, "keys-path.golden", 1},
+		{"decrypt path", []string{"-k", "Test Salt Master", "decrypt", "path", "-f", dirPath + "/test.sls", "-p", "key", "-u"}, "decrypt-file.golden", 0},
+		{"decrypt file", []string{"-k", "Test Salt Master", "decrypt", "all", "-f", dirPath + "/test.sls", "-u"}, "decrypt-file.golden", 0},
 	}
 
+	os.Setenv("GNUPGHOME", dirPath+"/gnupg")
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			dir, err := os.Getwd()
@@ -98,26 +98,58 @@ func TestCliArgs(t *testing.T) {
 				t.Fatalf("%s:\n%s", err, output)
 			}
 
-			// due to the way the output is generated we skip the recursive output
-			if !strings.Contains(tt.name, "recurse") || tt.fixture != "" {
-				actual := string(output)
+			actual := getActual(output)
+			if *update {
+				writeFixture(t, tt.fixture, []byte(actual))
+			}
 
-				// need to remove timestamps
-				reg := regexp.MustCompile(`(?m)time=\".*?\"\s`)
-				actual = reg.ReplaceAllString(actual, "")
+			// due to the way the output is generated we skip the recursive output
+			if (!strings.Contains(tt.name, "recurse") && !strings.Contains(tt.name, "keys")) || tt.fixture != "" {
+				expected := getExpected(t, tt.fixture)
+
 				if *update {
 					writeFixture(t, tt.fixture, []byte(actual))
 				}
 
-				expected := loadFixture(t, tt.fixture)
-				expected = reg.ReplaceAllString(expected, "")
-
 				if a, e := strings.TrimSpace(actual), strings.TrimSpace(expected); a != e {
 					t.Errorf("Output error:\n%v", diff.LineDiff(e, a))
+				}
+			} else if strings.Contains(tt.name, "keys") {
+				actualCount := keyNameCount(actual, "Test Salt Master")
+				if actualCount != tt.count {
+					t.Errorf("Key name count error, expected %d got %d", tt.count, actualCount)
 				}
 			}
 		})
 	}
+}
+
+func getActual(output []byte) string {
+	actual := string(output)
+
+	// need to remove timestamps
+	reg := regexp.MustCompile(`(?m)time=\".*?\"\s`)
+	return reg.ReplaceAllString(actual, "")
+}
+
+func getExpected(t *testing.T, fixture string) string {
+
+	expected := loadFixture(t, fixture)
+	// need to remove timestamps
+	reg := regexp.MustCompile(`(?m)time=\".*?\"\s`)
+	return reg.ReplaceAllString(expected, "")
+}
+
+func keyNameCount(str string, needle string) int {
+	lines := strings.Split(str, "\n")
+	count := 0
+	for _, line := range lines {
+		ok := strings.Contains(line, needle)
+		if ok {
+			count++
+		}
+	}
+	return count
 }
 
 func TestWriteSlsFile(t *testing.T) {
@@ -495,6 +527,8 @@ func Equals(tb testing.TB, exp, act interface{}) {
 
 func initGPGDir() {
 	teardownGPGDir()
+	dirPath, _ = filepath.Abs("./testdata")
+	os.Setenv("GNUPGHOME", dirPath+"/gnupg")
 	cmd := exec.Command("./testdata/testkeys.sh")
 	out, _ := cmd.CombinedOutput()
 	fmt.Printf("%s", string(out))
