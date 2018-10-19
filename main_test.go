@@ -32,6 +32,7 @@ import (
 	"reflect"
 	"regexp"
 	"runtime"
+	"sort"
 	"strings"
 	"testing"
 
@@ -46,7 +47,7 @@ var pgpKeyName string
 var publicKeyRing string
 var secretKeyRing string
 var topLevelElement string
-var update = flag.Bool("update", true, "update golden files")
+var update = flag.Bool("update", false, "update golden files")
 var dirPath string
 
 func TestMain(m *testing.M) {
@@ -80,7 +81,7 @@ func TestCliArgs(t *testing.T) {
 		{"encrypt file", []string{"-k", "Test Salt Master", "encrypt", "all", "-f", dirPath + "/test.sls", "-u"}, "encrypt-file.golden", 0},
 		{"keys file", []string{"-k", "Test Salt Master", "keys", "all", "-f", dirPath + "/test.sls"}, "keys-file.golden", 12},
 		{"keys path", []string{"-k", "Test Salt Master", "keys", "path", "-f", dirPath + "/test.sls", "-p", "key"}, "keys-path.golden", 1},
-		{"decrypt path", []string{"-k", "Test Salt Master", "decrypt", "path", "-f", dirPath + "/test.sls", "-p", "key", "-u"}, "decrypt-file.golden", 0},
+		{"decrypt path", []string{"-k", "Test Salt Master", "decrypt", "path", "-f", dirPath + "/test.sls", "-p", "key", "-u"}, "decrypt-path.golden", 0},
 		{"decrypt file", []string{"-k", "Test Salt Master", "decrypt", "all", "-f", dirPath + "/test.sls", "-u"}, "decrypt-file.golden", 0},
 	}
 
@@ -103,6 +104,7 @@ func TestCliArgs(t *testing.T) {
 				writeFixture(t, tt.fixture, []byte(actual))
 			}
 
+			// due to the way the output is generated we skip the recursive output
 			switch tt.name {
 			case "keys file":
 			case "keys path":
@@ -111,6 +113,11 @@ func TestCliArgs(t *testing.T) {
 				if actualCount != tt.count {
 					t.Errorf("Key name count error, expected %d got %d", tt.count, actualCount)
 				}
+
+			// case "no arguments":
+			// case "encrypt file":
+			// case "decrypt path":
+			// case "decrypt file":
 			default:
 				expected := getExpected(t, tt.fixture)
 
@@ -127,19 +134,20 @@ func TestCliArgs(t *testing.T) {
 }
 
 func getActual(output []byte) string {
-	actual := string(output)
-
-	// need to remove timestamps
-	reg := regexp.MustCompile(`(?m)time=\".*?\"\s`)
-	return reg.ReplaceAllString(actual, "")
+	return cleanAndSort(string(output))
 }
 
 func getExpected(t *testing.T, fixture string) string {
+	return cleanAndSort(loadFixture(t, fixture))
+}
 
-	expected := loadFixture(t, fixture)
+func cleanAndSort(str string) string {
 	// need to remove timestamps
 	reg := regexp.MustCompile(`(?m)time=\".*?\"\s`)
-	return reg.ReplaceAllString(expected, "")
+	str = reg.ReplaceAllString(str, "")
+	lines := strings.Split(str, "\n")
+	sort.Strings(lines)
+	return strings.Join(lines, "\n")
 }
 
 func keyNameCount(str string, needle string) int {
@@ -571,7 +579,8 @@ func fixturePath(t *testing.T, fixture string) string {
 }
 
 func writeFixture(t *testing.T, fixture string, content []byte) {
-	err := ioutil.WriteFile(fixturePath(t, fixture), content, 0644)
+	str := getActual(content)
+	err := ioutil.WriteFile(fixturePath(t, fixture), []byte(str), 0644)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -582,6 +591,5 @@ func loadFixture(t *testing.T, fixture string) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	return string(content)
 }

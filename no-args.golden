@@ -1,69 +1,70 @@
-Create and update encrypted content or decrypt encrypted content.
-
-Usage:
-  generate-secure-pillar [command]
-
-Examples:
-
-# specify a config profile and create a new file
-$ generate-secure-pillar --profile dev create --name secret_name1 --value secret_value1 --name secret_name2 --value secret_value2 --outfile new.sls
-
-# create a new sls file
-$ generate-secure-pillar -k "Salt Master" create --name secret_name1 --value secret_value1 --name secret_name2 --value secret_value2 --outfile new.sls
-
-# add to the new file
-$ generate-secure-pillar -k "Salt Master" update --name new_secret_name --value new_secret_value --file new.sls
-
-# update an existing value
-$ generate-secure-pillar -k "Salt Master" update --name secret_name --value secret_value3 --file new.sls
-
-# encrypt all plain text values in a file
-$ generate-secure-pillar -k "Salt Master" encrypt all --file us1.sls --outfile us1.sls
-# or use --update flag
-$ generate-secure-pillar -k "Salt Master" encrypt all --file us1.sls --update
-
-# encrypt all plain text values in a file under the element 'secret_stuff'
-$ generate-secure-pillar -k "Salt Master" --element secret_stuff encrypt all --file us1.sls --outfile us1.sls
-
-# recurse through all sls files, encrypting all values
-$ generate-secure-pillar -k "Salt Master" encrypt recurse -d /path/to/pillar/secure/stuff
-
-# recurse through all sls files, decrypting all values (requires imported private key)
-$ generate-secure-pillar decrypt recurse -d /path/to/pillar/secure/stuff
-
-# decrypt a specific existing value (requires imported private key)
-$ generate-secure-pillar decrypt path --path "some:yaml:path" --file new.sls
-
-# decrypt all files and re-encrypt with given key (requires imported private key)
-$ generate-secure-pillar -k "New Salt Master Key" rotate -d /path/to/pillar/secure/stuff
-
-# show all PGP key IDs used in a file
-$ generate-secure-pillar keys all --file us1.sls
-
-# show all keys used in all files in a given directory
-$ generate-secure-pillar keys recurse -d /path/to/pillar/secure/stuff
-
-# show the PGP Key ID used for an element at a path in a file
-$ generate-secure-pillar keys path --path "some:yaml:path" --file new.sls
 
 
-Available Commands:
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      --config string    config file (default is $HOME/.config/generate-secure-pillar/config.yaml)
+      --profile string   config file (default is $HOME/.config/generate-secure-pillar/config.yaml)
+      --pubring string   PGP public keyring (default "/Users/ed.silva/gocode/src/github.com/Everbridge/generate-secure-pillar/testdata/gnupg/pubring.gpg")
+      --secring string   PGP private keyring (default "/Users/ed.silva/gocode/src/github.com/Everbridge/generate-secure-pillar/testdata/gnupg/secring.gpg")
+  -e, --element string   Name of the top level element under which encrypted key/value pairs are kept
+  -h, --help             help for generate-secure-pillar
+  -k, --pgp_key string   PGP key name, email, or ID to use for encryption
+  -v, --version          print the version
   create      create a new sls file
   decrypt     perform decryption operations
   encrypt     perform encryption operations
+  generate-secure-pillar [command]
   help        Help about any command
   keys        show PGP key IDs used
   rotate      decrypt existing files and re-encrypt with a new key
   update      update the value of the given key in the given file
-
+# add to the new file
+# create a new sls file
+# decrypt a specific existing value (requires imported private key)
+# decrypt all files and re-encrypt with given key (requires imported private key)
+# encrypt all plain text values in a file
+# encrypt all plain text values in a file under the element 'secret_stuff'
+# or use --update flag
+# recurse through all sls files, decrypting all values (requires imported private key)
+# recurse through all sls files, encrypting all values
+# show all PGP key IDs used in a file
+# show all keys used in all files in a given directory
+# show the PGP Key ID used for an element at a path in a file
+# specify a config profile and create a new file
+# update an existing value
+$ generate-secure-pillar --profile dev create --name secret_name1 --value secret_value1 --name secret_name2 --value secret_value2 --outfile new.sls
+$ generate-secure-pillar -k "New Salt Master Key" rotate -d /path/to/pillar/secure/stuff
+$ generate-secure-pillar -k "Salt Master" --element secret_stuff encrypt all --file us1.sls --outfile us1.sls
+$ generate-secure-pillar -k "Salt Master" create --name secret_name1 --value secret_value1 --name secret_name2 --value secret_value2 --outfile new.sls
+$ generate-secure-pillar -k "Salt Master" encrypt all --file us1.sls --outfile us1.sls
+$ generate-secure-pillar -k "Salt Master" encrypt all --file us1.sls --update
+$ generate-secure-pillar -k "Salt Master" encrypt recurse -d /path/to/pillar/secure/stuff
+$ generate-secure-pillar -k "Salt Master" update --name new_secret_name --value new_secret_value --file new.sls
+$ generate-secure-pillar -k "Salt Master" update --name secret_name --value secret_value3 --file new.sls
+$ generate-secure-pillar decrypt path --path "some:yaml:path" --file new.sls
+$ generate-secure-pillar decrypt recurse -d /path/to/pillar/secure/stuff
+$ generate-secure-pillar keys all --file us1.sls
+$ generate-secure-pillar keys path --path "some:yaml:path" --file new.sls
+$ generate-secure-pillar keys recurse -d /path/to/pillar/secure/stuff
+Available Commands:
+Create and update encrypted content or decrypt encrypted content.
+Examples:
 Flags:
-      --config string    config file (default is $HOME/.config/generate-secure-pillar/config.yaml)
-  -e, --element string   Name of the top level element under which encrypted key/value pairs are kept
-  -h, --help             help for generate-secure-pillar
-  -k, --pgp_key string   PGP key name, email, or ID to use for encryption
-      --profile string   config file (default is $HOME/.config/generate-secure-pillar/config.yaml)
-      --pubring string   PGP public keyring (default "/Users/ed.silva/gocode/src/github.com/Everbridge/generate-secure-pillar/testdata/gnupg/pubring.gpg")
-      --secring string   PGP private keyring (default "/Users/ed.silva/gocode/src/github.com/Everbridge/generate-secure-pillar/testdata/gnupg/secring.gpg")
-  -v, --version          print the version
-
+Usage:
 Use "generate-secure-pillar [command] --help" for more information about a command.

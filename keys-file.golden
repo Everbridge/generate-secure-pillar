@@ -1,33 +1,34 @@
-key: |
-  27FCDC347C279B57: Test Salt Master (test key)
-list:
-- |
-  27FCDC347C279B57: Test Salt Master (test key)
-- |
-  27FCDC347C279B57: Test Salt Master (test key)
-- |
-  27FCDC347C279B57: Test Salt Master (test key)
-secure_vars:
-  api_key: |
-    27FCDC347C279B57: Test Salt Master (test key)
-  password: |
-    27FCDC347C279B57: Test Salt Master (test key)
-stuff:
-  flinstones:
-    barney: |
-      27FCDC347C279B57: Test Salt Master (test key)
-    fred: |
-      27FCDC347C279B57: Test Salt Master (test key)
-sub:
-  list:
-  - |
-    27FCDC347C279B57: Test Salt Master (test key)
-  - |
-    27FCDC347C279B57: Test Salt Master (test key)
-  - |
-    27FCDC347C279B57: Test Salt Master (test key)
-this:
-  is:
-    a.multi-line.example: |
-      27FCDC347C279B57: Test Salt Master (test key)
 
+
+      3DDD0BE7FBB6E40C: Test Salt Master (test key)
+      3DDD0BE7FBB6E40C: Test Salt Master (test key)
+      3DDD0BE7FBB6E40C: Test Salt Master (test key)
+    3DDD0BE7FBB6E40C: Test Salt Master (test key)
+    3DDD0BE7FBB6E40C: Test Salt Master (test key)
+    3DDD0BE7FBB6E40C: Test Salt Master (test key)
+    3DDD0BE7FBB6E40C: Test Salt Master (test key)
+    3DDD0BE7FBB6E40C: Test Salt Master (test key)
+    a.multi-line.example: |
+    barney: |
+    fred: |
+  - |
+  - |
+  - |
+  3DDD0BE7FBB6E40C: Test Salt Master (test key)
+  3DDD0BE7FBB6E40C: Test Salt Master (test key)
+  3DDD0BE7FBB6E40C: Test Salt Master (test key)
+  3DDD0BE7FBB6E40C: Test Salt Master (test key)
+  api_key: |
+  flinstones:
+  is:
+  list:
+  password: |
+- |
+- |
+- |
+key: |
+list:
+secure_vars:
+stuff:
+sub:
+this:

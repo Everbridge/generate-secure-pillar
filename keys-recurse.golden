@@ -1,70 +1,71 @@
-level=warning msg="testdata/inc.sls contains include directives"
-/Users/ed.silva/gocode/src/github.com/Everbridge/generate-secure-pillar/testdata/test/baz.sls:
-secure_vars:
-  bar: |
-    27FCDC347C279B57: Test Salt Master (test key)
-  foo: |
-    27FCDC347C279B57: Test Salt Master (test key)
 
-/Users/ed.silva/gocode/src/github.com/Everbridge/generate-secure-pillar/testdata/test/bar.sls:
-secure_vars:
-  bar: |
-    27FCDC347C279B57: Test Salt Master (test key)
-  foo: |
-    27FCDC347C279B57: Test Salt Master (test key)
 
-/Users/ed.silva/gocode/src/github.com/Everbridge/generate-secure-pillar/testdata/test/foo.sls:
-secure_vars:
-  bar: |
-    27FCDC347C279B57: Test Salt Master (test key)
-  foo: |
-    27FCDC347C279B57: Test Salt Master (test key)
 
-/Users/ed.silva/gocode/src/github.com/Everbridge/generate-secure-pillar/testdata/new.sls:
-bar:
-  baz: |
-    27FCDC347C279B57: Test Salt Master (test key)
-foo: |
-  27FCDC347C279B57: Test Salt Master (test key)
-secure_vars:
-  aaa: |
-    27FCDC347C279B57: Test Salt Master (test key)
-  bbb: |
-    27FCDC347C279B57: Test Salt Master (test key)
-  zzz: |
-    27FCDC347C279B57: Test Salt Master (test key)
 
-/Users/ed.silva/gocode/src/github.com/Everbridge/generate-secure-pillar/testdata/test.sls:
-key: |
-  27FCDC347C279B57: Test Salt Master (test key)
-list:
-- |
-  27FCDC347C279B57: Test Salt Master (test key)
-- |
-  27FCDC347C279B57: Test Salt Master (test key)
-- |
-  27FCDC347C279B57: Test Salt Master (test key)
-secure_vars:
-  api_key: |
-    27FCDC347C279B57: Test Salt Master (test key)
-  password: |
-    27FCDC347C279B57: Test Salt Master (test key)
-stuff:
-  flinstones:
-    barney: |
-      27FCDC347C279B57: Test Salt Master (test key)
-    fred: |
-      27FCDC347C279B57: Test Salt Master (test key)
-sub:
-  list:
-  - |
-    27FCDC347C279B57: Test Salt Master (test key)
-  - |
-    27FCDC347C279B57: Test Salt Master (test key)
-  - |
-    27FCDC347C279B57: Test Salt Master (test key)
-this:
-  is:
+
+
+      3DDD0BE7FBB6E40C: Test Salt Master (test key)
+      3DDD0BE7FBB6E40C: Test Salt Master (test key)
+      3DDD0BE7FBB6E40C: Test Salt Master (test key)
+    3DDD0BE7FBB6E40C: Test Salt Master (test key)
+    3DDD0BE7FBB6E40C: Test Salt Master (test key)
+    3DDD0BE7FBB6E40C: Test Salt Master (test key)
+    3DDD0BE7FBB6E40C: Test Salt Master (test key)
+    3DDD0BE7FBB6E40C: Test Salt Master (test key)
+    3DDD0BE7FBB6E40C: Test Salt Master (test key)
+    3DDD0BE7FBB6E40C: Test Salt Master (test key)
+    3DDD0BE7FBB6E40C: Test Salt Master (test key)
+    3DDD0BE7FBB6E40C: Test Salt Master (test key)
+    3DDD0BE7FBB6E40C: Test Salt Master (test key)
+    3DDD0BE7FBB6E40C: Test Salt Master (test key)
+    3DDD0BE7FBB6E40C: Test Salt Master (test key)
+    3DDD0BE7FBB6E40C: Test Salt Master (test key)
+    3DDD0BE7FBB6E40C: Test Salt Master (test key)
+    3DDD0BE7FBB6E40C: Test Salt Master (test key)
     a.multi-line.example: |
-      27FCDC347C279B57: Test Salt Master (test key)
-
+    barney: |
+    fred: |
+  - |
+  - |
+  - |
+  3DDD0BE7FBB6E40C: Test Salt Master (test key)
+  3DDD0BE7FBB6E40C: Test Salt Master (test key)
+  3DDD0BE7FBB6E40C: Test Salt Master (test key)
+  3DDD0BE7FBB6E40C: Test Salt Master (test key)
+  3DDD0BE7FBB6E40C: Test Salt Master (test key)
+  aaa: |
+  api_key: |
+  bar: |
+  bar: |
+  bar: |
+  baz: |
+  bbb: |
+  flinstones:
+  foo: |
+  foo: |
+  foo: |
+  is:
+  list:
+  password: |
+  zzz: |
+- |
+- |
+- |
+/Users/ed.silva/gocode/src/github.com/Everbridge/generate-secure-pillar/testdata/new.sls:
+/Users/ed.silva/gocode/src/github.com/Everbridge/generate-secure-pillar/testdata/test.sls:
+/Users/ed.silva/gocode/src/github.com/Everbridge/generate-secure-pillar/testdata/test/bar.sls:
+/Users/ed.silva/gocode/src/github.com/Everbridge/generate-secure-pillar/testdata/test/baz.sls:
+/Users/ed.silva/gocode/src/github.com/Everbridge/generate-secure-pillar/testdata/test/foo.sls:
+bar:
+foo: |
+key: |
+level=warning msg="testdata/inc.sls contains include directives"
+list:
+secure_vars:
+secure_vars:
+secure_vars:
+secure_vars:
+secure_vars:
+stuff:
+sub:
+this:
