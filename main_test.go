@@ -104,7 +104,7 @@ func TestCliArgs(t *testing.T) {
 				writeFixture(t, tt.fixture, []byte(actual))
 			}
 
-			// due to the way the output is generated we skip the recursive output
+			// due to the way the output is generated we normalize the recursive output
 			switch tt.name {
 			case "keys file":
 			case "keys path":
