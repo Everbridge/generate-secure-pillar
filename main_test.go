@@ -74,15 +74,15 @@ func TestCliArgs(t *testing.T) {
 		fixture string
 		count   int
 	}{
-		{"no arguments", []string{}, "no-args.golden", 0},
-		{"encrypt recurse", []string{"-k", "Test Salt Master", "encrypt", "recurse", "-d", dirPath}, "encrypt-recurse.golden", 0},
-		{"keys recurse", []string{"-k", "Test Salt Master", "keys", "recurse", "-d", dirPath}, "keys-recurse.golden", 23},
-		{"decrypt recurse", []string{"-k", "Test Salt Master", "decrypt", "recurse", "-d", dirPath}, "decrypt-recurse.golden", 0},
-		{"encrypt file", []string{"-k", "Test Salt Master", "encrypt", "all", "-f", dirPath + "/test.sls", "-u"}, "encrypt-file.golden", 0},
-		{"keys file", []string{"-k", "Test Salt Master", "keys", "all", "-f", dirPath + "/test.sls"}, "keys-file.golden", 12},
-		{"keys path", []string{"-k", "Test Salt Master", "keys", "path", "-f", dirPath + "/test.sls", "-p", "key"}, "keys-path.golden", 1},
-		{"decrypt path", []string{"-k", "Test Salt Master", "decrypt", "path", "-f", dirPath + "/test.sls", "-p", "key", "-u"}, "decrypt-path.golden", 0},
-		{"decrypt file", []string{"-k", "Test Salt Master", "decrypt", "all", "-f", dirPath + "/test.sls", "-u"}, "decrypt-file.golden", 0},
+		{"no arguments", []string{}, "testdata/no-args.golden", 0},
+		{"encrypt recurse", []string{"-k", "Test Salt Master", "encrypt", "recurse", "-d", dirPath}, "testdata/encrypt-recurse.golden", 0},
+		{"keys recurse", []string{"-k", "Test Salt Master", "keys", "recurse", "-d", dirPath}, "testdata/keys-recurse.golden", 23},
+		{"decrypt recurse", []string{"-k", "Test Salt Master", "decrypt", "recurse", "-d", dirPath}, "testdata/decrypt-recurse.golden", 0},
+		{"encrypt file", []string{"-k", "Test Salt Master", "encrypt", "all", "-f", dirPath + "/test.sls", "-u"}, "testdata/encrypt-file.golden", 0},
+		{"keys file", []string{"-k", "Test Salt Master", "keys", "all", "-f", dirPath + "/test.sls"}, "testdata/keys-file.golden", 12},
+		{"keys path", []string{"-k", "Test Salt Master", "keys", "path", "-f", dirPath + "/test.sls", "-p", "key"}, "testdata/keys-path.golden", 1},
+		{"decrypt path", []string{"-k", "Test Salt Master", "decrypt", "path", "-f", dirPath + "/test.sls", "-p", "key", "-u"}, "testdata/decrypt-path.golden", 0},
+		{"decrypt file", []string{"-k", "Test Salt Master", "decrypt", "all", "-f", dirPath + "/test.sls", "-u"}, "testdata/decrypt-file.golden", 0},
 	}
 
 	os.Setenv("GNUPGHOME", dirPath+"/gnupg")
