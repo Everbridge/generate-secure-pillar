@@ -32,10 +32,12 @@ import (
 
 	"github.com/keybase/go-crypto/openpgp"
 	"github.com/keybase/go-crypto/openpgp/armor"
+	"github.com/sanity-io/litter"
 	"github.com/sirupsen/logrus"
 )
 
 var logger = logrus.New()
+var debug = false
 
 // PGPHeader header const
 const PGPHeader string = "-----BEGIN PGP MESSAGE-----"
@@ -53,6 +55,9 @@ type Pki struct {
 
 // New returns a pki object
 func New(pgpKeyName string, publicKeyRing string, secretKeyRing string) Pki {
+	if os.Getenv("GSPPKI_DEBUG") != "" {
+		debug = true
+	}
 	logger.Out = os.Stdout
 	var err error
 
@@ -84,6 +89,10 @@ func New(pgpKeyName string, publicKeyRing string, secretKeyRing string) Pki {
 	p.PublicKey = p.GetKeyByID(p.PubRing, p.PgpKeyName)
 	if p.PublicKey == nil {
 		logger.Fatalf("unable to find key '%s' in %s", p.PgpKeyName, p.PublicKeyRing)
+	}
+
+	if debug {
+		litter.Dump(p)
 	}
 
 	return p

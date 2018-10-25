@@ -21,6 +21,7 @@
 package cmd
 
 import (
+	"fmt"
 	"github.com/Everbridge/generate-secure-pillar/sls"
 	"github.com/Everbridge/generate-secure-pillar/utils"
 	"github.com/spf13/cobra"
@@ -33,15 +34,16 @@ var rotateCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		pk := getPki()
 
-		if inputFilePath != "" {
-			s := sls.New(inputFilePath, pk, topLevelElement)
-			buf, err := s.PerformAction("rotate")
-			utils.SafeWrite(buf, outputFilePath, err)
-		} else {
+		fmt.Printf("IN: %#v\n", inputFilePath)
+		if recurseDir != "" {
 			err := utils.ProcessDir(recurseDir, ".sls", "rotate", outputFilePath, topLevelElement, pk)
 			if err != nil {
 				logger.Warnf("rotate: %s", err)
 			}
+		} else if inputFilePath != "" {
+			s := sls.New(inputFilePath, pk, topLevelElement)
+			buf, err := s.PerformAction("rotate")
+			utils.SafeWrite(buf, outputFilePath, err)
 		}
 	},
 }
