@@ -35,7 +35,7 @@ $(TARGET): $(SRC)
 	@go build $(LDFLAGS) -o $(TARGET)
 
 build: $(TARGET) deps check test
-	@go build
+	@go build $(LDFLAGS)
 
 release: build
 	@sed -i .bak 's/\"1.0.*\"/\"1.0.'$(COMMIT)'\"/' cmd/root.go
