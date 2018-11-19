@@ -444,15 +444,8 @@ func (s *Sls) doMap(vals map[interface{}]interface{}, action string) (map[interf
 
 func (s *Sls) doString(val interface{}, action string) (string, error) {
 	var err error
-	var strVal string
 
-	vtype := reflect.TypeOf(val).Kind()
-	switch vtype {
-	case reflect.String:
-		strVal = val.(string)
-	default:
-		strVal = fmt.Sprintf("%v", val)
-	}
+	strVal := fmt.Sprintf("%v", val)
 
 	switch action {
 	case Decrypt:
