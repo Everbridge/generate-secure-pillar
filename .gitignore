@@ -20,3 +20,5 @@ new.sls
 packages/*
 .idea
 testdata/gnupg/*
+num.sls
+num.yaml
