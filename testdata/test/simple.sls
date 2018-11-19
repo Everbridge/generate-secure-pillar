@@ -1,4 +1,4 @@
 #!yaml|gpg
 
-username: 123456
-stuff: 1.2
+stuff: "1.2"
+username: "123456"
