@@ -4,35 +4,37 @@
 
 
 
-      3DDD0BE7FBB6E40C: Test Salt Master (test key)
-      3DDD0BE7FBB6E40C: Test Salt Master (test key)
-      3DDD0BE7FBB6E40C: Test Salt Master (test key)
-    3DDD0BE7FBB6E40C: Test Salt Master (test key)
-    3DDD0BE7FBB6E40C: Test Salt Master (test key)
-    3DDD0BE7FBB6E40C: Test Salt Master (test key)
-    3DDD0BE7FBB6E40C: Test Salt Master (test key)
-    3DDD0BE7FBB6E40C: Test Salt Master (test key)
-    3DDD0BE7FBB6E40C: Test Salt Master (test key)
-    3DDD0BE7FBB6E40C: Test Salt Master (test key)
-    3DDD0BE7FBB6E40C: Test Salt Master (test key)
-    3DDD0BE7FBB6E40C: Test Salt Master (test key)
-    3DDD0BE7FBB6E40C: Test Salt Master (test key)
-    3DDD0BE7FBB6E40C: Test Salt Master (test key)
-    3DDD0BE7FBB6E40C: Test Salt Master (test key)
-    3DDD0BE7FBB6E40C: Test Salt Master (test key)
-    3DDD0BE7FBB6E40C: Test Salt Master (test key)
-    3DDD0BE7FBB6E40C: Test Salt Master (test key)
+
+      4F9E78B1DEFBE6FE: Test Salt Master (test key)
+      4F9E78B1DEFBE6FE: Test Salt Master (test key)
+      4F9E78B1DEFBE6FE: Test Salt Master (test key)
+    4F9E78B1DEFBE6FE: Test Salt Master (test key)
+    4F9E78B1DEFBE6FE: Test Salt Master (test key)
+    4F9E78B1DEFBE6FE: Test Salt Master (test key)
+    4F9E78B1DEFBE6FE: Test Salt Master (test key)
+    4F9E78B1DEFBE6FE: Test Salt Master (test key)
+    4F9E78B1DEFBE6FE: Test Salt Master (test key)
+    4F9E78B1DEFBE6FE: Test Salt Master (test key)
+    4F9E78B1DEFBE6FE: Test Salt Master (test key)
+    4F9E78B1DEFBE6FE: Test Salt Master (test key)
+    4F9E78B1DEFBE6FE: Test Salt Master (test key)
+    4F9E78B1DEFBE6FE: Test Salt Master (test key)
+    4F9E78B1DEFBE6FE: Test Salt Master (test key)
+    4F9E78B1DEFBE6FE: Test Salt Master (test key)
+    4F9E78B1DEFBE6FE: Test Salt Master (test key)
+    4F9E78B1DEFBE6FE: Test Salt Master (test key)
     a.multi-line.example: |
     barney: |
     fred: |
   - |
   - |
   - |
-  3DDD0BE7FBB6E40C: Test Salt Master (test key)
-  3DDD0BE7FBB6E40C: Test Salt Master (test key)
-  3DDD0BE7FBB6E40C: Test Salt Master (test key)
-  3DDD0BE7FBB6E40C: Test Salt Master (test key)
-  3DDD0BE7FBB6E40C: Test Salt Master (test key)
+  4F9E78B1DEFBE6FE: Test Salt Master (test key)
+  4F9E78B1DEFBE6FE: Test Salt Master (test key)
+  4F9E78B1DEFBE6FE: Test Salt Master (test key)
+  4F9E78B1DEFBE6FE: Test Salt Master (test key)
+  4F9E78B1DEFBE6FE: Test Salt Master (test key)
+  4F9E78B1DEFBE6FE: Test Salt Master (test key)
   aaa: |
   api_key: |
   bar: |
@@ -56,6 +58,7 @@
 /Users/ed.silva/gocode/src/github.com/Everbridge/generate-secure-pillar/testdata/test/bar.sls:
 /Users/ed.silva/gocode/src/github.com/Everbridge/generate-secure-pillar/testdata/test/baz.sls:
 /Users/ed.silva/gocode/src/github.com/Everbridge/generate-secure-pillar/testdata/test/foo.sls:
+/Users/ed.silva/gocode/src/github.com/Everbridge/generate-secure-pillar/testdata/test/simple.sls:
 bar:
 foo: |
 key: |
@@ -69,3 +72,4 @@ secure_vars:
 stuff:
 sub:
 this:
+username: |

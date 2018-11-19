@@ -64,7 +64,7 @@ func TestCliArgs(t *testing.T) {
 
 	// set up: encrypt the test sls files
 	_, slsCount := utils.FindFilesByExt(dirPath, ".sls")
-	Equals(t, 6, slsCount)
+	Equals(t, 7, slsCount)
 	pk := pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
 	defer utils.ProcessDir(dirPath, ".sls", sls.Decrypt, "", topLevelElement, pk)
 
@@ -76,7 +76,7 @@ func TestCliArgs(t *testing.T) {
 	}{
 		{"no arguments", []string{}, "testdata/no-args.golden", 0},
 		{"encrypt recurse", []string{"-k", "Test Salt Master", "encrypt", "recurse", "-d", dirPath}, "testdata/encrypt-recurse.golden", 0},
-		{"keys recurse", []string{"-k", "Test Salt Master", "keys", "recurse", "-d", dirPath}, "testdata/keys-recurse.golden", 23},
+		{"keys recurse", []string{"-k", "Test Salt Master", "keys", "recurse", "-d", dirPath}, "testdata/keys-recurse.golden", 24},
 		{"decrypt recurse", []string{"-k", "Test Salt Master", "decrypt", "recurse", "-d", dirPath}, "testdata/decrypt-recurse.golden", 0},
 		{"encrypt file", []string{"-k", "Test Salt Master", "encrypt", "all", "-f", dirPath + "/test.sls", "-u"}, "testdata/encrypt-file.golden", 0},
 		{"keys file", []string{"-k", "Test Salt Master", "keys", "all", "-f", dirPath + "/test.sls"}, "testdata/keys-file.golden", 12},
@@ -413,7 +413,7 @@ func TestEncryptProcessDir(t *testing.T) {
 
 	dirPath := "./testdata"
 	slsFiles, slsCount := utils.FindFilesByExt(dirPath, ".sls")
-	Equals(t, 6, slsCount)
+	Equals(t, 7, slsCount)
 
 	pk := pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
 	err := utils.ProcessDir(dirPath, ".sls", sls.Encrypt, "", topLevelElement, pk)
@@ -445,7 +445,7 @@ func TestDecryptProcessDir(t *testing.T) {
 
 	dirPath := "./testdata"
 	slsFiles, slsCount := utils.FindFilesByExt(dirPath, ".sls")
-	Equals(t, 6, slsCount)
+	Equals(t, 7, slsCount)
 
 	pk := pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
 	err := utils.ProcessDir(dirPath, ".sls", sls.Decrypt, "", topLevelElement, pk)

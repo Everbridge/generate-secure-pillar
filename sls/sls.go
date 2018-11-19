@@ -33,9 +33,9 @@ import (
 	"strings"
 
 	"github.com/Everbridge/generate-secure-pillar/pki"
+	yamlv2 "github.com/edlitmus/yaml"
 	yaml "github.com/esilva-everbridge/yaml"
 	"github.com/sirupsen/logrus"
-	yamlv2 "gopkg.in/yaml.v2"
 )
 
 // Encrypt action
@@ -80,8 +80,6 @@ func New(filePath string, p pki.Pki, encPath string) Sls {
 
 // ReadBytes loads YAML from a []byte
 func (s *Sls) ReadBytes(buf []byte) error {
-	s.Yaml = yaml.New()
-
 	reader := strings.NewReader(string(buf))
 
 	err := s.ScanForIncludes(reader)
@@ -369,23 +367,19 @@ func (s *Sls) PerformAction(action string) (bytes.Buffer, error) {
 // ProcessValues will encrypt or decrypt given values
 func (s *Sls) ProcessValues(vals interface{}, action string) (interface{}, error) {
 	var res interface{}
-	var err error
 
 	if vals == nil {
 		return res, nil
 	}
-
 	vtype := reflect.TypeOf(vals).Kind()
 	switch vtype {
 	case reflect.Slice:
 		return s.doSlice(vals, action)
 	case reflect.Map:
 		return s.doMap(vals.(map[interface{}]interface{}), action)
-	case reflect.String:
+	default:
 		return s.doString(vals, action)
 	}
-
-	return res, err
 }
 
 func (s *Sls) doSlice(vals interface{}, action string) (interface{}, error) {
@@ -413,7 +407,7 @@ func (s *Sls) doSlice(vals interface{}, action string) (interface{}, error) {
 				return vals, err
 			}
 			things = append(things, mapStuff)
-		case reflect.String:
+		default:
 			thing, err := s.doString(item, action)
 			if err != nil {
 				return vals, err
@@ -440,7 +434,7 @@ func (s *Sls) doMap(vals map[interface{}]interface{}, action string) (map[interf
 			ret[key], err = s.doSlice(val, action)
 		case reflect.Map:
 			ret[key], err = s.doMap(val.(map[interface{}]interface{}), action)
-		case reflect.String:
+		default:
 			ret[key], err = s.doString(val, action)
 		}
 	}
@@ -450,8 +444,16 @@ func (s *Sls) doMap(vals map[interface{}]interface{}, action string) (map[interf
 
 func (s *Sls) doString(val interface{}, action string) (string, error) {
 	var err error
+	var strVal string
 
-	strVal := val.(string)
+	vtype := reflect.TypeOf(val).Kind()
+	switch vtype {
+	case reflect.String:
+		strVal = val.(string)
+	default:
+		strVal = fmt.Sprintf("%v", val)
+	}
+
 	switch action {
 	case Decrypt:
 		strVal, err = s.decryptVal(strVal)
