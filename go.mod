@@ -3,7 +3,6 @@ module github.com/Everbridge/generate-secure-pillar
 require (
 	github.com/BurntSushi/toml v0.3.1 // indirect
 	github.com/andreyvit/diff v0.0.0-20170406064948-c7f18ee00883
-	github.com/edlitmus/yaml v2.1.0+incompatible
 	github.com/esilva-everbridge/dig v0.0.0-20180223224648-c61b8cdf35b7 // indirect
 	github.com/esilva-everbridge/yaml v0.0.0-20180228212815-c24d151cf388
 	github.com/golang/protobuf v1.2.0 // indirect
@@ -33,4 +32,5 @@ require (
 	gopkg.in/fsnotify.v1 v1.4.7 // indirect
 	gopkg.in/gemnasium/logrus-airbrake-hook.v2 v2.1.2 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
+	gopkg.in/yaml.v2 v2.2.1
 )

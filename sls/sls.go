@@ -33,9 +33,9 @@ import (
 	"strings"
 
 	"github.com/Everbridge/generate-secure-pillar/pki"
-	yamlv2 "github.com/edlitmus/yaml"
 	yaml "github.com/esilva-everbridge/yaml"
 	"github.com/sirupsen/logrus"
+	yamlv2 "gopkg.in/yaml.v2"
 )
 
 // Encrypt action

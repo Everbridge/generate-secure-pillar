@@ -4,8 +4,6 @@ github.com/andreyvit/diff v0.0.0-20170406064948-c7f18ee00883 h1:bvNMNQO63//z+xNg
 github.com/andreyvit/diff v0.0.0-20170406064948-c7f18ee00883/go.mod h1:rCTlJbsFo29Kk6CurOXKm700vrz8f0KW0JNfpkRJY/8=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
-github.com/edlitmus/yaml v2.1.0+incompatible h1:Ck80DevRJ9k+Hc9l3J/ySL+mIDloi/vRXbdk7vVUUCY=
-github.com/edlitmus/yaml v2.1.0+incompatible/go.mod h1:rPNApkFt0wSFaW78MVajUjdtXPM5dAXutz+NTJhCXUE=
 github.com/esilva-everbridge/dig v0.0.0-20180223224648-c61b8cdf35b7 h1:QHjV7NNssIR8OZuUpNaEtILE2tsMwFrJAPafm4cOi54=
 github.com/esilva-everbridge/dig v0.0.0-20180223224648-c61b8cdf35b7/go.mod h1:OUzZBkSOo01ut4tb4kXlJujAKlOrmFQw9AhhsMZvrYc=
 github.com/esilva-everbridge/yaml v0.0.0-20180228212815-c24d151cf388 h1:WQh/tBEvURe3FeMC6fI6EQag96SeBAT9i+0Kwufcy5o=
