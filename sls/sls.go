@@ -445,6 +445,8 @@ func (s *Sls) doMap(vals map[interface{}]interface{}, action string) (map[interf
 func (s *Sls) doString(val interface{}, action string) (string, error) {
 	var err error
 
+	// %v is a 'cheat' in that it will convert any type
+	// and allow it to be used as a string output with sprintf
 	strVal := fmt.Sprintf("%v", val)
 
 	switch action {
