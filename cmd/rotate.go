@@ -21,7 +21,6 @@
 package cmd
 
 import (
-	"fmt"
 	"github.com/Everbridge/generate-secure-pillar/sls"
 	"github.com/Everbridge/generate-secure-pillar/utils"
 	"github.com/spf13/cobra"
