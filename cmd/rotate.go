@@ -34,7 +34,6 @@ var rotateCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		pk := getPki()
 
-		fmt.Printf("IN: %#v\n", inputFilePath)
 		if recurseDir != "" {
 			err := utils.ProcessDir(recurseDir, ".sls", "rotate", outputFilePath, topLevelElement, pk)
 			if err != nil {
