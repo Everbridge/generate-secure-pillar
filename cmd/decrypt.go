@@ -61,6 +61,8 @@ var decryptCmd = &cobra.Command{
 		case path:
 			s := sls.New(inputFilePath, pk, topLevelElement)
 			utils.PathAction(&s, yamlPath, "decrypt")
+		default:
+			logger.Fatalf("unknown argument: '%s'", args[0])
 		}
 	},
 }

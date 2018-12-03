@@ -142,6 +142,7 @@ func initConfig() {
 		// Search config in home directory with name ".generate-secure-pillar" (without extension).
 		viper.AddConfigPath(fmt.Sprintf("%s/.config/generate-secure-pillar/", home))
 		viper.SetConfigName("config")
+		viper.SetConfigType("yaml")
 	}
 
 	viper.AutomaticEnv() // read in environment variables that match

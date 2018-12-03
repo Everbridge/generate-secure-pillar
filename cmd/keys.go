@@ -59,6 +59,8 @@ var keysCmd = &cobra.Command{
 		case path:
 			s := sls.New(inputFilePath, pk, topLevelElement)
 			utils.PathAction(&s, yamlPath, "validate")
+		default:
+			logger.Fatalf("unknown argument: '%s'", args[0])
 		}
 	},
 }

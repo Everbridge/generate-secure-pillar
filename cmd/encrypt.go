@@ -61,6 +61,8 @@ var encryptCmd = &cobra.Command{
 		case path:
 			s := sls.New(inputFilePath, pk, topLevelElement)
 			utils.PathAction(&s, yamlPath, "encrypt")
+		default:
+			logger.Fatalf("unknown argument: '%s'", args[0])
 		}
 	},
 }
