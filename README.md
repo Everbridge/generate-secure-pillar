@@ -9,7 +9,7 @@
 
    generate-secure-pillar [global options] command [command options] [arguments...]
 
-## VERSION 1.0.493
+## VERSION 1.0.494
 
 ## AUTHOR
 
