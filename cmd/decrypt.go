@@ -47,6 +47,9 @@ var decryptCmd = &cobra.Command{
 		// process args
 		switch args[0] {
 		case all:
+			if inputFilePath == os.Stdin.Name() {
+				logger.Infof("reading from %s", os.Stdin.Name())
+			}
 			s := sls.New(inputFilePath, pk, topLevelElement)
 			if inputFilePath != os.Stdin.Name() && updateInPlace {
 				outputFilePath = inputFilePath
