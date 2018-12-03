@@ -88,9 +88,9 @@ test: $(TARGET)
 	@go test -v
 
 deps:
-	@go mod init | true
-	@go mod tidy
-	@go mod verify
+	GO111MODULE="on" go mod init | true
+	GO111MODULE="on" go mod tidy
+	GO111MODULE="on" go mod verify
 
 mac: GOOS = darwin
 mac: GOARCH = amd64
