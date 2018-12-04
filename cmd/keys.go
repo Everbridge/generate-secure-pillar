@@ -45,7 +45,7 @@ var keysCmd = &cobra.Command{
 		// process args
 		switch args[0] {
 		case all:
-			if inputFilePath == os.Stdin.Name() {
+			if inputFilePath == os.Stdin.Name() && !stdinIsPiped() {
 				logger.Infof("reading from %s", os.Stdin.Name())
 			}
 			s := sls.New(inputFilePath, pk, topLevelElement)
