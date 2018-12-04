@@ -180,6 +180,8 @@ func readProfile() {
 	}
 }
 
+// if we are getting stdin from a pipe we don't want
+// to output log info about it that could mess up parsing
 func stdinIsPiped() bool {
 	fi, _ := os.Stdin.Stat()
 
