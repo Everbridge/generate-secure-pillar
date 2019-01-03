@@ -32,8 +32,8 @@ import (
 
 	"github.com/keybase/go-crypto/openpgp"
 	"github.com/keybase/go-crypto/openpgp/armor"
-	"github.com/sanity-io/litter"
 	"github.com/sirupsen/logrus"
+	"github.com/y0ssar1an/q"
 )
 
 var logger = logrus.New()
@@ -52,6 +52,17 @@ type Pki struct {
 	PubRing       *openpgp.EntityList
 	SecRing       *openpgp.EntityList
 }
+
+// if debug==true this can be used to dump values from the var(s) passed in
+func dbg() func(thing ...interface{}) {
+	return func(thing ...interface{}) {
+		if debug {
+			q.Q(thing)
+		}
+	}
+}
+
+var dumper = dbg()
 
 // New returns a pki object
 func New(pgpKeyName string, publicKeyRing string, secretKeyRing string) Pki {
@@ -91,9 +102,7 @@ func New(pgpKeyName string, publicKeyRing string, secretKeyRing string) Pki {
 		logger.Fatalf("unable to find key '%s' in %s", p.PgpKeyName, p.PublicKeyRing)
 	}
 
-	if debug {
-		litter.Dump(p)
-	}
+	dumper(p)
 
 	return p
 }

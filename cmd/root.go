@@ -23,6 +23,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/Everbridge/generate-secure-pillar/pki"
 	homedir "github.com/mitchellh/go-homedir"
@@ -139,8 +140,15 @@ func initConfig() {
 			os.Exit(1)
 		}
 
-		// Search config in home directory with name ".generate-secure-pillar" (without extension).
-		viper.AddConfigPath(fmt.Sprintf("%s/.config/generate-secure-pillar/", home))
+		configPath := fmt.Sprintf("%s/.config/generate-secure-pillar/", home)
+		dir := filepath.Clean(configPath)
+		err = os.MkdirAll(dir, 0700)
+		if err != nil {
+			logger.Fatalf("error creating config file path: %s", err)
+		}
+
+		// set config in "~/.config/generate-secure-pillar/config.yaml".
+		viper.AddConfigPath(configPath)
 		viper.SetConfigName("config")
 		viper.SetConfigType("yaml")
 	}
