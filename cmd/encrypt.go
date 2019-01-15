@@ -44,6 +44,11 @@ var encryptCmd = &cobra.Command{
 			logger.Fatal(err)
 		}
 
+		if len(args) == 0 {
+			cmd.Help()
+			return
+		}
+
 		// process args
 		switch args[0] {
 		case all:
@@ -65,7 +70,7 @@ var encryptCmd = &cobra.Command{
 			s := sls.New(inputFilePath, pk, topLevelElement)
 			utils.PathAction(&s, yamlPath, "encrypt")
 		default:
-			logger.Fatalf("unknown argument: '%s'", args[0])
+			cmd.Help()
 		}
 	},
 }

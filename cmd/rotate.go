@@ -42,6 +42,8 @@ var rotateCmd = &cobra.Command{
 			s := sls.New(inputFilePath, pk, topLevelElement)
 			buf, err := s.PerformAction("rotate")
 			utils.SafeWrite(buf, outputFilePath, err)
+		} else {
+			cmd.Help()
 		}
 	},
 }
