@@ -13,5 +13,6 @@ require (
 	github.com/spf13/viper v1.3.1
 	github.com/y0ssar1an/q v1.0.6
 	golang.org/x/tools v0.0.0-20190107155254-e063def13b29 // indirect
+	gopkg.in/mattes/go-expand-tilde.v1 v1.0.0-20150330173918-cb884138e64c
 	gopkg.in/yaml.v2 v2.2.2
 )

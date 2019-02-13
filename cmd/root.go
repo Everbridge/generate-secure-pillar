@@ -30,6 +30,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"gopkg.in/mattes/go-expand-tilde.v1"
 )
 
 var logger = logrus.New()
@@ -118,6 +119,17 @@ func init() {
 		privateKeyRing = fmt.Sprintf("%s/secring.gpg", gpgHome)
 	}
 
+	// check for GNUPG1 pubring file
+	filePath, err := tilde.Expand(publicKeyRing)
+	if err != nil {
+		logger.Fatalf("Error with GNUPG pubring path: %s", err)
+	}
+	if _, err = os.Stat(filepath.Clean(filePath)); os.IsNotExist(err) {
+		if err != nil {
+			logger.Fatalf("Error finding GNUPG pubring file: %s", err)
+		}
+	}
+
 	rootCmd.PersistentFlags().BoolP("version", "v", false, "print the version")
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.config/generate-secure-pillar/config.yaml)")
 	rootCmd.PersistentFlags().StringVar(&profile, "profile", "", "config file (default is $HOME/.config/generate-secure-pillar/config.yaml)")
@@ -146,6 +158,10 @@ func initConfig() {
 		if err != nil {
 			logger.Fatalf("error creating config file path: %s", err)
 		}
+		_, err = os.OpenFile(dir+"/config.yaml", os.O_RDONLY|os.O_CREATE, 0660)
+		if err != nil {
+			logger.Fatalf("Error creating config file: %s", err)
+		}
 
 		// set config in "~/.config/generate-secure-pillar/config.yaml".
 		viper.AddConfigPath(configPath)
@@ -168,20 +184,22 @@ func getPki() pki.Pki {
 }
 
 func readProfile() {
-	profiles := viper.Get("profiles")
-	profName := rootCmd.Flag("profile").Value.String()
+	if viper.IsSet("profiles") {
+		profiles := viper.Get("profiles")
+		profName := rootCmd.Flag("profile").Value.String()
 
-	if profName != "" || pgpKeyName == "" {
-		for _, prof := range profiles.([]interface{}) {
-			p := prof.(map[interface{}]interface{})
-			if p["default"] == true || profName == p["name"] {
-				gpgHome := p["gnupg_home"].(string)
-				if gpgHome != "" {
-					publicKeyRing = fmt.Sprintf("%s/pubring.gpg", gpgHome)
-					privateKeyRing = fmt.Sprintf("%s/secring.gpg", gpgHome)
-				}
-				if p["default_key"] != nil {
-					pgpKeyName = p["default_key"].(string)
+		if profName != "" || pgpKeyName == "" {
+			for _, prof := range profiles.([]interface{}) {
+				p := prof.(map[interface{}]interface{})
+				if p["default"] == true || profName == p["name"] {
+					gpgHome := p["gnupg_home"].(string)
+					if gpgHome != "" {
+						publicKeyRing = fmt.Sprintf("%s/pubring.gpg", gpgHome)
+						privateKeyRing = fmt.Sprintf("%s/secring.gpg", gpgHome)
+					}
+					if p["default_key"] != nil {
+						pgpKeyName = p["default_key"].(string)
+					}
 				}
 			}
 		}
