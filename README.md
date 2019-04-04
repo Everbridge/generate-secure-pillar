@@ -1,5 +1,6 @@
 # generate-secure-pillar
 
+[![Go Report Card](https://goreportcard.com/badge/github.com/Everbridge/generate-secure-pillar)](https://goreportcard.com/report/github.com/Everbridge/generate-secure-pillar)
 [![Average time to resolve an issue](http://isitmaintained.com/badge/resolution/Everbridge/generate-secure-pillar.svg)](https://isitmaintained.com/project/Everbridge/generate-secure-pillar "Average time to resolve an issue")
 [![Percentage of issues still open](http://isitmaintained.com/badge/open/Everbridge/generate-secure-pillar.svg)](https://isitmaintained.com/project/Everbridge/generate-secure-pillar "Percentage of issues still open")
 
