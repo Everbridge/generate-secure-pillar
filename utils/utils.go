@@ -150,7 +150,7 @@ func handleErr(err error, errChan chan error) {
 	}
 }
 
-// FindFilesByExt recurses through the given searchDir returning a list of files with a given extention and it's length
+// FindFilesByExt recurses through the given searchDir returning a list of files with a given extension and it's length
 func FindFilesByExt(searchDir string, ext string) ([]string, int) {
 	fileList := []string{}
 	searchDir, err := filepath.Abs(searchDir)
