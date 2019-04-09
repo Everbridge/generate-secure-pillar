@@ -45,7 +45,10 @@ var encryptCmd = &cobra.Command{
 		}
 
 		if len(args) == 0 {
-			cmd.Help()
+			err = cmd.Help()
+			if err != nil {
+				logger.Fatal(err)
+			}
 			return
 		}
 
@@ -70,7 +73,10 @@ var encryptCmd = &cobra.Command{
 			s := sls.New(inputFilePath, pk, topLevelElement)
 			utils.PathAction(&s, yamlPath, "encrypt")
 		default:
-			cmd.Help()
+			err = cmd.Help()
+			if err != nil {
+				logger.Fatal(err)
+			}
 		}
 	},
 }

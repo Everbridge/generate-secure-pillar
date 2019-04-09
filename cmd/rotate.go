@@ -43,7 +43,10 @@ var rotateCmd = &cobra.Command{
 			buf, err := s.PerformAction("rotate")
 			utils.SafeWrite(buf, outputFilePath, err)
 		} else {
-			cmd.Help()
+			err := cmd.Help()
+			if err != nil {
+				logger.Fatal(err)
+			}
 		}
 	},
 }

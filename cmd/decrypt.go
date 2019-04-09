@@ -45,7 +45,10 @@ var decryptCmd = &cobra.Command{
 		}
 
 		if len(args) == 0 {
-			cmd.Help()
+			err = cmd.Help()
+			if err != nil {
+				logger.Fatal(err)
+			}
 			return
 		}
 
@@ -62,7 +65,7 @@ var decryptCmd = &cobra.Command{
 			buffer, err := s.PerformAction("decrypt")
 			utils.SafeWrite(buffer, outputFilePath, err)
 		case recurse:
-			err := utils.ProcessDir(recurseDir, ".sls", "decrypt", outputFilePath, topLevelElement, pk)
+			err = utils.ProcessDir(recurseDir, ".sls", "decrypt", outputFilePath, topLevelElement, pk)
 			if err != nil {
 				logger.Warnf("decrypt: %s", err)
 			}
@@ -70,7 +73,10 @@ var decryptCmd = &cobra.Command{
 			s := sls.New(inputFilePath, pk, topLevelElement)
 			utils.PathAction(&s, yamlPath, "decrypt")
 		default:
-			cmd.Help()
+			err = cmd.Help()
+			if err != nil {
+				logger.Fatal(err)
+			}
 		}
 	},
 }
