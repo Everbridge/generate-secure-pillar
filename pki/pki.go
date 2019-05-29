@@ -30,14 +30,16 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/keybase/go-crypto/openpgp"
-	"github.com/keybase/go-crypto/openpgp/armor"
+	"github.com/ProtonMail/gopenpgp/crypto"
+	// "github.com/keybase/go-crypto/openpgp"
+	// "github.com/keybase/go-crypto/openpgp/armor"
 	"github.com/sirupsen/logrus"
 	"github.com/y0ssar1an/q"
 )
 
 var logger = logrus.New()
 var debug = false
+var pgp = crypto.GopenPGP{}
 
 // PGPHeader header const
 const PGPHeader string = "-----BEGIN PGP MESSAGE-----"
@@ -47,10 +49,12 @@ type Pki struct {
 	PublicKeyRing string
 	SecretKeyRing string
 	PgpKeyName    string
-	PublicKey     *openpgp.Entity
-	SecretKey     *openpgp.Entity
-	PubRing       *openpgp.EntityList
-	SecRing       *openpgp.EntityList
+	// PublicKey     *openpgp.Entity
+	// SecretKey     *openpgp.Entity
+	// PubRing       *openpgp.EntityList
+	// SecRing       *openpgp.EntityList
+	SecRing    *crypto.KeyRing
+	PubRing    *crypto.KeyRing
 }
 
 // if debug==true this can be used to dump values from the var(s) passed in
@@ -107,7 +111,7 @@ func New(pgpKeyName string, publicKeyRing string, secretKeyRing string) Pki {
 	return p
 }
 
-func (p *Pki) setKeyRing(keyRingPath string) (*openpgp.EntityList, error) {
+func (p *Pki) setKeyRing(keyRingPath string) (*crypto.KeyRing, error) {
 	keyRing, err := p.ExpandTilde(keyRingPath)
 	if err != nil {
 		return nil, fmt.Errorf("error reading secring: %s", err)
@@ -116,12 +120,16 @@ func (p *Pki) setKeyRing(keyRingPath string) (*openpgp.EntityList, error) {
 	if err != nil {
 		return nil, fmt.Errorf("unable to open key ring: %s", err)
 	}
-	ring, err := openpgp.ReadKeyRing(keyRingFile)
+
+	ring, err := crypto.ReadKeyRing(keyRingFile)
 	if err != nil {
 		return nil, fmt.Errorf("cannot read private keys: %s", err)
 	} else if ring == nil {
 		return nil, fmt.Errorf("%s is empty", p.SecretKeyRing)
 	}
+	p.SecRing = secKey
+	dumper(secKey)
+
 	if err = keyRingFile.Close(); err != nil {
 		return &ring, fmt.Errorf("error closing secring: %s", err)
 	}
@@ -167,9 +175,6 @@ func (p *Pki) DecryptSecret(cipherText string) (plainText string, err error) {
 	if p.SecRing == nil {
 		return cipherText, fmt.Errorf("no secring set")
 	}
-	if p.SecretKey == nil {
-		return cipherText, fmt.Errorf("unable to load PGP secret key for '%s'", p.PgpKeyName)
-	}
 
 	decbuf := bytes.NewBuffer([]byte(cipherText))
 	block, err := armor.Decode(decbuf)
@@ -194,15 +199,8 @@ func (p *Pki) DecryptSecret(cipherText string) (plainText string, err error) {
 }
 
 // GetKeyByID returns a keyring by the given ID
-func (p *Pki) GetKeyByID(keyring *openpgp.EntityList, id interface{}) *openpgp.Entity {
-	for _, entity := range *keyring {
-		if entity.PrivateKey != nil && entity.PrivateKey.KeyIdString() == id.(string) {
-			return entity
-		}
-		if entity.PrimaryKey != nil && entity.PrimaryKey.KeyIdString() == id.(string) {
-			return entity
-		}
-
+func (p *Pki) GetKeyByID(keyring *crypto.KeyRing, id interface{}) *crypto.Identity {
+	for _, entity := range keyring.Identities() {
 		if checkIdentities(id.(string), entity) {
 			return entity
 		}
@@ -211,18 +209,12 @@ func (p *Pki) GetKeyByID(keyring *openpgp.EntityList, id interface{}) *openpgp.E
 	return nil
 }
 
-func checkIdentities(id string, entity *openpgp.Entity) bool {
+func checkIdentities(id string, entity *crypto.Identity) bool {
 	for _, ident := range entity.Identities {
 		if id == ident.Name {
 			return true
 		}
-		if id == ident.UserId.Email {
-			return true
-		}
-		if id == ident.UserId.Name {
-			return true
-		}
-		if id == ident.UserId.Id {
+		if id == ident.Email {
 			return true
 		}
 	}
@@ -255,26 +247,36 @@ func (p *Pki) KeyUsedForEncryptedFile(file string) (string, error) {
 		return "", err
 	}
 
-	block, err := armor.Decode(in)
+
+	dec, sig, err := p.SecRing.DecryptArmored(in)
 	if err != nil {
 		return "", err
 	}
+	fmt.Printf("%#v\n", dec)
+	fmt.Printf("%#v\n", sig)
 
-	if block.Type != "PGP MESSAGE" {
-		return "", fmt.Errorf("error decoding private key")
-	}
-	md, err := openpgp.ReadMessage(block.Body, p.SecRing, nil, nil)
-	if err != nil {
-		return "", fmt.Errorf("unable to read PGP message: %s", err)
-	}
 
-	for index := 0; index < len(md.EncryptedToKeyIds); index++ {
-		id := md.EncryptedToKeyIds[index]
-		keyStr := p.keyStringForID(id)
-		if keyStr != "" {
-			return keyStr, nil
-		}
-	}
+
+	// block, err := armor.Decode(in)
+	// if err != nil {
+	// 	return "", err
+	// }
+
+	// if block.Type != "PGP MESSAGE" {
+	// 	return "", fmt.Errorf("error decoding private key")
+	// }
+	// md, err := openpgp.ReadMessage(block.Body, p.SecRing, nil, nil)
+	// if err != nil {
+	// 	return "", fmt.Errorf("unable to read PGP message: %s", err)
+	// }
+
+	// for index := 0; index < len(md.EncryptedToKeyIds); index++ {
+	// 	id := md.EncryptedToKeyIds[index]
+	// 	keyStr := p.keyStringForID(id)
+	// 	if keyStr != "" {
+	// 		return keyStr, nil
+	// 	}
+	// }
 
 	return "", fmt.Errorf("unable to find key for ids used")
 }
