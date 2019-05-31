@@ -33,6 +33,7 @@ import (
 	"strings"
 
 	"github.com/Everbridge/generate-secure-pillar/pki"
+	"github.com/ProtonMail/gopenpgp/crypto"
 	yaml "github.com/esilva-everbridge/yaml"
 	"github.com/sirupsen/logrus"
 	yamlv2 "gopkg.in/yaml.v2"
@@ -282,7 +283,7 @@ func (s *Sls) ProcessYaml(secretNames []string, secretValues []string) error {
 	for index := 0; index < len(secretNames); index++ {
 		cipherText := ""
 		if index >= 0 && index < len(secretValues) {
-			cipherText, err = s.Pki.EncryptSecret(secretValues[index])
+			cipherText, err = s.Pki.PublicKeyRing.EncryptMessage(secretValues[index], s.Pki.SecretKeyRing)
 			if err != nil {
 				return err
 			}
@@ -457,7 +458,7 @@ func (s *Sls) doString(val interface{}, action string) (string, error) {
 		}
 	case Encrypt:
 		if !isEncrypted(strVal) {
-			strVal, err = s.Pki.EncryptSecret(strVal)
+			strVal, err = s.Pki.PublicKeyRing.EncryptMessage(strVal, s.Pki.SecretKeyRing)
 			if err != nil {
 				return val.(string), err
 			}
@@ -482,7 +483,7 @@ func (s *Sls) rotateVal(strVal string) (string, error) {
 	if err != nil {
 		return strVal, err
 	}
-	return s.Pki.EncryptSecret(strVal)
+	return s.Pki.PublicKeyRing.EncryptMessage(strVal, s.Pki.SecretKeyRing)
 }
 
 func isEncrypted(str string) bool {
@@ -519,11 +520,11 @@ func (s *Sls) keyInfo(val string) (string, error) {
 }
 
 func (s *Sls) decryptVal(strVal string) (string, error) {
-	var plainText string
+	var plainText crypto.SignedString
 
 	if isEncrypted(strVal) {
 		var err error
-		plainText, err = s.Pki.DecryptSecret(strVal)
+		plainText, err = s.Pki.PublicKeyRing.DecryptMessage(strVal)
 		if err != nil {
 			return strVal, fmt.Errorf("error decrypting value: %s", err)
 		}
@@ -531,7 +532,7 @@ func (s *Sls) decryptVal(strVal string) (string, error) {
 		return strVal, nil
 	}
 
-	return plainText, nil
+	return plainText.String, nil
 }
 
 func validAction(action string) bool {

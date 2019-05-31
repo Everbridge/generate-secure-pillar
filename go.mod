@@ -4,7 +4,6 @@ require (
 	github.com/ProtonMail/go-mime v0.0.0-20190521135552-09454e3dbe72 // indirect
 	github.com/ProtonMail/gopenpgp v1.0.0
 	github.com/andreyvit/diff v0.0.0-20170406064948-c7f18ee00883
-	github.com/edlitmus/gopenpgp v1.0.0
 	github.com/esilva-everbridge/dig v0.0.0-20180223224648-c61b8cdf35b7 // indirect
 	github.com/esilva-everbridge/yaml v0.0.0-20180228212815-c24d151cf388
 	github.com/gosexy/to v0.0.0-20141221203644-c20e083e3123 // indirect
