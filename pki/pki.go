@@ -28,8 +28,6 @@ import (
 	"path/filepath"
 
 	"github.com/ProtonMail/gopenpgp/crypto"
-	// "github.com/keybase/go-crypto/openpgp"
-	// "github.com/keybase/go-crypto/openpgp/armor"
 	"github.com/sirupsen/logrus"
 	"github.com/y0ssar1an/q"
 )
