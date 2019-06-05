@@ -66,7 +66,9 @@ func TestCliArgs(t *testing.T) {
 	_, slsCount := utils.FindFilesByExt(dirPath, ".sls")
 	Equals(t, 7, slsCount)
 	pk := pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
-	defer utils.ProcessDir(dirPath, ".sls", sls.Decrypt, "", topLevelElement, pk)
+	defer func() {
+		_ = utils.ProcessDir(dirPath, ".sls", sls.Decrypt, "", topLevelElement, pk)
+	}()
 
 	tests := []struct {
 		name    string
@@ -167,11 +169,11 @@ func TestWriteSlsFile(t *testing.T) {
 
 	secText := "secret"
 	valType := "text"
-	s.SetValueFromPath(secText, valType)
+	_ = s.SetValueFromPath(secText, valType)
 
 	buffer, err := s.FormatBuffer("")
 	Ok(t, err)
-	sls.WriteSlsFile(buffer, slsFile)
+	_, _ = sls.WriteSlsFile(buffer, slsFile)
 
 	if _, err = os.Stat(slsFile); os.IsNotExist(err) {
 		t.Errorf("%s file was not written", slsFile)
@@ -252,7 +254,7 @@ func TestGetPath(t *testing.T) {
 	buffer, err := s.PerformAction("encrypt")
 	Ok(t, err)
 	if err == nil {
-		sls.WriteSlsFile(buffer, file)
+		_, _ = sls.WriteSlsFile(buffer, file)
 	}
 
 	if s.GetValueFromPath(topLevelElement) == nil {
@@ -267,7 +269,7 @@ func TestGetPath(t *testing.T) {
 	buffer, err = s.PerformAction("decrypt")
 	Ok(t, err)
 	if err == nil {
-		sls.WriteSlsFile(buffer, file)
+		_, _ = sls.WriteSlsFile(buffer, file)
 	}
 }
 
@@ -313,7 +315,7 @@ func TestNestedAndMultiLineFile(t *testing.T) {
 	buffer, err := s.PerformAction("encrypt")
 	Ok(t, err)
 	if err == nil {
-		sls.WriteSlsFile(buffer, filePath)
+		_, _ = sls.WriteSlsFile(buffer, filePath)
 	}
 
 	err = scanString(buffer.String(), 2, pki.PGPHeader)
@@ -326,7 +328,7 @@ func TestNestedAndMultiLineFile(t *testing.T) {
 	buffer, err = s.PerformAction("decrypt")
 	Ok(t, err)
 	if err == nil {
-		sls.WriteSlsFile(buffer, filePath)
+		_, _ = sls.WriteSlsFile(buffer, filePath)
 	}
 
 	err = scanString(buffer.String(), 0, pki.PGPHeader)
@@ -358,13 +360,13 @@ func TestRotateFile(t *testing.T) {
 	buffer, err := s.PerformAction("encrypt")
 	Ok(t, err)
 	if err == nil {
-		sls.WriteSlsFile(buffer, filePath)
+		_, _ = sls.WriteSlsFile(buffer, filePath)
 	}
 
 	buffer, err = s.PerformAction("rotate")
 	Ok(t, err)
 	if err == nil {
-		sls.WriteSlsFile(buffer, filePath)
+		_, _ = sls.WriteSlsFile(buffer, filePath)
 	}
 
 	val := s.GetValueFromPath("bar:baz")
@@ -372,7 +374,7 @@ func TestRotateFile(t *testing.T) {
 	buffer, err = s.PerformAction("decrypt")
 	Ok(t, err)
 	if err == nil {
-		sls.WriteSlsFile(buffer, filePath)
+		_, _ = sls.WriteSlsFile(buffer, filePath)
 	}
 }
 
@@ -387,7 +389,7 @@ func TestKeyInfo(t *testing.T) {
 	buffer, err := s.PerformAction("encrypt")
 	Ok(t, err)
 	if err == nil {
-		sls.WriteSlsFile(buffer, filePath)
+		_, _ = sls.WriteSlsFile(buffer, filePath)
 	}
 
 	buffer, err = s.PerformAction("validate")
@@ -403,7 +405,7 @@ func TestKeyInfo(t *testing.T) {
 	buffer, err = s.PerformAction("decrypt")
 	Ok(t, err)
 	if err == nil {
-		sls.WriteSlsFile(buffer, filePath)
+		_, _ = sls.WriteSlsFile(buffer, filePath)
 	}
 }
 
