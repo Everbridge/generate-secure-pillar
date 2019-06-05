@@ -169,7 +169,7 @@ func WriteSlsFile(buffer bytes.Buffer, outFilePath string) (int, error) {
 
 	var byteCount int
 	if stdOut {
-		byteCount, err = fmt.Fprintf(os.Stdout, fmt.Sprintf("%s\n", buffer.String()))
+		byteCount, err = os.Stdout.Write(buffer.Bytes())
 	} else {
 		byteCount, err = atomicWrite(fullPath, buffer)
 	}
@@ -524,7 +524,7 @@ func (s *Sls) decryptVal(strVal string) (string, error) {
 
 	if isEncrypted(strVal) {
 		var err error
-		plainText, err = s.Pki.PublicKeyRing.DecryptMessage(strVal)
+		plainText, err = s.Pki.SecretKeyRing.DecryptMessage(strVal)
 		if err != nil {
 			return strVal, fmt.Errorf("error decrypting value: %s", err)
 		}

@@ -234,7 +234,7 @@ func TestEncryptSecret(t *testing.T) {
 		if strings.Contains(v.(string), pki.PGPHeader) {
 			t.Errorf("YAML content is already encrypted.")
 		} else {
-			cipherText, err := p.EncryptSecret(v.(string))
+			cipherText, err := p.PublicKeyRing.EncryptMessage(v.(string), p.SecretKeyRing)
 			Ok(t, err)
 			Assert(t, strings.Contains(cipherText, pki.PGPHeader), "YAML content was not encrypted.", strings.Contains(cipherText, pki.PGPHeader))
 		}
@@ -282,14 +282,14 @@ func TestDecryptSecret(t *testing.T) {
 	length := len(yamlObj.Get(topLevelElement).(map[interface{}]interface{}))
 	Assert(t, length == 3, fmt.Sprintf("YAML content lenth is incorrect, got: %d, want: %d.", length, 3), 3)
 	for _, v := range yamlObj.Get(topLevelElement).(map[interface{}]interface{}) {
-		cipherText, err := p.EncryptSecret(v.(string))
+		cipherText, err := p.PublicKeyRing.EncryptMessage(v.(string), p.SecretKeyRing)
 		Ok(t, err)
 
-		plainText, err := p.DecryptSecret(cipherText)
+		plainText, err := p.SecretKeyRing.DecryptMessage(cipherText)
 		Ok(t, err)
 
-		Assert(t, !strings.Contains(plainText, pki.PGPHeader), "YAML content was not decrypted.", strings.Contains(plainText, pki.PGPHeader))
-		Assert(t, plainText != "", "decrypted content is empty", plainText)
+		Assert(t, !strings.Contains(plainText.String, pki.PGPHeader), "YAML content was not decrypted.", strings.Contains(plainText.String, pki.PGPHeader))
+		Assert(t, plainText.String != "", "decrypted content is empty", plainText.String)
 	}
 }
 
