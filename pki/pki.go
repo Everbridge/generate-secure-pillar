@@ -112,7 +112,7 @@ func (p *Pki) setKeyRing(keyRingPath string) (*openpgp.EntityList, error) {
 	if err != nil {
 		return nil, fmt.Errorf("cannot read private keys: %s", err)
 	} else if ring == nil {
-		return nil, fmt.Errorf("%s is empty", p.SecretKeyRing)
+		return nil, fmt.Errorf("secret key ring is empty")
 	}
 	if err = keyRingFile.Close(); err != nil {
 		return &ring, fmt.Errorf("error closing secring: %s", err)
