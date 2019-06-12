@@ -16,16 +16,17 @@ builds:
     goarch:
       - amd64
 
-archive:
-  replacements:
-    darwin: Darwin
-    linux: Linux
-    windows: Windows
-    openbsd: OpenBSD
-    netbsd: NetBSD
-    freebsd: FreeBSD
-    amd64: x86_64
-  name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+archives:
+  - id: main
+    replacements:
+      darwin: Darwin
+      linux: Linux
+      windows: Windows
+      openbsd: OpenBSD
+      netbsd: NetBSD
+      freebsd: FreeBSD
+      amd64: x86_64
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
 
 snapshot:
   name_template: SNAPSHOT-{{.Commit}}
@@ -66,30 +67,31 @@ brew:
   # Default is empty.
   description: "Create and update encrypted content or decrypt encrypted content in YAML files"
 
-nfpm:
-  # Your app's vendor.
-  # Default is empty.
-  vendor: Everbridge, Inc.
-  # Your app's homepage.
-  # Default is empty.
-  homepage: https://github.com/Everbridge/generate-secure-pillar
+nfpms:
+  -
+    # Your app's vendor.
+    # Default is empty.
+    vendor: Everbridge, Inc.
+    # Your app's homepage.
+    # Default is empty.
+    homepage: https://github.com/Everbridge/generate-secure-pillar
 
-  # Your app's maintainer (probably you).
-  # Default is empty.
-  maintainer: "Ed Silva <ed.silva@everbridge.com>"
+    # Your app's maintainer (probably you).
+    # Default is empty.
+    maintainer: "Ed Silva <ed.silva@everbridge.com>"
 
-  # Your app's description.
-  # Default is empty.
-  description: "Create and update encrypted content or decrypt encrypted content in YAML files"
+    # Your app's description.
+    # Default is empty.
+    description: "Create and update encrypted content or decrypt encrypted content in YAML files"
 
-  # Your app's license.
-  # Default is empty.
-  license: MIT
+    # Your app's license.
+    # Default is empty.
+    license: MIT
 
-  # Formats to be generated.
-  formats:
-    - deb
-    - rpm
+    # Formats to be generated.
+    formats:
+      - deb
+      - rpm
 
 sign:
   cmd: gpg
