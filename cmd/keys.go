@@ -30,6 +30,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const count = "count"
+
+var verbose bool
+
 // keysCmd represents the keys command
 var keysCmd = &cobra.Command{
 	Use:   "keys",
@@ -62,6 +66,26 @@ var keysCmd = &cobra.Command{
 		case path:
 			s := sls.New(inputFilePath, pk, topLevelElement)
 			utils.PathAction(&s, yamlPath, "validate")
+		case count:
+			s := sls.New(inputFilePath, pk, topLevelElement)
+			_, err := s.PerformAction("validate")
+			if err != nil {
+				logger.Fatal(err)
+			}
+			var vals []string
+			for _, v := range s.KeyMap {
+				vals = append(vals, v.(string))
+			}
+			unique := removeDuplicates(vals)
+			if verbose {
+				fmt.Printf("%d keys found:\n", len(unique))
+				for i := range unique {
+					fmt.Printf("  %s", unique[i])
+				}
+			}
+			if len(unique) > 1 {
+				os.Exit(len(unique))
+			}
 		default:
 			logger.Fatalf("unknown argument: '%s'", args[0])
 		}
@@ -73,4 +97,21 @@ func init() {
 	keysCmd.PersistentFlags().StringVarP(&yamlPath, "path", "p", "", "YAML path to examine")
 	keysCmd.PersistentFlags().StringVarP(&recurseDir, "dir", "d", "", "recurse over all .sls files in the given directory")
 	keysCmd.PersistentFlags().StringVarP(&inputFilePath, "file", "f", os.Stdin.Name(), "input file (defaults to STDIN)")
+	keysCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "verbose output")
+}
+
+func removeDuplicates(elements []string) []string {
+	seen := make(map[string]bool, 0)
+	var result []string
+
+	for v := range elements {
+		if seen[elements[v]] == true {
+			// skip it
+		} else {
+			seen[elements[v]] = true
+			result = append(result, elements[v])
+		}
+	}
+
+	return result
 }

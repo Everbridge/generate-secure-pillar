@@ -30,7 +30,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"gopkg.in/mattes/go-expand-tilde.v1"
+	tilde "gopkg.in/mattes/go-expand-tilde.v1"
 )
 
 var logger = logrus.New()
@@ -130,7 +130,7 @@ func init() {
 		}
 	}
 
-	rootCmd.PersistentFlags().BoolP("version", "v", false, "print the version")
+	rootCmd.PersistentFlags().Bool("version", false, "print the version")
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.config/generate-secure-pillar/config.yaml)")
 	rootCmd.PersistentFlags().StringVar(&profile, "profile", "", "config file (default is $HOME/.config/generate-secure-pillar/config.yaml)")
 	rootCmd.PersistentFlags().StringVarP(&pgpKeyName, "pgp_key", "k", pgpKeyName, "PGP key name, email, or ID to use for encryption")
