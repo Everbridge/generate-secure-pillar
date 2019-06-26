@@ -38,34 +38,35 @@ changelog:
     - '^docs:'
     - '^test:'
 
-brew:
-  # Reporitory to push the tap to.
-  github:
-    owner: esilva-everbridge
-    name: homebrew-generate-secure-pillar
+brews:
+  -
+    # Reporitory to push the tap to.
+    github:
+      owner: esilva-everbridge
+      name: homebrew-generate-secure-pillar
 
-  skip_upload: false
+    skip_upload: false
 
-  dependencies:
-    - gpg1
+    dependencies:
+      - gpg1
 
-  # Git author used to commit to the repository.
-  # Defaults are shown.
-  commit_author:
-    name: Ed Silva
-    email: ed.silva@everbridge.com
+    # Git author used to commit to the repository.
+    # Defaults are shown.
+    commit_author:
+      name: Ed Silva
+      email: ed.silva@everbridge.com
 
-  # Folder inside the repository to put the formula.
-  # Default is the root folder.
-  folder: Formula
+    # Folder inside the repository to put the formula.
+    # Default is the root folder.
+    folder: Formula
 
-  # Your app's homepage.
-  # Default is empty.
-  homepage: https://github.com/Everbridge/generate-secure-pillar
+    # Your app's homepage.
+    # Default is empty.
+    homepage: https://github.com/Everbridge/generate-secure-pillar
 
-  # Your app's description.
-  # Default is empty.
-  description: "Create and update encrypted content or decrypt encrypted content in YAML files"
+    # Your app's description.
+    # Default is empty.
+    description: "Create and update encrypted content or decrypt encrypted content in YAML files"
 
 nfpms:
   -
