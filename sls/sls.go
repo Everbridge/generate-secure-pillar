@@ -453,24 +453,24 @@ func (s *Sls) doString(val interface{}, action string) (string, error) {
 	case Decrypt:
 		strVal, err = s.decryptVal(strVal)
 		if err != nil {
-			return val.(string), err
+			return strVal, err
 		}
 	case Encrypt:
 		if !isEncrypted(strVal) {
 			strVal, err = s.Pki.EncryptSecret(strVal)
 			if err != nil {
-				return val.(string), err
+				return strVal, err
 			}
 		}
 	case Validate:
 		strVal, err = s.keyInfo(strVal)
 		if err != nil {
-			return val.(string), err
+			return strVal, err
 		}
 	case Rotate:
 		strVal, err = s.rotateVal(strVal)
 		if err != nil {
-			return val.(string), err
+			return strVal, err
 		}
 	}
 
