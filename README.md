@@ -25,7 +25,7 @@ brew install generate-secure-pillar
 
 ## CONFIG FILE USAGE
 
-A config file can be used to set default values, an example file is created, if there isn't one already, with commented out values.
+A config file can be used to set default values, and an example file is created if there isn't one already, with commented out values. The file location defaults to `~/.config/generate-secure-pillar/config.yaml`.
 Profiles can be specified and selected via a command line option.
 
 ``` shell
