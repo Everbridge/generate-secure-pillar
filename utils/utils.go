@@ -65,6 +65,10 @@ func PathAction(s *sls.Sls, path string, action string) {
 
 // ProcessDir applies an action concurrently to a directory of files
 func ProcessDir(searchDir string, fileExt string, action string, outputFilePath string, topLevelElement string, pk pki.Pki) error {
+	if len(searchDir) == 0 {
+		return fmt.Errorf("search directory not specified\n")
+	}
+
 	// get a list of sls files along with the count
 	files, count := FindFilesByExt(searchDir, fileExt)
 
