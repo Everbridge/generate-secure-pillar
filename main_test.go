@@ -79,6 +79,7 @@ func TestCliArgs(t *testing.T) {
 		{"no arguments", []string{}, "testdata/no-args.golden", 0},
 		{"encrypt recurse", []string{"-k", "Test Salt Master", "encrypt", "recurse", "-d", dirPath}, "testdata/encrypt-recurse.golden", 0},
 		{"keys recurse", []string{"-k", "Test Salt Master", "keys", "recurse", "-d", dirPath}, "testdata/keys-recurse.golden", 25},
+		{"keys recurse bad", []string{"-k", "Test Salt Master", "keys", "recurse", "-f", dirPath}, "testdata/keys-recurse-bad.golden", 0},
 		{"decrypt recurse", []string{"-k", "Test Salt Master", "decrypt", "recurse", "-d", dirPath}, "testdata/decrypt-recurse.golden", 0},
 		{"encrypt file", []string{"-k", "Test Salt Master", "encrypt", "all", "-f", dirPath + "/test.sls", "-u"}, "testdata/encrypt-file.golden", 0},
 		{"keys file", []string{"-k", "Test Salt Master", "keys", "all", "-f", dirPath + "/test.sls"}, "testdata/keys-file.golden", 12},
