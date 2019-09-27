@@ -94,7 +94,8 @@ nfpms:
       - deb
       - rpm
 
-sign:
-  cmd: gpg
-  artifacts: checksum
-  args: ["-u", "Everbridge Open Source", "--output", "${signature}", "--detach-sign", "${artifact}"]
+signs:
+  -
+    cmd: gpg
+    artifacts: checksum
+    args: ["-u", "Everbridge Open Source", "--output", "${signature}", "--detach-sign", "${artifact}"]
