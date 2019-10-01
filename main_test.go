@@ -264,7 +264,7 @@ func TestGetPath(t *testing.T) {
 			s.GetValueFromPath(topLevelElement))
 	}
 	secureVars := s.GetValueFromPath(topLevelElement)
-	for _, v := range secureVars.(map[interface{}]interface{}) {
+	for _, v := range secureVars.(map[string]interface{}) {
 		Assert(t, strings.Contains(v.(string), pki.PGPHeader), "YAML content was not encrypted.", strings.Contains(v.(string), pki.PGPHeader))
 	}
 

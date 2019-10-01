@@ -1,9 +1,9 @@
 #!yaml|gpg
 
 bar:
-  baz: qux
+    baz: qux
 foo: bar
 secure_vars:
-  aaa: bbb
-  bbb: foo
-  zzz: xxx
+    aaa: bbb
+    bbb: foo
+    zzz: xxx

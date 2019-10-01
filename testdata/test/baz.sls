@@ -1,5 +1,5 @@
 #!yaml|gpg
 
 secure_vars:
-  bar: baz
-  foo: bar
+    bar: baz
+    foo: bar

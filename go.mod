@@ -13,5 +13,5 @@ require (
 	github.com/spf13/viper v1.4.0
 	github.com/y0ssar1an/q v1.0.7
 	gopkg.in/mattes/go-expand-tilde.v1 v1.0.0-20150330173918-cb884138e64c
-	gopkg.in/yaml.v2 v2.2.2
+	gopkg.in/yaml.v3 v3.0.0-20190924164351-c8b7dadae555
 )

@@ -35,7 +35,7 @@ import (
 	"github.com/Everbridge/generate-secure-pillar/pki"
 	yaml "github.com/esilva-everbridge/yaml"
 	"github.com/sirupsen/logrus"
-	yamlv2 "gopkg.in/yaml.v2"
+	yamlv3 "gopkg.in/yaml.v3"
 )
 
 // Encrypt action
@@ -88,7 +88,7 @@ func (s *Sls) ReadBytes(buf []byte) error {
 		logger.Warnf("%s", err)
 	}
 
-	return yamlv2.Unmarshal(buf, &s.Yaml.Values)
+	return yamlv3.Unmarshal(buf, &s.Yaml.Values)
 }
 
 // ScanForIncludes looks for include statements in the given io.Reader
@@ -259,7 +259,7 @@ func (s *Sls) FormatBuffer(action string) (bytes.Buffer, error) {
 		return buffer, fmt.Errorf("%s has no values to format", s.FilePath)
 	}
 
-	out, err = yamlv2.Marshal(data)
+	out, err = yamlv3.Marshal(data)
 	if err != nil {
 		return buffer, fmt.Errorf("%s format error: %s", s.FilePath, err)
 	}
@@ -376,7 +376,7 @@ func (s *Sls) ProcessValues(vals interface{}, action string) (interface{}, error
 	case reflect.Slice:
 		return s.doSlice(vals, action)
 	case reflect.Map:
-		return s.doMap(vals.(map[interface{}]interface{}), action)
+		return s.doMap(vals.(map[string]interface{}), action)
 	default:
 		return s.doString(vals, action)
 	}
@@ -402,7 +402,7 @@ func (s *Sls) doSlice(vals interface{}, action string) (interface{}, error) {
 			things = append(things, sliceStuff)
 		case reflect.Map:
 			thing = item
-			mapStuff, err := s.doMap(thing.(map[interface{}]interface{}), action)
+			mapStuff, err := s.doMap(thing.(map[string]interface{}), action)
 			if err != nil {
 				return vals, err
 			}
@@ -419,8 +419,8 @@ func (s *Sls) doSlice(vals interface{}, action string) (interface{}, error) {
 	return things, nil
 }
 
-func (s *Sls) doMap(vals map[interface{}]interface{}, action string) (map[interface{}]interface{}, error) {
-	var ret = make(map[interface{}]interface{})
+func (s *Sls) doMap(vals map[string]interface{}, action string) (map[string]interface{}, error) {
+	var ret = make(map[string]interface{})
 	var err error
 
 	for key, val := range vals {
@@ -433,7 +433,7 @@ func (s *Sls) doMap(vals map[interface{}]interface{}, action string) (map[interf
 		case reflect.Slice:
 			ret[key], err = s.doSlice(val, action)
 		case reflect.Map:
-			ret[key], err = s.doMap(val.(map[interface{}]interface{}), action)
+			ret[key], err = s.doMap(val.(map[string]interface{}), action)
 		default:
 			ret[key], err = s.doString(val, action)
 		}
