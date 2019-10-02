@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 
 	"github.com/Everbridge/generate-secure-pillar/sls"
 	"github.com/Everbridge/generate-secure-pillar/utils"
@@ -74,7 +75,7 @@ var keysCmd = &cobra.Command{
 			}
 			var vals []string
 			for _, v := range s.KeyMap {
-				vals = append(vals, v.(string))
+				vals = append(vals, getNode(v.(interface{})).(string))
 			}
 			unique := removeDuplicates(vals)
 			if verbose {
@@ -114,4 +115,21 @@ func removeDuplicates(elements []string) []string {
 	}
 
 	return result
+}
+
+func getNode(v interface{}) interface{} {
+	var node interface{}
+	vtype := reflect.TypeOf(v)
+	kind := vtype.Kind()
+
+	switch kind {
+	case reflect.Slice:
+	case reflect.Map:
+		for _, v2 := range v.(map[string]interface{}) {
+			node = getNode(v2.(interface{}))
+		}
+	default:
+		node = fmt.Sprintf("%v", v)
+	}
+	return node
 }
