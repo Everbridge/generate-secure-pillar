@@ -75,7 +75,10 @@ var keysCmd = &cobra.Command{
 			}
 			var vals []string
 			for _, v := range s.KeyMap {
-				vals = append(vals, getNode(v.(interface{})).(string))
+				node := getNode(v.(interface{}))
+				if node != nil {
+					vals = append(vals, node.(string))
+				}
 			}
 			unique := removeDuplicates(vals)
 			if verbose {

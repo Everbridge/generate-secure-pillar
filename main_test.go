@@ -78,7 +78,7 @@ func TestCliArgs(t *testing.T) {
 	}{
 		{"no arguments", []string{}, "testdata/no-args.golden", 0},
 		{"encrypt recurse", []string{"-k", "Test Salt Master", "encrypt", "recurse", "-d", dirPath}, "testdata/encrypt-recurse.golden", 0},
-		{"keys recurse", []string{"-k", "Test Salt Master", "keys", "recurse", "-d", dirPath}, "testdata/keys-recurse.golden", 25},
+		{"keys recurse", []string{"-k", "Test Salt Master", "keys", "recurse", "-d", dirPath}, "testdata/keys-recurse.golden", 26},
 		{"keys recurse bad", []string{"-k", "Test Salt Master", "keys", "recurse", "-f", dirPath}, "testdata/keys-recurse-bad.golden", 0},
 		{"decrypt recurse", []string{"-k", "Test Salt Master", "decrypt", "recurse", "-d", dirPath}, "testdata/decrypt-recurse.golden", 0},
 		{"encrypt file", []string{"-k", "Test Salt Master", "encrypt", "all", "-f", dirPath + "/test.sls", "-u"}, "testdata/encrypt-file.golden", 0},
@@ -91,8 +91,6 @@ func TestCliArgs(t *testing.T) {
 
 	os.Setenv("GNUPGHOME", dirPath+"/gnupg")
 	for _, tt := range tests {
-		fmt.Printf("TT: %v\n", tt)
-
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			dir, err := os.Getwd()
@@ -105,6 +103,10 @@ func TestCliArgs(t *testing.T) {
 			if err != nil {
 				t.Fatalf("%s:\n%s", err, output)
 			}
+			ex := cmd.ProcessState.ExitCode()
+			if ex != 0 {
+				t.Errorf("Key command error, expected 0 got %d", ex)
+			}
 
 			actual := getActual(output)
 			if *update {
@@ -116,10 +118,15 @@ func TestCliArgs(t *testing.T) {
 			case "keys file":
 			case "keys path":
 			case "keys recurse":
-			case "keys count":
 				actualCount := keyNameCount(actual, "Test Salt Master")
 				if actualCount != tt.count {
 					t.Errorf("Key name count error, expected %d got %d", tt.count, actualCount)
+				}
+
+			case "keys count":
+				actualCount := keyNameCount(actual, "1 keys found:")
+				if actualCount != tt.count {
+					t.Errorf("Key count error, expected %d got %d", tt.count, actualCount)
 				}
 
 			default:
