@@ -1,31 +1,31 @@
 
 
-      4F9E78B1DEFBE6FE: Test Salt Master (test key)
-      4F9E78B1DEFBE6FE: Test Salt Master (test key)
-      4F9E78B1DEFBE6FE: Test Salt Master (test key)
-    4F9E78B1DEFBE6FE: Test Salt Master (test key)
-    4F9E78B1DEFBE6FE: Test Salt Master (test key)
-    4F9E78B1DEFBE6FE: Test Salt Master (test key)
-    4F9E78B1DEFBE6FE: Test Salt Master (test key)
-    4F9E78B1DEFBE6FE: Test Salt Master (test key)
-    a.multi-line.example: |
-    barney: |
-    fred: |
+            31E67906D88BF02: Test Salt Master (test key)
+            31E67906D88BF02: Test Salt Master (test key)
+            31E67906D88BF02: Test Salt Master (test key)
+        31E67906D88BF02: Test Salt Master (test key)
+        31E67906D88BF02: Test Salt Master (test key)
+        31E67906D88BF02: Test Salt Master (test key)
+        31E67906D88BF02: Test Salt Master (test key)
+        31E67906D88BF02: Test Salt Master (test key)
+        a.multi-line.example: |
+        barney: |
+        fred: |
+      - |
+      - |
+      - |
+    31E67906D88BF02: Test Salt Master (test key)
+    31E67906D88BF02: Test Salt Master (test key)
+    31E67906D88BF02: Test Salt Master (test key)
+    31E67906D88BF02: Test Salt Master (test key)
+    api_key: |
+    flinstones:
+    is:
+    list:
+    password: |
   - |
   - |
   - |
-  4F9E78B1DEFBE6FE: Test Salt Master (test key)
-  4F9E78B1DEFBE6FE: Test Salt Master (test key)
-  4F9E78B1DEFBE6FE: Test Salt Master (test key)
-  4F9E78B1DEFBE6FE: Test Salt Master (test key)
-  api_key: |
-  flinstones:
-  is:
-  list:
-  password: |
-- |
-- |
-- |
 key: |
 list:
 secure_vars:

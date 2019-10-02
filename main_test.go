@@ -84,12 +84,15 @@ func TestCliArgs(t *testing.T) {
 		{"encrypt file", []string{"-k", "Test Salt Master", "encrypt", "all", "-f", dirPath + "/test.sls", "-u"}, "testdata/encrypt-file.golden", 0},
 		{"keys file", []string{"-k", "Test Salt Master", "keys", "all", "-f", dirPath + "/test.sls"}, "testdata/keys-file.golden", 12},
 		{"keys path", []string{"-k", "Test Salt Master", "keys", "path", "-f", dirPath + "/test.sls", "-p", "key"}, "testdata/keys-path.golden", 1},
+		{"keys count", []string{"-k", "Test Salt Master", "keys", "count", "-v", "-f", dirPath + "/test.sls"}, "testdata/keys-count.golden", 1},
 		{"decrypt path", []string{"-k", "Test Salt Master", "decrypt", "path", "-f", dirPath + "/test.sls", "-p", "key", "-u"}, "testdata/decrypt-path.golden", 0},
 		{"decrypt file", []string{"-k", "Test Salt Master", "decrypt", "all", "-f", dirPath + "/test.sls", "-u"}, "testdata/decrypt-file.golden", 0},
 	}
 
 	os.Setenv("GNUPGHOME", dirPath+"/gnupg")
 	for _, tt := range tests {
+		fmt.Printf("TT: %v\n", tt)
+
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			dir, err := os.Getwd()
@@ -113,6 +116,7 @@ func TestCliArgs(t *testing.T) {
 			case "keys file":
 			case "keys path":
 			case "keys recurse":
+			case "keys count":
 				actualCount := keyNameCount(actual, "Test Salt Master")
 				if actualCount != tt.count {
 					t.Errorf("Key name count error, expected %d got %d", tt.count, actualCount)

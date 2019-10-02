@@ -22,10 +22,10 @@
       --profile string   config file (default is $HOME/.config/generate-secure-pillar/config.yaml)
       --pubring string   PGP public keyring (default "/Users/ed.silva/gocode/src/github.com/Everbridge/generate-secure-pillar/testdata/gnupg/pubring.gpg")
       --secring string   PGP private keyring (default "/Users/ed.silva/gocode/src/github.com/Everbridge/generate-secure-pillar/testdata/gnupg/secring.gpg")
+      --version          print the version
   -e, --element string   Name of the top level element under which encrypted key/value pairs are kept
   -h, --help             help for generate-secure-pillar
   -k, --pgp_key string   PGP key name, email, or ID to use for encryption
-  -v, --version          print the version
   create      create a new sls file
   decrypt     perform decryption operations
   encrypt     perform encryption operations

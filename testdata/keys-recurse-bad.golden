@@ -1,1 +1,2 @@
-level=warning msg="keys: search directory not specified\n"
+
+level=warning msg="keys: search directory not specified"
