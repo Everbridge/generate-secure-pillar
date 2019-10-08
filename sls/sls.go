@@ -60,13 +60,15 @@ type Sls struct {
 	IsInclude      bool
 	EncryptionPath string
 	KeyMap         map[string]interface{}
+	KeyMeta        string
+	KeyCount       int
 	Error          error
 }
 
 // New returns a Sls object
 func New(filePath string, p pki.Pki, encPath string) Sls {
 	logger.Out = os.Stdout
-	s := Sls{filePath, yaml.New(), &p, false, encPath, map[string]interface{}{}, nil}
+	s := Sls{filePath, yaml.New(), &p, false, encPath, map[string]interface{}{}, "", 0, nil}
 	if len(filePath) > 0 {
 		err := s.ReadSlsFile()
 		if err != nil {
@@ -358,6 +360,21 @@ func (s *Sls) PerformAction(action string) (bytes.Buffer, error) {
 			s.Yaml.Values = stuff
 		} else {
 			s.KeyMap = stuff
+			var vals []string
+			for _, v := range s.KeyMap {
+				node := getNode(v.(interface{}))
+				if node != nil {
+					vals = append(vals, node.(string))
+				}
+			}
+			unique := removeDuplicates(vals)
+			buf := bytes.Buffer{}
+			buf.WriteString(fmt.Sprintf("%d keys found:\n", len(unique)))
+			for i := range unique {
+				buf.WriteString(fmt.Sprintf("  %s", unique[i]))
+			}
+			s.KeyMeta = buf.String()
+			s.KeyCount = len(unique)
 		}
 	}
 
@@ -545,4 +562,37 @@ func shortFileName(file string) string {
 		return file
 	}
 	return strings.Replace(file, pwd+"/", "", 1)
+}
+
+func getNode(v interface{}) interface{} {
+	var node interface{}
+	vtype := reflect.TypeOf(v)
+	kind := vtype.Kind()
+
+	switch kind {
+	case reflect.Slice:
+	case reflect.Map:
+		for _, v2 := range v.(map[string]interface{}) {
+			node = getNode(v2.(interface{}))
+		}
+	default:
+		node = fmt.Sprintf("%v", v)
+	}
+	return node
+}
+
+func removeDuplicates(elements []string) []string {
+	seen := make(map[string]bool, 0)
+	var result []string
+
+	for v := range elements {
+		if seen[elements[v]] == true {
+			// skip it
+		} else {
+			seen[elements[v]] = true
+			result = append(result, elements[v])
+		}
+	}
+
+	return result
 }

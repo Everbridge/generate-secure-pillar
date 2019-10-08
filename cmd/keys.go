@@ -24,7 +24,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"reflect"
 
 	"github.com/Everbridge/generate-secure-pillar/sls"
 	"github.com/Everbridge/generate-secure-pillar/utils"
@@ -73,22 +72,11 @@ var keysCmd = &cobra.Command{
 			if err != nil {
 				logger.Fatal(err)
 			}
-			var vals []string
-			for _, v := range s.KeyMap {
-				node := getNode(v.(interface{}))
-				if node != nil {
-					vals = append(vals, node.(string))
-				}
-			}
-			unique := removeDuplicates(vals)
 			if verbose {
-				fmt.Printf("%d keys found:\n", len(unique))
-				for i := range unique {
-					fmt.Printf("  %s", unique[i])
-				}
+				fmt.Println(s.KeyMeta)
 			}
-			if len(unique) > 1 {
-				os.Exit(len(unique))
+			if s.KeyCount > 1 {
+				os.Exit(s.KeyCount)
 			}
 		default:
 			logger.Fatalf("unknown argument: '%s'", args[0])
@@ -102,37 +90,4 @@ func init() {
 	keysCmd.PersistentFlags().StringVarP(&recurseDir, "dir", "d", "", "recurse over all .sls files in the given directory")
 	keysCmd.PersistentFlags().StringVarP(&inputFilePath, "file", "f", os.Stdin.Name(), "input file (defaults to STDIN)")
 	keysCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "verbose output")
-}
-
-func removeDuplicates(elements []string) []string {
-	seen := make(map[string]bool, 0)
-	var result []string
-
-	for v := range elements {
-		if seen[elements[v]] == true {
-			// skip it
-		} else {
-			seen[elements[v]] = true
-			result = append(result, elements[v])
-		}
-	}
-
-	return result
-}
-
-func getNode(v interface{}) interface{} {
-	var node interface{}
-	vtype := reflect.TypeOf(v)
-	kind := vtype.Kind()
-
-	switch kind {
-	case reflect.Slice:
-	case reflect.Map:
-		for _, v2 := range v.(map[string]interface{}) {
-			node = getNode(v2.(interface{}))
-		}
-	default:
-		node = fmt.Sprintf("%v", v)
-	}
-	return node
 }

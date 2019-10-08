@@ -128,7 +128,7 @@ func applyActionAndWrite(file string, action string, pk *pki.Pki, topLevelElemen
 	} else if err != nil && action == sls.Validate {
 		logger.Warnf("%s", err)
 	} else if action == sls.Validate {
-		fmt.Printf("%s:\n%s\n", s.FilePath, buf.String())
+		fmt.Printf("%s:\nkey count: %d\n%s\n", s.FilePath, s.KeyCount, buf.String())
 		return byteCount
 	} else if buf.Len() == 0 {
 		err = fmt.Errorf("zero length buffer produced by '%s' for file '%s'", action, file)
