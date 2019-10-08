@@ -113,6 +113,7 @@ func ProcessDir(searchDir string, fileExt string, action string, outputFilePath 
 }
 
 func applyActionAndWrite(file string, action string, pk *pki.Pki, topLevelElement string, errChan chan error) int {
+	byteCount := 0
 	s := sls.New(file, *pk, topLevelElement)
 	if s.IsInclude || s.Error != nil {
 		if s.Error != nil {
@@ -128,17 +129,23 @@ func applyActionAndWrite(file string, action string, pk *pki.Pki, topLevelElemen
 		logger.Warnf("%s", err)
 	} else if action == sls.Validate {
 		fmt.Printf("%s:\n%s\n", s.FilePath, buf.String())
-		return 0
+		return byteCount
 	} else if buf.Len() == 0 {
 		err = fmt.Errorf("zero length buffer produced by '%s' for file '%s'", action, file)
 		handleErr(err, errChan)
-		return 0
+		return byteCount
 	}
 
-	byteCount, err := sls.WriteSlsFile(buf, file)
+	if action != sls.Validate {
+		byteCount, err = sls.WriteSlsFile(buf, file)
+	} else {
+		byteCount, err = os.Stdout.Write(buf.Bytes())
+	}
+
 	if err != nil {
 		handleErr(err, errChan)
 	}
+
 	return byteCount
 }
 
