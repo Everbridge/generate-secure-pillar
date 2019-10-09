@@ -362,9 +362,11 @@ func (s *Sls) PerformAction(action string) (bytes.Buffer, error) {
 			s.KeyMap = stuff
 			var vals []string
 			for _, v := range s.KeyMap {
-				node := getNode(v.(interface{}))
-				if node != nil {
-					vals = append(vals, node.(string))
+				if v != nil {
+					node := getNode(v.(interface{}))
+					if node != nil {
+						vals = append(vals, node.(string))
+					}
 				}
 			}
 			unique := removeDuplicates(vals)
