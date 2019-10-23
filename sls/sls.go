@@ -584,11 +584,11 @@ func getNode(v interface{}) interface{} {
 }
 
 func removeDuplicates(elements []string) []string {
-	seen := make(map[string]bool, 0)
+	seen := make(map[string]bool)
 	var result []string
 
 	for v := range elements {
-		if seen[elements[v]] == true {
+		if seen[elements[v]] {
 			// skip it
 		} else {
 			seen[elements[v]] = true
