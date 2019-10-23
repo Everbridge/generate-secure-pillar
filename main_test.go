@@ -210,7 +210,7 @@ func TestReadSlsFile(t *testing.T) {
 	yamlObj, err := yaml.Open("./testdata/new.sls")
 	Ok(t, err)
 
-	length := len(yamlObj.Get(topLevelElement).(map[interface{}]interface{}))
+	length := len(yamlObj.Get(topLevelElement).(map[string]interface{}))
 	Assert(t, length == 3, fmt.Sprintf("YAML content length is incorrect, got: %d, want: %d.", length, 3), 3)
 }
 
@@ -241,11 +241,11 @@ func TestEncryptSecret(t *testing.T) {
 	yamlObj, err := yaml.Open("./testdata/new.sls")
 	Ok(t, err)
 
-	length := len(yamlObj.Get(topLevelElement).(map[interface{}]interface{}))
+	length := len(yamlObj.Get(topLevelElement).(map[string]interface{}))
 	Assert(t, length == 3, fmt.Sprintf("YAML content lenth is incorrect, got: %d, want: %d.", length, 3), 3)
 
 	secureVars := yamlObj.Get(topLevelElement)
-	for _, v := range secureVars.(map[interface{}]interface{}) {
+	for _, v := range secureVars.(map[string]interface{}) {
 		if strings.Contains(v.(string), pki.PGPHeader) {
 			t.Errorf("YAML content is already encrypted.")
 		} else {
@@ -294,9 +294,9 @@ func TestDecryptSecret(t *testing.T) {
 	yamlObj, err := yaml.Open("./testdata/new.sls")
 	Ok(t, err)
 
-	length := len(yamlObj.Get(topLevelElement).(map[interface{}]interface{}))
+	length := len(yamlObj.Get(topLevelElement).(map[string]interface{}))
 	Assert(t, length == 3, fmt.Sprintf("YAML content lenth is incorrect, got: %d, want: %d.", length, 3), 3)
-	for _, v := range yamlObj.Get(topLevelElement).(map[interface{}]interface{}) {
+	for _, v := range yamlObj.Get(topLevelElement).(map[string]interface{}) {
 		cipherText, err := p.EncryptSecret(v.(string))
 		Ok(t, err)
 
