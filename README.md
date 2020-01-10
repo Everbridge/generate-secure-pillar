@@ -1,10 +1,10 @@
 # generate-secure-pillar
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/Everbridge/generate-secure-pillar)](https://goreportcard.com/report/github.com/Everbridge/generate-secure-pillar)
-[![Average time to resolve an issue](http://isitmaintained.com/badge/resolution/Everbridge/generate-secure-pillar.svg)](https://isitmaintained.com/project/Everbridge/generate-secure-pillar "Average time to resolve an issue")
-[![Percentage of issues still open](http://isitmaintained.com/badge/open/Everbridge/generate-secure-pillar.svg)](https://isitmaintained.com/project/Everbridge/generate-secure-pillar "Percentage of issues still open")
 
 ## Create and update encrypted content or decrypt encrypted content in YAML files
+
+<https://blog.edlitmus.info/generate-secure-pillar/>
 
 ## USAGE
 
@@ -58,6 +58,7 @@ expect -c "spawn gpg --edit-key '<the PGP key id here>' trust quit; send \"5\ry\
 
 ## COMMANDS
 
+```text
      create, c   create a new sls file
      update, u   update the value of the given key in the given file
      encrypt, e  perform encryption operations
@@ -65,6 +66,7 @@ expect -c "spawn gpg --edit-key '<the PGP key id here>' trust quit; send \"5\ry\
      rotate, r   decrypt existing files and re-encrypt with a new key
      keys, k     show PGP key IDs used
      help, h     Shows a list of commands or help for one command
+```
 
 ## GLOBAL OPTIONS
 
