@@ -37,7 +37,7 @@ func init() {
 	logger.Out = os.Stdout
 }
 
-// SafeWrite checks that there is no error priot to trying to write a file
+// SafeWrite checks that there is no error prior to trying to write a file
 func SafeWrite(buffer bytes.Buffer, outputFilePath string, err error) {
 	if err != nil {
 		logger.Fatalf("%s", err)
@@ -49,7 +49,7 @@ func SafeWrite(buffer bytes.Buffer, outputFilePath string, err error) {
 	}
 }
 
-// PathAction applys an action to a YAML path
+// PathAction applies an action to a YAML path
 func PathAction(s *sls.Sls, path string, action string) {
 	vals := s.GetValueFromPath(path)
 	if vals != nil {
