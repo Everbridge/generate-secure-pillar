@@ -12,6 +12,7 @@ require (
 	github.com/spf13/cobra v0.0.5
 	github.com/spf13/viper v1.4.0
 	github.com/y0ssar1an/q v1.0.7
+	golang.org/x/sys v0.0.0-20210305034016-7844c3c200c3 // indirect
 	gopkg.in/mattes/go-expand-tilde.v1 v1.0.0-20150330173918-cb884138e64c
 	gopkg.in/yaml.v3 v3.0.0-20191010095647-fc94e3f71652
 )
