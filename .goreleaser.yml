@@ -4,8 +4,7 @@
 dist: packages
 
 builds:
-  -
-    binary: generate-secure-pillar
+  - binary: generate-secure-pillar
     goos:
       - windows
       - darwin
@@ -35,12 +34,11 @@ changelog:
   sort: asc
   filters:
     exclude:
-    - '^docs:'
-    - '^test:'
+      - "^docs:"
+      - "^test:"
 
 brews:
-  -
-    # Reporitory to push the tap to.
+  - # Repository to push the tap to.
     github:
       owner: esilva-everbridge
       name: homebrew-generate-secure-pillar
@@ -69,8 +67,7 @@ brews:
     description: "Create and update encrypted content or decrypt encrypted content in YAML files"
 
 nfpms:
-  -
-    # Your app's vendor.
+  - # Your app's vendor.
     # Default is empty.
     vendor: Everbridge, Inc.
     # Your app's homepage.
@@ -95,7 +92,14 @@ nfpms:
       - rpm
 
 signs:
-  -
-    cmd: gpg
+  - cmd: gpg
     artifacts: checksum
-    args: ["-u", "Everbridge Open Source", "--output", "${signature}", "--detach-sign", "${artifact}"]
+    args:
+      [
+        "-u",
+        "Everbridge Open Source",
+        "--output",
+        "${signature}",
+        "--detach-sign",
+        "${artifact}",
+      ]
