@@ -14,6 +14,7 @@ builds:
       - freebsd
     goarch:
       - amd64
+      - arm64
 
 archives:
   - id: main
@@ -39,7 +40,7 @@ changelog:
 
 brews:
   - # Repository to push the tap to.
-    github:
+    tap:
       owner: esilva-everbridge
       name: homebrew-generate-secure-pillar
 
