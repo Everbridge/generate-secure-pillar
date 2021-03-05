@@ -45,7 +45,7 @@ brews:
     tap:
       owner: esilva-everbridge
       name: homebrew-generate-secure-pillar
-      token: "{{ .Env.HOMEBREW_GITHUB_API_TOKEN }}"
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
 
     skip_upload: false
 
