@@ -38,6 +38,16 @@ var verbose bool
 var keysCmd = &cobra.Command{
 	Use:   "keys",
 	Short: "show PGP key IDs used",
+	PreRunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) == 0 {
+			err := cmd.Help()
+			if err != nil {
+				logger.Fatal(err)
+			}
+			os.Exit(0)
+		}
+		return nil
+	},
 	Run: func(cmd *cobra.Command, args []string) {
 		pk := getPki()
 		outputFilePath = os.Stdout.Name()

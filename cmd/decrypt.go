@@ -33,6 +33,16 @@ import (
 var decryptCmd = &cobra.Command{
 	Use:   "decrypt",
 	Short: "perform decryption operations",
+	PreRunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) == 0 {
+			err := cmd.Help()
+			if err != nil {
+				logger.Fatal(err)
+			}
+			os.Exit(0)
+		}
+		return nil
+	},
 	Run: func(cmd *cobra.Command, args []string) {
 		pk := getPki()
 		outputFilePath, err := filepath.Abs(outputFilePath)
@@ -42,14 +52,6 @@ var decryptCmd = &cobra.Command{
 		inputFilePath, err := filepath.Abs(inputFilePath)
 		if err != nil {
 			logger.Fatal(err)
-		}
-
-		if len(args) == 0 {
-			err = cmd.Help()
-			if err != nil {
-				logger.Fatal(err)
-			}
-			return
 		}
 
 		// process args

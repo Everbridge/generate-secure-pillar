@@ -295,7 +295,7 @@ func TestDecryptSecret(t *testing.T) {
 	Ok(t, err)
 
 	length := len(yamlObj.Get(topLevelElement).(map[string]interface{}))
-	Assert(t, length == 3, fmt.Sprintf("YAML content lenth is incorrect, got: %d, want: %d.", length, 3), 3)
+	Assert(t, length == 3, fmt.Sprintf("YAML content length is incorrect, got: %d, want: %d.", length, 3), 3)
 	for _, v := range yamlObj.Get(topLevelElement).(map[string]interface{}) {
 		cipherText, err := p.EncryptSecret(v.(string))
 		Ok(t, err)
