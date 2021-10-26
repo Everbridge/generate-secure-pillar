@@ -21,6 +21,9 @@ builds:
       - arm64
     goarm:
       - 7
+    ignore:
+      - goos: linux
+        goarch: arm64
 
 archives:
   - id: main
