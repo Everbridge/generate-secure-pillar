@@ -74,8 +74,8 @@ simplify:
 check:
 	@test -z $(shell gofmt -l main.go | tee /dev/stderr) || echo "[WARN] Fix formatting issues with 'make fmt'"
 ifndef REVIVE
-	@echo "running 'golint .'"
-	@golint .
+	@echo "running 'staticcheck .'"
+	@staticcheck .
 else
 	@echo "running 'revive ./...'"
 	@revive --formatter friendly ./...
