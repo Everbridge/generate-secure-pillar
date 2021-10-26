@@ -9,22 +9,18 @@ dist: packages
 
 builds:
   - binary: generate-secure-pillar
-    goos:
-      - windows
-      - darwin
-      - linux
-      - openbsd
-      - netbsd
-      - freebsd
-    goarch:
-      - amd64
-      - arm64
-    goarm:
-      - 7
-    ignore:
-      - goos: linux
-        goarch: arm64
-        goarm: 7
+    targets:
+      - windows_amd64
+      - windows_arm64
+      - darwin_amd64
+      - darwin_arm64
+      - linux_amd64
+      - openbsd_amd64
+      - openbsd_arm64
+      - netbsd_amd64
+      - netbsd_arm64
+      - freebsd_amd64
+      - freebsd_arm64
 
 archives:
   - id: main
