@@ -54,8 +54,8 @@ type Pki struct {
 }
 
 // if debug==true this can be used to dump values from the var(s) passed in
-func dbg() func(thing ...interface{}) {
-	return func(thing ...interface{}) {
+func dbg() func(thing ...any) {
+	return func(thing ...any) {
 		if debug {
 			q.Q(thing)
 		}
@@ -73,22 +73,22 @@ func New(pgpKeyName string, publicKeyRing string, secretKeyRing string) Pki {
 	var err error
 
 	p := Pki{publicKeyRing, secretKeyRing, pgpKeyName, nil, nil, nil, nil}
-	publicKeyRing, err = p.ExpandTilde(p.PublicKeyRing)
+	publicKeyRing, err = ExpandTilde(p.PublicKeyRing)
 	if err != nil {
 		logger.Fatal("cannot expand public key ring path: ", err)
 	}
 	p.PublicKeyRing = publicKeyRing
-	p.PubRing, err = p.setKeyRing(p.PublicKeyRing)
+	p.PubRing, err = ReadKeyRing(p.PublicKeyRing)
 	if err != nil {
 		logger.Fatalf("Pki: %s", err)
 	}
 
-	secKeyRing, err := p.ExpandTilde(p.SecretKeyRing)
+	secKeyRing, err := ExpandTilde(p.SecretKeyRing)
 	if err != nil {
 		logger.Fatal("cannot expand secret key ring path: ", err)
 	}
 	p.SecretKeyRing = secKeyRing
-	p.SecRing, err = p.setKeyRing(p.SecretKeyRing)
+	p.SecRing, err = ReadKeyRing(p.SecretKeyRing)
 	if err != nil {
 		logger.Warnf("Pki: %s", err)
 	}
@@ -107,8 +107,9 @@ func New(pgpKeyName string, publicKeyRing string, secretKeyRing string) Pki {
 	return p
 }
 
-func (p *Pki) setKeyRing(keyRingPath string) (*openpgp.EntityList, error) {
-	keyRing, err := p.ExpandTilde(keyRingPath)
+// ReadKeyRing tries to read a given file, first as a non-armored file, then as an armored one, returning the the EntityList (or nil) and an error
+func ReadKeyRing(keyRingPath string) (*openpgp.EntityList, error) {
+	keyRing, err := ExpandTilde(keyRingPath)
 	if err != nil {
 		return nil, fmt.Errorf("error reading secring: %s", err)
 	}
@@ -118,9 +119,14 @@ func (p *Pki) setKeyRing(keyRingPath string) (*openpgp.EntityList, error) {
 	}
 	ring, err := openpgp.ReadKeyRing(keyRingFile)
 	if err != nil {
-		return nil, fmt.Errorf("cannot read private keys: %s", err)
-	} else if ring == nil {
-		return nil, fmt.Errorf("%s is empty", p.SecretKeyRing)
+		logger.Errorf("pki: %s", err)
+		ring, err = openpgp.ReadArmoredKeyRing(keyRingFile)
+		if err != nil {
+			return nil, fmt.Errorf("cannot read private keys in %s: %s", keyRingPath, err)
+		}
+	}
+	if ring == nil {
+		return nil, fmt.Errorf("%s is empty", keyRingPath)
 	}
 	if err = keyRingFile.Close(); err != nil {
 		return &ring, fmt.Errorf("error closing secring: %s", err)
@@ -194,7 +200,7 @@ func (p *Pki) DecryptSecret(cipherText string) (plainText string, err error) {
 }
 
 // GetKeyByID returns a keyring by the given ID
-func (p *Pki) GetKeyByID(keyring *openpgp.EntityList, id interface{}) *openpgp.Entity {
+func (p *Pki) GetKeyByID(keyring *openpgp.EntityList, id any) *openpgp.Entity {
 	for _, entity := range *keyring {
 		if entity.PrivateKey != nil && entity.PrivateKey.KeyIdString() == id.(string) {
 			return entity
@@ -231,7 +237,7 @@ func checkIdentities(id string, entity *openpgp.Entity) bool {
 }
 
 // ExpandTilde does exactly what it says on the tin
-func (p *Pki) ExpandTilde(path string) (string, error) {
+func ExpandTilde(path string) (string, error) {
 	if len(path) == 0 || path[0] != '~' {
 		return path, nil
 	}

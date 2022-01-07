@@ -158,7 +158,8 @@ func initConfig() {
 		if err != nil {
 			logger.Fatalf("error creating config file path: %s", err)
 		}
-		_, err = os.OpenFile(dir+"/config.yaml", os.O_RDONLY|os.O_CREATE, 0660)
+		configFilePath := fmt.Sprintf("%s/config.yaml", dir)
+		_, err = os.OpenFile(configFilePath, os.O_RDONLY|os.O_CREATE, 0600)
 		if err != nil {
 			logger.Fatalf("Error creating config file: %s", err)
 		}
@@ -189,8 +190,8 @@ func readProfile() {
 		profName := rootCmd.Flag("profile").Value.String()
 
 		if profName != "" || pgpKeyName == "" {
-			for _, prof := range profiles.([]interface{}) {
-				p := prof.(map[interface{}]interface{})
+			for _, prof := range profiles.([]any) {
+				p := prof.(map[any]any)
 				if p["default"] == true || profName == p["name"] {
 					gpgHome := p["gnupg_home"].(string)
 					if gpgHome != "" {

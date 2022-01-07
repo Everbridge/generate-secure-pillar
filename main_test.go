@@ -210,7 +210,7 @@ func TestReadSlsFile(t *testing.T) {
 	yamlObj, err := yaml.Open("./testdata/new.sls")
 	Ok(t, err)
 
-	length := len(yamlObj.Get(topLevelElement).(map[string]interface{}))
+	length := len(yamlObj.Get(topLevelElement).(map[string]any))
 	Assert(t, length == 3, fmt.Sprintf("YAML content length is incorrect, got: %d, want: %d.", length, 3), 3)
 }
 
@@ -241,11 +241,11 @@ func TestEncryptSecret(t *testing.T) {
 	yamlObj, err := yaml.Open("./testdata/new.sls")
 	Ok(t, err)
 
-	length := len(yamlObj.Get(topLevelElement).(map[string]interface{}))
+	length := len(yamlObj.Get(topLevelElement).(map[string]any))
 	Assert(t, length == 3, fmt.Sprintf("YAML content lenth is incorrect, got: %d, want: %d.", length, 3), 3)
 
 	secureVars := yamlObj.Get(topLevelElement)
-	for _, v := range secureVars.(map[string]interface{}) {
+	for _, v := range secureVars.(map[string]any) {
 		if strings.Contains(v.(string), pki.PGPHeader) {
 			t.Errorf("YAML content is already encrypted.")
 		} else {
@@ -275,7 +275,7 @@ func TestGetPath(t *testing.T) {
 			s.GetValueFromPath(topLevelElement))
 	}
 	secureVars := s.GetValueFromPath(topLevelElement)
-	for _, v := range secureVars.(map[string]interface{}) {
+	for _, v := range secureVars.(map[string]any) {
 		Assert(t, strings.Contains(v.(string), pki.PGPHeader), "YAML content was not encrypted.", strings.Contains(v.(string), pki.PGPHeader))
 	}
 
@@ -294,9 +294,9 @@ func TestDecryptSecret(t *testing.T) {
 	yamlObj, err := yaml.Open("./testdata/new.sls")
 	Ok(t, err)
 
-	length := len(yamlObj.Get(topLevelElement).(map[string]interface{}))
+	length := len(yamlObj.Get(topLevelElement).(map[string]any))
 	Assert(t, length == 3, fmt.Sprintf("YAML content length is incorrect, got: %d, want: %d.", length, 3), 3)
-	for _, v := range yamlObj.Get(topLevelElement).(map[string]interface{}) {
+	for _, v := range yamlObj.Get(topLevelElement).(map[string]any) {
 		cipherText, err := p.EncryptSecret(v.(string))
 		Ok(t, err)
 
@@ -520,10 +520,10 @@ func scanString(buffer string, wantedCount int, term string) error {
 }
 
 // Assert fails the test if the provided condition is false
-func Assert(tb testing.TB, condition bool, msg string, v ...interface{}) {
+func Assert(tb testing.TB, condition bool, msg string, v ...any) {
 	if !condition {
 		_, file, line, _ := runtime.Caller(1)
-		fmt.Printf("\033[31m%s:%d: "+msg+"\033[39m\n\n", append([]interface{}{filepath.Base(file), line}, v...)...)
+		fmt.Printf("\033[31m%s:%d: "+msg+"\033[39m\n\n", append([]any{filepath.Base(file), line}, v...)...)
 		tb.FailNow()
 	}
 }
@@ -538,7 +538,7 @@ func Ok(tb testing.TB, err error) {
 }
 
 // Equals fails the test if exp is not equal to act
-func Equals(tb testing.TB, exp, act interface{}) {
+func Equals(tb testing.TB, exp, act any) {
 	if !reflect.DeepEqual(exp, act) {
 		_, file, line, _ := runtime.Caller(1)
 		fmt.Printf("\033[31m%s:%d:\n\n\tExpected: %#v\n\n\tGot: %#v\033[39m\n\n", filepath.Base(file), line, exp, act)

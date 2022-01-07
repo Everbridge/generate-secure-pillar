@@ -59,7 +59,7 @@ type Sls struct {
 	Pki            *pki.Pki
 	IsInclude      bool
 	EncryptionPath string
-	KeyMap         map[string]interface{}
+	KeyMap         map[string]any
 	KeyMeta        string
 	KeyCount       int
 	Error          error
@@ -68,7 +68,7 @@ type Sls struct {
 // New returns a Sls object
 func New(filePath string, p pki.Pki, encPath string) Sls {
 	logger.Out = os.Stdout
-	s := Sls{filePath, yaml.New(), &p, false, encPath, map[string]interface{}{}, "", 0, nil}
+	s := Sls{filePath, yaml.New(), &p, false, encPath, map[string]any{}, "", 0, nil}
 	if len(filePath) > 0 {
 		err := s.ReadSlsFile()
 		if err != nil {
@@ -249,7 +249,7 @@ func (s *Sls) FormatBuffer(action string) (bytes.Buffer, error) {
 	var buffer bytes.Buffer
 	var out []byte
 	var err error
-	var data map[string]interface{}
+	var data map[string]any
 
 	if action != Validate {
 		data = s.Yaml.Values
@@ -299,10 +299,10 @@ func (s *Sls) ProcessYaml(secretNames []string, secretValues []string) error {
 }
 
 // GetValueFromPath returns the value from a path string
-func (s *Sls) GetValueFromPath(path string) interface{} {
+func (s *Sls) GetValueFromPath(path string) any {
 	parts := strings.Split(path, ":")
 
-	args := make([]interface{}, len(parts))
+	args := make([]any, len(parts))
 	for i := 0; i < len(parts); i++ {
 		args[i] = parts[i]
 	}
@@ -315,7 +315,7 @@ func (s *Sls) SetValueFromPath(path string, value string) error {
 	parts := strings.Split(path, ":")
 
 	// construct the args list
-	args := make([]interface{}, len(parts)+1)
+	args := make([]any, len(parts)+1)
 	for i := 0; i < len(parts); i++ {
 		args[i] = parts[i]
 	}
@@ -334,7 +334,7 @@ func (s *Sls) PerformAction(action string) (bytes.Buffer, error) {
 	var buf bytes.Buffer
 
 	if validAction(action) {
-		var stuff = make(map[string]interface{})
+		var stuff = make(map[string]any)
 
 		for key := range s.Yaml.Values {
 			if s.EncryptionPath != "" {
@@ -363,7 +363,7 @@ func (s *Sls) PerformAction(action string) (bytes.Buffer, error) {
 			var vals []string
 			for _, v := range s.KeyMap {
 				if v != nil {
-					node := getNode(v.(interface{}))
+					node := getNode(v.(any))
 					if node != nil {
 						vals = append(vals, node.(string))
 					}
@@ -384,8 +384,8 @@ func (s *Sls) PerformAction(action string) (bytes.Buffer, error) {
 }
 
 // ProcessValues will encrypt or decrypt given values
-func (s *Sls) ProcessValues(vals interface{}, action string) (interface{}, error) {
-	var res interface{}
+func (s *Sls) ProcessValues(vals any, action string) (any, error) {
+	var res any
 
 	if vals == nil {
 		return res, nil
@@ -395,21 +395,21 @@ func (s *Sls) ProcessValues(vals interface{}, action string) (interface{}, error
 	case reflect.Slice:
 		return s.doSlice(vals, action)
 	case reflect.Map:
-		return s.doMap(vals.(map[string]interface{}), action)
+		return s.doMap(vals.(map[string]any), action)
 	default:
 		return s.doString(vals, action)
 	}
 }
 
-func (s *Sls) doSlice(vals interface{}, action string) (interface{}, error) {
-	var things []interface{}
+func (s *Sls) doSlice(vals any, action string) (any, error) {
+	var things []any
 
 	if vals == nil {
 		return things, nil
 	}
 
-	for _, item := range vals.([]interface{}) {
-		var thing interface{}
+	for _, item := range vals.([]any) {
+		var thing any
 		vtype := reflect.TypeOf(item).Kind()
 
 		switch vtype {
@@ -421,7 +421,7 @@ func (s *Sls) doSlice(vals interface{}, action string) (interface{}, error) {
 			things = append(things, sliceStuff)
 		case reflect.Map:
 			thing = item
-			mapStuff, err := s.doMap(thing.(map[string]interface{}), action)
+			mapStuff, err := s.doMap(thing.(map[string]any), action)
 			if err != nil {
 				return vals, err
 			}
@@ -438,8 +438,8 @@ func (s *Sls) doSlice(vals interface{}, action string) (interface{}, error) {
 	return things, nil
 }
 
-func (s *Sls) doMap(vals map[string]interface{}, action string) (map[string]interface{}, error) {
-	var ret = make(map[string]interface{})
+func (s *Sls) doMap(vals map[string]any, action string) (map[string]any, error) {
+	var ret = make(map[string]any)
 	var err error
 
 	for key, val := range vals {
@@ -452,7 +452,7 @@ func (s *Sls) doMap(vals map[string]interface{}, action string) (map[string]inte
 		case reflect.Slice:
 			ret[key], err = s.doSlice(val, action)
 		case reflect.Map:
-			ret[key], err = s.doMap(val.(map[string]interface{}), action)
+			ret[key], err = s.doMap(val.(map[string]any), action)
 		default:
 			ret[key], err = s.doString(val, action)
 		}
@@ -461,7 +461,7 @@ func (s *Sls) doMap(vals map[string]interface{}, action string) (map[string]inte
 	return ret, err
 }
 
-func (s *Sls) doString(val interface{}, action string) (string, error) {
+func (s *Sls) doString(val any, action string) (string, error) {
 	var err error
 
 	// %v is a 'cheat' in that it will convert any type
@@ -566,16 +566,16 @@ func shortFileName(file string) string {
 	return strings.Replace(file, pwd+"/", "", 1)
 }
 
-func getNode(v interface{}) interface{} {
-	var node interface{}
+func getNode(v any) any {
+	var node any
 	vtype := reflect.TypeOf(v)
 	kind := vtype.Kind()
 
 	switch kind {
 	case reflect.Slice:
 	case reflect.Map:
-		for _, v2 := range v.(map[string]interface{}) {
-			node = getNode(v2.(interface{}))
+		for _, v2 := range v.(map[string]any) {
+			node = getNode(v2.(any))
 		}
 	default:
 		node = fmt.Sprintf("%v", v)
