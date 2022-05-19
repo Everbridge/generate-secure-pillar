@@ -2,9 +2,9 @@
 
 key: value
 list:
-  - one
-  - two
-  - three
+    - one
+    - two
+    - three
 secure_vars:
     api_key: key_value
     password: foo
@@ -14,9 +14,9 @@ stuff:
         fred: wilma
 sub:
     list:
-      - one
-      - two
-      - three
+        - one
+        - two
+        - three
 this:
     is:
         a.multi-line.example: |

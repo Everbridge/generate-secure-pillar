@@ -21,11 +21,14 @@
 package utils
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
-
+	"strings"
+	
 	"github.com/Everbridge/generate-secure-pillar/pki"
 	"github.com/Everbridge/generate-secure-pillar/sls"
 	"github.com/sirupsen/logrus"
@@ -202,4 +205,15 @@ func checkForDir(filePath string) error {
 	}
 
 	return err
+}
+
+// scanForGPGRender looks for Salt GPG render header in the given io.Reader
+func scanForGPGRender(reader io.Reader) bool {
+	// Splits on newlines by default.
+	scanner := bufio.NewScanner(reader)
+
+	// we only care about the first line since we are looking for the shebang
+	scanner.Scan()
+	txt := scanner.Text()
+	return strings.Contains(txt, "#!yaml|gpg")
 }

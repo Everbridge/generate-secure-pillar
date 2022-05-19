@@ -33,7 +33,7 @@ import (
 	"github.com/keybase/go-crypto/openpgp"
 	"github.com/keybase/go-crypto/openpgp/armor"
 	"github.com/sirupsen/logrus"
-	"github.com/y0ssar1an/q"
+	"github.com/spewerspew/spew"
 )
 
 var logger = logrus.New()
@@ -57,7 +57,7 @@ type Pki struct {
 func dbg() func(thing ...any) {
 	return func(thing ...any) {
 		if debug {
-			q.Q(thing)
+			spew.Dump(thing)
 		}
 	}
 }
