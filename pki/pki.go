@@ -32,8 +32,8 @@ import (
 
 	"github.com/keybase/go-crypto/openpgp"
 	"github.com/keybase/go-crypto/openpgp/armor"
+	"github.com/ryboe/q"
 	"github.com/sirupsen/logrus"
-	"github.com/y0ssar1an/q"
 )
 
 var logger = logrus.New()
