@@ -7,8 +7,8 @@ require (
 	github.com/esilva-everbridge/yaml v0.0.0-20191018193613-f05de9cc556d
 	github.com/keybase/go-crypto v0.0.0-20200123153347-de78d2cb44f4
 	github.com/mitchellh/go-homedir v1.1.0
+	github.com/ryboe/q v1.0.16
 	github.com/sirupsen/logrus v1.8.1
-	github.com/spewerspew/spew v0.0.0-20220201233537-1fb8bf5ed3d2
 	github.com/spf13/cobra v1.4.0
 	github.com/spf13/viper v1.11.0
 	gopkg.in/mattes/go-expand-tilde.v1 v1.0.0-20150330173918-cb884138e64c
@@ -21,10 +21,13 @@ require (
 	github.com/fsnotify/fsnotify v1.5.1 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
+	github.com/kr/pretty v0.3.0 // indirect
+	github.com/kr/text v0.2.0 // indirect
 	github.com/magiconair/properties v1.8.6 // indirect
 	github.com/mitchellh/mapstructure v1.4.3 // indirect
 	github.com/pelletier/go-toml v1.9.4 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.0-beta.8 // indirect
+	github.com/rogpeppe/go-internal v1.6.1 // indirect
 	github.com/sergi/go-diff v1.2.0 // indirect
 	github.com/spf13/afero v1.8.2 // indirect
 	github.com/spf13/cast v1.4.1 // indirect
