@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-// The PKI package handles PGP for pillar content
+// Package pki handles PGP for pillar content
 package pki
 
 import (

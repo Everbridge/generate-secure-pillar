@@ -18,6 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+// Package cmd/keys is for showing what PGP keys were used to encrypt data in secure pillar files
 package cmd
 
 import (

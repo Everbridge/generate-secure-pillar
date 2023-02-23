@@ -1,3 +1,4 @@
+// Package cmd/root handles the base command line arguments
 package cmd
 
 // Copyright © 2018 Everbridge, Inc.

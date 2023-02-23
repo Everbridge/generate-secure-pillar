@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-// The Utils package is for general utility functions
+// Package utils is for general utility functions
 package utils
 
 import (
@@ -189,7 +189,7 @@ func FindFilesByExt(searchDir string, ext string) ([]string, int) {
 	return fileList, len(fileList)
 }
 
-//checkForDir does exactly what it says on the tin
+// checkForDir does exactly what it says on the tin
 func checkForDir(filePath string) error {
 	fi, err := os.Stat(filePath)
 	if err != nil {

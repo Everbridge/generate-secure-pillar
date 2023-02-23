@@ -18,6 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+// Package cmd/rotate handles the rotation of PGP keys by decrypting and re-encrypting data in secure pillar files
 package cmd
 
 import (
