@@ -51,7 +51,7 @@ ifndef RELEASER
 	@echo "cannot build release (missing goreleaser)"
 else
 	@echo "creating a new release"
-	GITHUB_TOKEN=`cat ~/.config/goreleaser/github_token` goreleaser --rm-dist
+	GITHUB_TOKEN=`cat ~/.config/goreleaser/github_token` goreleaser --clean
 endif
 	@true
 
