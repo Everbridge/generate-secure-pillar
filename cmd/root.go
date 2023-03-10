@@ -191,7 +191,7 @@ func readProfile() {
 
 		if profName != "" || pgpKeyName == "" {
 			for _, prof := range profiles.([]interface{}) {
-				p := prof.(map[interface{}]interface{})
+				p := prof.(map[string]interface{})
 				if p["default"] == true || profName == p["name"] {
 					gpgHome := p["gnupg_home"].(string)
 					if gpgHome != "" {
