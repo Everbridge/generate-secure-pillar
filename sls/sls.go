@@ -69,7 +69,7 @@ type Sls struct {
 // New returns a Sls object
 func New(filePath string, p pki.Pki, encPath string) Sls {
 	logger.Out = os.Stdout
-	s := Sls{filePath, yaml.New(), &p, false, encPath, map[string]interface{}{}, "", 0, nil}
+	s := Sls{nil, yaml.New(), &p, map[string]interface{}{}, filePath, encPath, "", 0, false}
 	if len(filePath) > 0 {
 		err := s.ReadSlsFile()
 		if err != nil {

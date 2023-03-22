@@ -73,7 +73,7 @@ func New(pgpKeyName string, publicKeyRing string, secretKeyRing string) Pki {
 	logger.Out = os.Stdout
 	var err error
 
-	p := Pki{publicKeyRing, secretKeyRing, pgpKeyName, nil, nil, nil, nil}
+	p := Pki{nil, nil, nil, nil, publicKeyRing, secretKeyRing, pgpKeyName}
 	publicKeyRing, err = p.ExpandTilde(p.PublicKeyRing)
 	if err != nil {
 		logger.Fatal("cannot expand public key ring path: ", err)
