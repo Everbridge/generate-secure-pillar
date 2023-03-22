@@ -55,15 +55,15 @@ var logger = logrus.New()
 
 // Sls sls data
 type Sls struct {
-	FilePath       string
+	Error          error
 	Yaml           *yaml.Yaml
 	Pki            *pki.Pki
-	IsInclude      bool
-	EncryptionPath string
 	KeyMap         map[string]interface{}
+	FilePath       string
+	EncryptionPath string
 	KeyMeta        string
 	KeyCount       int
-	Error          error
+	IsInclude      bool
 }
 
 // New returns a Sls object

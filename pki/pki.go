@@ -45,13 +45,13 @@ const PGPHeader string = "-----BEGIN PGP MESSAGE-----"
 
 // Pki pki info
 type Pki struct {
-	PublicKeyRing string
-	SecretKeyRing string
-	PgpKeyName    string
 	PublicKey     *openpgp.Entity
 	SecretKey     *openpgp.Entity
 	PubRing       *openpgp.EntityList
 	SecRing       *openpgp.EntityList
+	PublicKeyRing string
+	SecretKeyRing string
+	PgpKeyName    string
 }
 
 // if debug==true this can be used to dump values from the var(s) passed in
