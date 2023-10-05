@@ -38,7 +38,7 @@ changelog:
 
 brews:
   - # Repository to push the tap to.
-    tap:
+    repository:
       owner: esilva-everbridge
       name: homebrew-generate-secure-pillar
 
