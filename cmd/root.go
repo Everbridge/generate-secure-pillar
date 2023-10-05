@@ -28,13 +28,15 @@ import (
 
 	"github.com/Everbridge/generate-secure-pillar/pki"
 	homedir "github.com/mitchellh/go-homedir"
-	"github.com/sirupsen/logrus"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
+
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	tilde "gopkg.in/mattes/go-expand-tilde.v1"
 )
 
-var logger = logrus.New()
+var logger = zerolog.New(os.Stdout)
 var inputFilePath string
 var outputFilePath = os.Stdout.Name()
 var cfgFile string
@@ -110,7 +112,7 @@ func Execute() {
 }
 
 func init() {
-	logger.Out = os.Stdout
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stdout})
 	cobra.OnInitialize(initConfig)
 
 	// respect the env var if set
@@ -123,11 +125,11 @@ func init() {
 	// check for GNUPG1 pubring file
 	filePath, err := tilde.Expand(publicKeyRing)
 	if err != nil {
-		logger.Fatalf("Error with GNUPG pubring path: %s", err)
+		logger.Fatal().Err(err).Msg("Error with GNUPG pubring path")
 	}
 	if _, err = os.Stat(filepath.Clean(filePath)); os.IsNotExist(err) {
 		if err != nil {
-			logger.Fatalf("Error finding GNUPG pubring file: %s", err)
+			logger.Fatal().Err(err).Msg("Error finding GNUPG pubring file")
 		}
 	}
 
@@ -157,11 +159,11 @@ func initConfig() {
 		dir := filepath.Clean(configPath)
 		err = os.MkdirAll(dir, 0700)
 		if err != nil {
-			logger.Fatalf("error creating config file path: %s", err)
+			logger.Fatal().Err(err).Msg("error creating config file path")
 		}
 		_, err = os.OpenFile(dir+"/config.yaml", os.O_RDONLY|os.O_CREATE, 0660)
 		if err != nil {
-			logger.Fatalf("Error creating config file: %s", err)
+			logger.Fatal().Err(err).Msg("Error creating config file")
 		}
 
 		// set config in "~/.config/generate-secure-pillar/config.yaml".
@@ -175,7 +177,7 @@ func initConfig() {
 	// If a config file is found, read it in.
 	err := viper.ReadInConfig() // Find and read the config file
 	if err != nil {             // Handle errors reading the config file
-		logger.Fatalf("Fatal error config file: %s", err)
+		logger.Fatal().Err(err).Msg("Fatal error config file")
 	}
 	readProfile()
 }

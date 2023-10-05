@@ -29,23 +29,24 @@ import (
 
 	"github.com/Everbridge/generate-secure-pillar/pki"
 	"github.com/Everbridge/generate-secure-pillar/sls"
-	"github.com/sirupsen/logrus"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 )
 
-var logger = logrus.New()
+var logger = zerolog.New(os.Stdout)
 
 func init() {
-	logger.Out = os.Stdout
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stdout})
 }
 
 // SafeWrite checks that there is no error prior to trying to write a file
 func SafeWrite(buffer bytes.Buffer, outputFilePath string, err error) {
 	if err != nil {
-		logger.Fatalf("%s", err)
+		logger.Fatal().Err(err)
 	} else {
 		_, err = sls.WriteSlsFile(buffer, outputFilePath)
 		if err != nil {
-			logger.Fatalf("%s", err)
+			logger.Fatal().Err(err)
 		}
 	}
 }
@@ -56,11 +57,11 @@ func PathAction(s *sls.Sls, path string, action string) {
 	if vals != nil {
 		processedVals, err := s.ProcessValues(vals, action)
 		if err != nil {
-			logger.Fatalf("path action failed: %s", err)
+			logger.Fatal().Err(err).Msg("path action failed")
 		}
 		fmt.Printf("%s: %s\n", path, processedVals)
 	} else {
-		logger.Warnf("unable to find path: '%s'", path)
+		logger.Warn().Msgf("unable to find path: '%s'", path)
 	}
 }
 
@@ -99,8 +100,8 @@ func ProcessDir(searchDir string, fileExt string, action string, outputFilePath 
 		select {
 		case byteCount := <-resChan:
 			if action != sls.Validate && outputFilePath != os.Stdout.Name() {
-				logger.Infof("%d bytes written", byteCount)
-				logger.Infof("Finished processing %d of %d files\n", count-remaining+1, count)
+				logger.Info().Msgf("%d bytes written", byteCount)
+				logger.Info().Msgf("Finished processing %d of %d files\n", count-remaining+1, count)
 			}
 			remaining--
 		case err := <-errChan:
@@ -118,16 +119,16 @@ func applyActionAndWrite(file string, action string, pk *pki.Pki, topLevelElemen
 	s := sls.New(file, *pk, topLevelElement)
 	if s.IsInclude || s.Error != nil {
 		if s.Error != nil {
-			logger.Warnf("%s", s.Error)
+			logger.Warn().Err(s.Error)
 		}
 		return 0
 	}
 
 	buf, err := s.PerformAction(action)
 	if buf.Len() > 0 && err != nil && action != sls.Validate {
-		logger.Warnf("%s", err)
+		logger.Warn().Err(err)
 	} else if err != nil && action == sls.Validate {
-		logger.Warnf("%s", err)
+		logger.Warn().Err(err)
 	} else if action == sls.Validate {
 		fmt.Printf("%s:\nkey count: %d\n%s\n", s.FilePath, s.KeyCount, buf.String())
 		return byteCount
@@ -167,12 +168,12 @@ func FindFilesByExt(searchDir string, ext string) ([]string, int) {
 	fileList := []string{}
 	searchDir, err := filepath.Abs(searchDir)
 	if err != nil {
-		logger.Error(err)
+		logger.Error().Err(err)
 		return fileList, 0
 	}
 	err = checkForDir(searchDir)
 	if err != nil {
-		logger.Error(err)
+		logger.Error().Err(err)
 		return fileList, 0
 	}
 
@@ -183,7 +184,7 @@ func FindFilesByExt(searchDir string, ext string) ([]string, int) {
 		return nil
 	})
 	if err != nil {
-		logger.Fatal("error walking file path: ", err)
+		logger.Fatal().Err(err).Msg("error walking file path")
 	}
 
 	return fileList, len(fileList)

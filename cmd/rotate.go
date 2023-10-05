@@ -22,8 +22,12 @@
 package cmd
 
 import (
+	"os"
+
 	"github.com/Everbridge/generate-secure-pillar/sls"
 	"github.com/Everbridge/generate-secure-pillar/utils"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
@@ -37,7 +41,7 @@ var rotateCmd = &cobra.Command{
 		if recurseDir != "" {
 			err := utils.ProcessDir(recurseDir, ".sls", "rotate", outputFilePath, topLevelElement, pk)
 			if err != nil {
-				logger.Warnf("rotate: %s", err)
+				logger.Warn().Err(err).Msg("rotate")
 			}
 		} else if inputFilePath != "" {
 			s := sls.New(inputFilePath, pk, topLevelElement)
@@ -46,13 +50,14 @@ var rotateCmd = &cobra.Command{
 		} else {
 			err := cmd.Help()
 			if err != nil {
-				logger.Fatal(err)
+				logger.Fatal().Err(err)
 			}
 		}
 	},
 }
 
 func init() {
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stdout})
 	rootCmd.AddCommand(rotateCmd)
 	rotateCmd.PersistentFlags().StringVarP(&recurseDir, "dir", "d", "", "recurse over all .sls files in the given directory")
 	rotateCmd.PersistentFlags().StringVarP(&inputFilePath, "file", "f", "", "input file (defaults to STDIN)")

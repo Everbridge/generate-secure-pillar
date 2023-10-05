@@ -33,11 +33,12 @@ import (
 
 	"github.com/keybase/go-crypto/openpgp"
 	"github.com/keybase/go-crypto/openpgp/armor"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"github.com/ryboe/q"
-	"github.com/sirupsen/logrus"
 )
 
-var logger = logrus.New()
+var logger = zerolog.New(os.Stdout)
 var debug = false
 
 // PGPHeader header const
@@ -70,28 +71,28 @@ func New(pgpKeyName string, publicKeyRing string, secretKeyRing string) Pki {
 	if os.Getenv("GSPPKI_DEBUG") != "" {
 		debug = true
 	}
-	logger.Out = os.Stdout
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stdout})
 	var err error
 
 	p := Pki{nil, nil, nil, nil, publicKeyRing, secretKeyRing, pgpKeyName}
 	publicKeyRing, err = p.ExpandTilde(p.PublicKeyRing)
 	if err != nil {
-		logger.Fatal("cannot expand public key ring path: ", err)
+		logger.Fatal().Err(err).Msg("cannot expand public key ring path")
 	}
 	p.PublicKeyRing = publicKeyRing
 	p.PubRing, err = p.setKeyRing(p.PublicKeyRing)
 	if err != nil {
-		logger.Fatalf("Pki: %s", err)
+		logger.Fatal().Err(err).Msg("Pki")
 	}
 
 	secKeyRing, err := p.ExpandTilde(p.SecretKeyRing)
 	if err != nil {
-		logger.Fatal("cannot expand secret key ring path: ", err)
+		logger.Fatal().Err(err).Msg("cannot expand secret key ring path")
 	}
 	p.SecretKeyRing = secKeyRing
 	p.SecRing, err = p.setKeyRing(p.SecretKeyRing)
 	if err != nil {
-		logger.Warnf("Pki: %s", err)
+		logger.Warn().Err(err).Msg("Pki")
 	}
 
 	// TODO: Something is goofy here sometimes when getting a key to decrypt
@@ -100,7 +101,7 @@ func New(pgpKeyName string, publicKeyRing string, secretKeyRing string) Pki {
 	}
 	p.PublicKey = p.GetKeyByID(p.PubRing, p.PgpKeyName)
 	if p.PublicKey == nil {
-		logger.Fatalf("unable to find key '%s' in %s", p.PgpKeyName, p.PublicKeyRing)
+		logger.Fatal().Err(err).Msg(fmt.Sprintf("unable to find key '%s' in %s", p.PgpKeyName, p.PublicKeyRing))
 	}
 
 	dumper(p)

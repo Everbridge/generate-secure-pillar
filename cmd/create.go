@@ -27,6 +27,8 @@ import (
 	"strings"
 
 	"github.com/Everbridge/generate-secure-pillar/sls"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
@@ -37,7 +39,7 @@ var createCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		outputFilePath, err := filepath.Abs(outputFilePath)
 		if err != nil {
-			logger.Fatal(err)
+			logger.Fatal().Err(err)
 		}
 		secretNames := strings.Split(strings.Trim(cmd.Flag("name").Value.String(), "[]"), ",")
 		secretValues := strings.Split(strings.Trim(cmd.Flag("value").Value.String(), "[]"), ",")
@@ -45,20 +47,21 @@ var createCmd = &cobra.Command{
 		s := sls.New(outputFilePath, pk, topLevelElement)
 		err = s.ProcessYaml(secretNames, secretValues)
 		if err != nil {
-			logger.Fatalf("create: %s", err)
+			logger.Fatal().Err(err).Msg("create")
 		}
 		buffer, err := s.FormatBuffer("")
 		if err != nil {
-			logger.Fatalf("create: %s", err)
+			logger.Fatal().Err(err).Msg("create")
 		}
 		_, err = sls.WriteSlsFile(buffer, outputFilePath)
 		if err != nil {
-			logger.Fatalf("create: %s", err)
+			logger.Fatal().Err(err).Msg("create")
 		}
 	},
 }
 
 func init() {
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stdout})
 	rootCmd.AddCommand(createCmd)
 	createCmd.PersistentFlags().StringVarP(&outputFilePath, "outfile", "o", os.Stdout.Name(), "output file (defaults to STDOUT)")
 	createCmd.PersistentFlags().StringArrayP("name", "n", nil, "secret name(s)")

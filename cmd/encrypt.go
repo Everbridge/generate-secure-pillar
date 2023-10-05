@@ -27,6 +27,8 @@ import (
 
 	"github.com/Everbridge/generate-secure-pillar/sls"
 	"github.com/Everbridge/generate-secure-pillar/utils"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
@@ -38,7 +40,7 @@ var encryptCmd = &cobra.Command{
 		if len(args) == 0 {
 			err := cmd.Help()
 			if err != nil {
-				logger.Fatal(err)
+				logger.Fatal().Err(err)
 			}
 			os.Exit(0)
 		}
@@ -48,18 +50,18 @@ var encryptCmd = &cobra.Command{
 		pk := getPki()
 		outputFilePath, err := filepath.Abs(outputFilePath)
 		if err != nil {
-			logger.Fatal(err)
+			logger.Fatal().Err(err)
 		}
 		inputFilePath, err := filepath.Abs(inputFilePath)
 		if err != nil {
-			logger.Fatal(err)
+			logger.Fatal().Err(err)
 		}
 
 		// process args
 		switch args[0] {
 		case all:
 			if inputFilePath == os.Stdin.Name() && !stdinIsPiped() {
-				logger.Infof("reading from %s", os.Stdin.Name())
+				logger.Info().Msgf("reading from %s", os.Stdin.Name())
 			}
 			s := sls.New(inputFilePath, pk, topLevelElement)
 			if inputFilePath != os.Stdin.Name() && updateInPlace {
@@ -70,7 +72,7 @@ var encryptCmd = &cobra.Command{
 		case recurse:
 			err := utils.ProcessDir(recurseDir, ".sls", "encrypt", outputFilePath, topLevelElement, pk)
 			if err != nil {
-				logger.Warnf("encrypt: %s", err)
+				logger.Warn().Err(err).Msg("encrypt")
 			}
 		case path:
 			s := sls.New(inputFilePath, pk, topLevelElement)
@@ -78,13 +80,14 @@ var encryptCmd = &cobra.Command{
 		default:
 			err = cmd.Help()
 			if err != nil {
-				logger.Fatal(err)
+				logger.Fatal().Err(err)
 			}
 		}
 	},
 }
 
 func init() {
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stdout})
 	rootCmd.AddCommand(encryptCmd)
 	encryptCmd.PersistentFlags().StringVarP(&yamlPath, "path", "p", "", "YAML path to encrypt")
 	encryptCmd.PersistentFlags().StringVarP(&recurseDir, "dir", "d", "", "recurse over all .sls files in the given directory")

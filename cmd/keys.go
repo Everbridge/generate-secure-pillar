@@ -28,6 +28,8 @@ import (
 
 	"github.com/Everbridge/generate-secure-pillar/sls"
 	"github.com/Everbridge/generate-secure-pillar/utils"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
@@ -43,7 +45,7 @@ var keysCmd = &cobra.Command{
 		if len(args) == 0 {
 			err := cmd.Help()
 			if err != nil {
-				logger.Fatal(err)
+				logger.Fatal().Err(err)
 			}
 			os.Exit(0)
 		}
@@ -54,25 +56,25 @@ var keysCmd = &cobra.Command{
 		outputFilePath = os.Stdout.Name()
 		inputFilePath, err := filepath.Abs(inputFilePath)
 		if err != nil {
-			logger.Fatal(err)
+			logger.Fatal().Err(err)
 		}
 
 		// process args
 		switch args[0] {
 		case all:
 			if inputFilePath == os.Stdin.Name() && !stdinIsPiped() {
-				logger.Infof("reading from %s", os.Stdin.Name())
+				logger.Info().Msgf("reading from %s", os.Stdin.Name())
 			}
 			s := sls.New(inputFilePath, pk, topLevelElement)
 			buffer, err := s.PerformAction("validate")
 			if err != nil {
-				logger.Fatal(err)
+				logger.Fatal().Err(err)
 			}
 			fmt.Printf("%s\n", buffer.String())
 		case recurse:
 			err := utils.ProcessDir(recurseDir, ".sls", "validate", outputFilePath, topLevelElement, pk)
 			if err != nil {
-				logger.Warnf("keys: %s", err)
+				logger.Warn().Err(err).Msg("keys")
 			}
 		case path:
 			s := sls.New(inputFilePath, pk, topLevelElement)
@@ -81,7 +83,7 @@ var keysCmd = &cobra.Command{
 			s := sls.New(inputFilePath, pk, topLevelElement)
 			_, err := s.PerformAction("validate")
 			if err != nil {
-				logger.Fatal(err)
+				logger.Fatal().Err(err)
 			}
 			if verbose {
 				fmt.Println(s.KeyMeta)
@@ -90,12 +92,13 @@ var keysCmd = &cobra.Command{
 				os.Exit(s.KeyCount)
 			}
 		default:
-			logger.Fatalf("unknown argument: '%s'", args[0])
+			logger.Fatal().Msgf("unknown argument: '%s'", args[0])
 		}
 	},
 }
 
 func init() {
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stdout})
 	rootCmd.AddCommand(keysCmd)
 	keysCmd.PersistentFlags().StringVarP(&yamlPath, "path", "p", "", "YAML path to examine")
 	keysCmd.PersistentFlags().StringVarP(&recurseDir, "dir", "d", "", "recurse over all .sls files in the given directory")

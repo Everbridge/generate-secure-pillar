@@ -26,7 +26,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -35,7 +34,8 @@ import (
 
 	"github.com/Everbridge/generate-secure-pillar/pki"
 	yaml "github.com/esilva-everbridge/yaml"
-	"github.com/sirupsen/logrus"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	yamlv3 "gopkg.in/yaml.v3"
 )
 
@@ -51,7 +51,7 @@ const Validate = "validate"
 // Rotate action
 const Rotate = "rotate"
 
-var logger = logrus.New()
+var logger = zerolog.New(os.Stdout)
 
 // Sls sls data
 type Sls struct {
@@ -68,12 +68,12 @@ type Sls struct {
 
 // New returns a Sls object
 func New(filePath string, p pki.Pki, encPath string) Sls {
-	logger.Out = os.Stdout
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stdout})
 	s := Sls{nil, yaml.New(), &p, map[string]interface{}{}, filePath, encPath, "", 0, false}
 	if len(filePath) > 0 {
 		err := s.ReadSlsFile()
 		if err != nil {
-			logger.Errorf("init error for %s: %s", s.FilePath, err)
+			logger.Error().Err(err).Msgf("init error for %s", s.FilePath)
 			s.Error = err
 		}
 	}
@@ -88,7 +88,7 @@ func (s *Sls) ReadBytes(buf []byte) error {
 	err := s.ScanForIncludes(reader)
 	if err != nil {
 		s.IsInclude = true
-		logger.Warnf("%s", err)
+		logger.Warn().Err(err)
 	}
 
 	return yamlv3.Unmarshal(buf, &s.Yaml.Values)
@@ -121,7 +121,7 @@ func (s *Sls) ReadSlsFile() error {
 	}
 
 	// this could be called when creating a new file, so check the path
-	if _, statErr := os.Stat(s.FilePath); os.IsNotExist(statErr) {
+	if _, statErr := os.Stat(s.FilePath); statErr == nil {
 		dir := filepath.Dir(s.FilePath)
 		err := os.MkdirAll(dir, 0700)
 		if err != nil {
@@ -139,7 +139,7 @@ func (s *Sls) ReadSlsFile() error {
 	}
 
 	var buf []byte
-	buf, err = ioutil.ReadFile(filepath.Clean(fullPath))
+	buf, err = os.ReadFile(filepath.Clean(fullPath))
 	if err != nil {
 		return err
 	}
@@ -178,7 +178,7 @@ func WriteSlsFile(buffer bytes.Buffer, outFilePath string) (int, error) {
 
 	if !stdOut && err == nil {
 		shortFile := shortFileName(outFilePath)
-		logger.Infof("wrote out to file: '%s'", shortFile)
+		logger.Info().Msgf("wrote out to file: '%s'", shortFile)
 	}
 
 	return byteCount, err
@@ -186,7 +186,7 @@ func WriteSlsFile(buffer bytes.Buffer, outFilePath string) (int, error) {
 
 func atomicWrite(fullPath string, buffer bytes.Buffer) (int, error) {
 	_, name := path.Split(fullPath)
-	f, err := ioutil.TempFile("", fmt.Sprintf("gsp-%s", name))
+	f, err := os.CreateTemp("", fmt.Sprintf("gsp-%s", name))
 	if err != nil {
 		return 0, err
 	}
@@ -514,7 +514,7 @@ func (s *Sls) keyInfo(val string) (string, error) {
 		return val, fmt.Errorf("value is not encrypted")
 	}
 
-	tmpfile, err := ioutil.TempFile("", "gsp-")
+	tmpfile, err := os.CreateTemp("", "gsp-")
 	if err != nil {
 		return val, fmt.Errorf("keyInfo: %s", err)
 	}
@@ -561,7 +561,7 @@ func validAction(action string) bool {
 func shortFileName(file string) string {
 	pwd, err := os.Getwd()
 	if err != nil {
-		logger.Warnf("%s", err)
+		logger.Warn().Err(err)
 		return file
 	}
 	return strings.Replace(file, pwd+"/", "", 1)

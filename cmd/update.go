@@ -27,6 +27,8 @@ import (
 	"strings"
 
 	"github.com/Everbridge/generate-secure-pillar/sls"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
@@ -37,7 +39,7 @@ var updateCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		inputFilePath, err := filepath.Abs(inputFilePath)
 		if err != nil {
-			logger.Fatal(err)
+			logger.Fatal().Err(err)
 		}
 		if inputFilePath != os.Stdin.Name() {
 			outputFilePath = inputFilePath
@@ -49,20 +51,21 @@ var updateCmd = &cobra.Command{
 		s := sls.New(inputFilePath, pk, topLevelElement)
 		err = s.ProcessYaml(secretNames, secretValues)
 		if err != nil {
-			logger.Fatal(err)
+			logger.Fatal().Err(err)
 		}
 		buffer, err := s.FormatBuffer("")
 		if err != nil {
-			logger.Fatal(err)
+			logger.Fatal().Err(err)
 		}
 		_, err = sls.WriteSlsFile(buffer, outputFilePath)
 		if err != nil {
-			logger.Fatal(err)
+			logger.Fatal().Err(err)
 		}
 	},
 }
 
 func init() {
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stdout})
 	rootCmd.AddCommand(updateCmd)
 	updateCmd.PersistentFlags().StringVarP(&inputFilePath, "file", "f", os.Stdin.Name(), "input file (defaults to STDIN)")
 	updateCmd.PersistentFlags().StringArrayP("name", "n", nil, "secret name(s)")
