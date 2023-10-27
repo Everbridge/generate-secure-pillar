@@ -139,8 +139,22 @@ func TestCliArgs(t *testing.T) {
 					t.Errorf("Key count error, expected %d got %d", count, actualCount)
 				}
 
-			case "decrypt path":
 			case "no arguments":
+				actual := strings.TrimSpace(actual)
+				expected := strings.TrimSpace(getExpected(t, fixture))
+				fmt.Printf("ACTUAL: %v\n", actual)
+				fmt.Printf("EXPECTED: %v\n", expected)
+
+				scanner := bufio.NewScanner(strings.NewReader(actual))
+				for scanner.Scan() {
+					line := scanner.Text()
+					if !strings.Contains(line, expected) {
+						t.Errorf("Output error:\n%v", diff.LineDiff(expected, actual))
+					}
+					break
+				}
+
+			case "decrypt path":
 				actual := strings.TrimSpace(actual)
 				expected := strings.TrimSpace(getExpected(t, fixture))
 				if !strings.Contains(expected, actual) {

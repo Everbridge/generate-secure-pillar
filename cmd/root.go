@@ -137,8 +137,8 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.config/generate-secure-pillar/config.yaml)")
 	rootCmd.PersistentFlags().StringVar(&profile, "profile", "", "profile name from profile specified in the config file")
 	rootCmd.PersistentFlags().StringVarP(&pgpKeyName, "pgp_key", "k", pgpKeyName, "PGP key name, email, or ID to use for encryption")
-	rootCmd.PersistentFlags().StringVar(&publicKeyRing, "pubring", "", "PGP public keyring (default is $HOME/.gnupg/pubring.gpg)")
-	rootCmd.PersistentFlags().StringVar(&privateKeyRing, "secring", "", "PGP private keyring (default is $HOME/.gnupg/secring.gpg)")
+	rootCmd.PersistentFlags().StringVar(&publicKeyRing, "pubring", publicKeyRing, "PGP public keyring (default is $HOME/.gnupg/pubring.gpg)")
+	rootCmd.PersistentFlags().StringVar(&privateKeyRing, "secring", privateKeyRing, "PGP private keyring (default is $HOME/.gnupg/secring.gpg)")
 	rootCmd.PersistentFlags().StringVarP(&topLevelElement, "element", "e", "", "Name of the top level element under which encrypted key/value pairs are kept")
 }
 
