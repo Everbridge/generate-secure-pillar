@@ -1,8 +1,7 @@
-
-level=info msg="wrote out to file: 'testdata/new.sls'"
-level=info msg="wrote out to file: 'testdata/test.sls'"
-level=info msg="wrote out to file: 'testdata/test/bar.sls'"
-level=info msg="wrote out to file: 'testdata/test/baz.sls'"
-level=info msg="wrote out to file: 'testdata/test/foo.sls'"
-level=info msg="wrote out to file: 'testdata/test/simple.sls'"
-level=warning msg="testdata/inc.sls contains include directives"
+{"level":"error","error":"testdata/inc.sls contains include directives","message":"init error for"}
+{"level":"info","message":"wrote out to file: 'testdata/new.sls'"}
+{"level":"info","message":"wrote out to file: 'testdata/test.sls'"}
+{"level":"info","message":"wrote out to file: 'testdata/test/bar.sls'"}
+{"level":"info","message":"wrote out to file: 'testdata/test/baz.sls'"}
+{"level":"info","message":"wrote out to file: 'testdata/test/foo.sls'"}
+{"level":"info","message":"wrote out to file: 'testdata/test/simple.sls'"}

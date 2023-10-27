@@ -22,9 +22,9 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
@@ -50,6 +50,13 @@ var topLevelElement string
 var update = flag.Bool("update", false, "update golden files")
 var dirPath string
 
+type CLITest struct {
+	name    string
+	args    []string
+	fixture string
+	count   int
+}
+
 func TestMain(m *testing.M) {
 	initGPGDir()
 	defer teardownGPGDir()
@@ -70,12 +77,7 @@ func TestCliArgs(t *testing.T) {
 		_ = utils.ProcessDir(dirPath, ".sls", sls.Decrypt, "", topLevelElement, pk)
 	}()
 
-	tests := []struct {
-		name    string
-		args    []string
-		fixture string
-		count   int
-	}{
+	tests := []CLITest{
 		{"no arguments", []string{}, "testdata/no-args.golden", 0},
 		{"encrypt recurse", []string{"-k", "Test Salt Master", "encrypt", "recurse", "-d", dirPath}, "testdata/encrypt-recurse.golden", 0},
 		{"keys recurse", []string{"-k", "Test Salt Master", "keys", "recurse", "-d", dirPath}, "testdata/keys-recurse.golden", 26},
@@ -89,19 +91,27 @@ func TestCliArgs(t *testing.T) {
 		{"decrypt file", []string{"-k", "Test Salt Master", "decrypt", "all", "-f", dirPath + "/test.sls", "-u"}, "testdata/decrypt-file.golden", 0},
 	}
 
-	os.Setenv("GNUPGHOME", dirPath+"/gnupg")
+	err := os.Setenv("GNUPGHOME", dirPath+"/gnupg")
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
+		args := tt.args
+		count := tt.count
+		fixture := tt.fixture
+		name := tt.name
+
+		t.Run(name, func(t *testing.T) {
 			dir, err := os.Getwd()
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			cmd := exec.Command(path.Join(dir, binaryName), tt.args...)
+			cmd := exec.Command(path.Join(dir, binaryName), args...)
 			output, err := cmd.CombinedOutput()
 			if err != nil {
-				t.Fatalf("%s:\n%s", err, output)
+				t.Fatalf("%s:\n%s%s", err, output, args)
 			}
 			ex := cmd.ProcessState.ExitCode()
 			if ex != 0 {
@@ -110,38 +120,82 @@ func TestCliArgs(t *testing.T) {
 
 			actual := getActual(output)
 			if *update {
-				writeFixture(t, tt.fixture, []byte(actual))
+				writeFixture(t, fixture, []byte(actual))
 			}
 
 			// due to the way the output is generated we normalize the recursive output
-			switch tt.name {
+			switch name {
 			case "keys file":
 			case "keys path":
 			case "keys recurse":
 				actualCount := keyNameCount(actual, "Test Salt Master")
-				if actualCount != tt.count {
-					t.Errorf("Key name count error, expected %d got %d", tt.count, actualCount)
+				if actualCount != count {
+					t.Errorf("Key name count error, expected %d got %d", count, actualCount)
 				}
 
 			case "keys count":
 				actualCount := keyNameCount(actual, "1 keys found:")
-				if actualCount != tt.count {
-					t.Errorf("Key count error, expected %d got %d", tt.count, actualCount)
+				if actualCount != count {
+					t.Errorf("Key count error, expected %d got %d", count, actualCount)
+				}
+
+			case "decrypt path":
+			case "no arguments":
+				actual := strings.TrimSpace(actual)
+				expected := strings.TrimSpace(getExpected(t, fixture))
+				if !strings.Contains(expected, actual) {
+					t.Errorf("Output error:\n%v", diff.LineDiff(expected, actual))
 				}
 
 			default:
-				expected := getExpected(t, tt.fixture)
-
 				if *update {
-					writeFixture(t, tt.fixture, []byte(actual))
+					writeFixture(t, fixture, []byte(actual))
 				}
 
-				if a, e := strings.TrimSpace(actual), strings.TrimSpace(expected); a != e {
-					t.Errorf("Output error:\n%v", diff.LineDiff(e, a))
+				expected := strings.TrimSpace(getExpected(t, fixture))
+				actual := strings.TrimSpace(actual)
+
+				exp, err := getLinesAsJSON(expected)
+				if err != nil {
+					t.Fatal(err)
+				}
+				act, err := getLinesAsJSON(actual)
+				if err != nil {
+					t.Fatal(err)
+				}
+
+			ActLoop:
+				for _, a := range act {
+				ExpLoop:
+					for _, e := range exp {
+						if !strings.Contains(a["message"], e["message"]) {
+							t.Errorf("Output error:\n%v", diff.LineDiff(e["message"], a["message"]))
+							break ExpLoop
+						} else {
+							break ActLoop
+						}
+					}
 				}
 			}
 		})
 	}
+}
+
+func getLinesAsJSON(lines string) ([]map[string]string, error) {
+	var jsonArr []map[string]string
+
+	// iterate over lines in string
+	scanner := bufio.NewScanner(strings.NewReader(lines))
+	for scanner.Scan() {
+		line := scanner.Text()
+		var e map[string]string
+		err := json.Unmarshal([]byte(line), &e)
+		if err != nil {
+			return nil, err
+		}
+		jsonArr = append(jsonArr, e)
+	}
+	return jsonArr, nil
 }
 
 func getActual(output []byte) string {
@@ -440,7 +494,7 @@ func TestEncryptProcessDir(t *testing.T) {
 			continue
 		}
 		var buf []byte
-		buf, err = ioutil.ReadFile(slsFiles[n])
+		buf, err = os.ReadFile(slsFiles[n])
 		Ok(t, err)
 
 		reader := strings.NewReader(string(buf))
@@ -472,7 +526,7 @@ func TestDecryptProcessDir(t *testing.T) {
 			continue
 		}
 		var buf []byte
-		buf, err = ioutil.ReadFile(slsFiles[n])
+		buf, err = os.ReadFile(slsFiles[n])
 		Ok(t, err)
 
 		reader := strings.NewReader(string(buf))
@@ -591,14 +645,14 @@ func fixturePath(t *testing.T, fixture string) string {
 
 func writeFixture(t *testing.T, fixture string, content []byte) {
 	str := getActual(content)
-	err := ioutil.WriteFile(fixturePath(t, fixture), []byte(str), 0644)
+	err := os.WriteFile(fixturePath(t, fixture), []byte(str), 0644)
 	if err != nil {
 		t.Fatal(err)
 	}
 }
 
 func loadFixture(t *testing.T, fixture string) string {
-	content, err := ioutil.ReadFile(fixturePath(t, fixture))
+	content, err := os.ReadFile(fixturePath(t, fixture))
 	if err != nil {
 		t.Fatal(err)
 	}

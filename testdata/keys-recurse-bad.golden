@@ -1,2 +1,1 @@
-
-level=warning msg="keys: search directory not specified"
+{"level":"warn","error":"search directory not specified","message":"keys"}

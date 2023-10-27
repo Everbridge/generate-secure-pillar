@@ -88,7 +88,7 @@ func (s *Sls) ReadBytes(buf []byte) error {
 	err := s.ScanForIncludes(reader)
 	if err != nil {
 		s.IsInclude = true
-		logger.Warn().Err(err)
+		return err
 	}
 
 	return yamlv3.Unmarshal(buf, &s.Yaml.Values)
