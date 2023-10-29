@@ -4,6 +4,7 @@ go 1.21
 
 require (
 	github.com/andreyvit/diff v0.0.0-20170406064948-c7f18ee00883
+	github.com/edlitmus/ezyaml v0.0.0-20231025150529-6f3a38cc5cf6
 	github.com/esilva-everbridge/yaml v0.0.0-20230222145725-586d68d00607
 	github.com/keybase/go-crypto v0.0.0-20200123153347-de78d2cb44f4
 	github.com/mitchellh/go-homedir v1.1.0
@@ -16,6 +17,8 @@ require (
 )
 
 require (
+	github.com/edlitmus/dig v0.0.0-20231025150220-13b7e66ce5ac // indirect
+	github.com/edlitmus/to v0.0.0-20231025141937-dd8488388a59 // indirect
 	github.com/esilva-everbridge/dig v0.0.0-20230222145646-42ad4ced5ae3 // indirect
 	github.com/esilva-everbridge/to v0.0.0-20220524174750-493ecaf861c8 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect

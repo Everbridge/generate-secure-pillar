@@ -40,7 +40,7 @@ import (
 	"github.com/Everbridge/generate-secure-pillar/sls"
 	"github.com/Everbridge/generate-secure-pillar/utils"
 	"github.com/andreyvit/diff"
-	yaml "github.com/esilva-everbridge/yaml"
+	yaml "github.com/edlitmus/ezyaml"
 )
 
 var pgpKeyName string
