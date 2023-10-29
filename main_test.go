@@ -60,8 +60,7 @@ type CLITest struct {
 func TestMain(m *testing.M) {
 	initGPGDir()
 	defer teardownGPGDir()
-	retCode := m.Run()
-	os.Exit(retCode)
+	m.Run()
 }
 
 func TestCliArgs(t *testing.T) {
