@@ -1,3 +1,4 @@
+{"level":"error","error":"testdata/inc.sls contains include directives","message":"init error for"}
 {"level":"info","message":"wrote out to file: 'testdata/new.sls'"}
 {"level":"info","message":"wrote out to file: 'testdata/test.sls'"}
 {"level":"info","message":"wrote out to file: 'testdata/test/bar.sls'"}
