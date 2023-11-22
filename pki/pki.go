@@ -25,7 +25,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -146,6 +146,9 @@ func (p *Pki) EncryptSecret(plainText string) (string, error) {
 	if err != nil {
 		return plainText, fmt.Errorf("encryption error: %s", err)
 	}
+	if plainFile == nil {
+		return plainText, fmt.Errorf("encryption error: plainFile is nil")
+	}
 
 	if _, err = fmt.Fprintf(plainFile, "%s", plainText); err != nil {
 		return plainText, fmt.Errorf("encryption error: %s", err)
@@ -154,6 +157,7 @@ func (p *Pki) EncryptSecret(plainText string) (string, error) {
 	if err = plainFile.Close(); err != nil {
 		return plainText, fmt.Errorf("encryption error: %s", err)
 	}
+
 	if err = w.Close(); err != nil {
 		return plainText, fmt.Errorf("encryption error: %s", err)
 	}
@@ -186,8 +190,11 @@ func (p *Pki) DecryptSecret(cipherText string) (plainText string, err error) {
 	if err != nil {
 		return cipherText, fmt.Errorf("unable to read PGP message: %s", err)
 	}
+	if md == nil {
+		return cipherText, fmt.Errorf("unable to read PGP message: md is nil")
+	}
 
-	body, err := ioutil.ReadAll(md.UnverifiedBody)
+	body, err := io.ReadAll(md.UnverifiedBody)
 	if err != nil {
 		return cipherText, fmt.Errorf("unable to read message body: %s", err)
 	}
@@ -197,6 +204,10 @@ func (p *Pki) DecryptSecret(cipherText string) (plainText string, err error) {
 
 // GetKeyByID returns a keyring by the given ID
 func (p *Pki) GetKeyByID(keyring *openpgp.EntityList, id interface{}) *openpgp.Entity {
+	if keyring == nil {
+		return nil
+	}
+
 	for _, entity := range *keyring {
 		if entity.PrivateKey != nil && entity.PrivateKey.KeyIdString() == id.(string) {
 			return entity
@@ -269,6 +280,9 @@ func (p *Pki) KeyUsedForEncryptedFile(file string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("unable to read PGP message: %s", err)
 	}
+	if md == nil {
+		return "", fmt.Errorf("unable to read PGP message: md is nil")
+	}
 
 	for index := 0; index < len(md.EncryptedToKeyIds); index++ {
 		id := md.EncryptedToKeyIds[index]
@@ -282,6 +296,9 @@ func (p *Pki) KeyUsedForEncryptedFile(file string) (string, error) {
 }
 
 func (p *Pki) keyStringForID(id uint64) string {
+	if p.SecRing == nil {
+		return ""
+	}
 	keys := p.SecRing.KeysById(id, nil)
 	if len(keys) > 0 {
 		for n := 0; n < len(keys); n++ {

@@ -307,8 +307,10 @@ func (s *Sls) GetValueFromPath(path string) interface{} {
 	for i := 0; i < len(parts); i++ {
 		args[i] = parts[i]
 	}
-	results := s.Yaml.Get(args...)
-	return results
+	if s.Yaml != nil {
+		return s.Yaml.Get(args...)
+	}
+	return nil
 }
 
 // SetValueFromPath returns the value from a path string
@@ -331,7 +333,6 @@ func (s *Sls) SetValueFromPath(path string, value string) error {
 // PerformAction takes an action string (encrypt or decrypt)
 // and applies that action on all items
 func (s *Sls) PerformAction(action string) (bytes.Buffer, error) {
-	var err error
 	var buf bytes.Buffer
 
 	if validAction(action) {
@@ -340,19 +341,29 @@ func (s *Sls) PerformAction(action string) (bytes.Buffer, error) {
 		for key := range s.Yaml.Values {
 			if s.EncryptionPath != "" {
 				vals := s.GetValueFromPath(key)
-				if s.EncryptionPath == key {
-					stuff[key], err = s.ProcessValues(vals, action)
-					if err != nil {
-						return buf, err
+				if vals != nil {
+					if s.EncryptionPath == key {
+						processed, err := s.ProcessValues(vals, action)
+						if err != nil {
+							return buf, err
+						}
+						if processed != nil {
+							stuff[key] = processed
+						}
+					} else {
+						stuff[key] = vals
 					}
-				} else {
-					stuff[key] = vals
 				}
 			} else {
 				vals := s.GetValueFromPath(key)
-				stuff[key], err = s.ProcessValues(vals, action)
-				if err != nil {
-					return buf, err
+				if vals != nil {
+					processed, err := s.ProcessValues(vals, action)
+					if err != nil {
+						return buf, err
+					}
+					if processed != nil {
+						stuff[key] = processed
+					}
 				}
 			}
 		}
@@ -451,11 +462,23 @@ func (s *Sls) doMap(vals map[string]interface{}, action string) (map[string]inte
 		vtype := reflect.TypeOf(val).Kind()
 		switch vtype {
 		case reflect.Slice:
-			ret[key], err = s.doSlice(val, action)
+			var slice interface{}
+			slice, err = s.doSlice(val, action)
+			if slice != nil {
+				ret[key] = slice
+			}
 		case reflect.Map:
-			ret[key], err = s.doMap(val.(map[string]interface{}), action)
+			var slice interface{}
+			slice, err = s.doMap(val.(map[string]interface{}), action)
+			if slice != nil {
+				ret[key] = slice
+			}
 		default:
-			ret[key], err = s.doString(val, action)
+			var slice interface{}
+			slice, err = s.doString(val, action)
+			if slice != nil {
+				ret[key] = slice
+			}
 		}
 	}
 

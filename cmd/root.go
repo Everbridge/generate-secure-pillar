@@ -189,7 +189,10 @@ func getPki() pki.Pki {
 func readProfile() {
 	if viper.IsSet("profiles") {
 		profiles := viper.Get("profiles")
-		profName := rootCmd.Flag("profile").Value.String()
+		profName := ""
+		if rootCmd.Flag("profile") != nil && rootCmd.Flag("profile").Value != nil {
+			profName = rootCmd.Flag("profile").Value.String()
+		}
 
 		if profName != "" || pgpKeyName == "" {
 			for _, prof := range profiles.([]interface{}) {
@@ -212,7 +215,14 @@ func readProfile() {
 // if we are getting stdin from a pipe we don't want
 // to output log info about it that could mess up parsing
 func stdinIsPiped() bool {
-	fi, _ := os.Stdin.Stat()
+	fi, err := os.Stdin.Stat()
+	if err != nil {
+		logger.Fatal().Err(err).Msgf("Fatal error: %s", err)
+	}
+	if fi != nil {
+		return ((fi.Mode() & os.ModeCharDevice) == 0)
+	}
 
-	return ((fi.Mode() & os.ModeCharDevice) == 0)
+	// if something goes wrong assume we are piped
+	return true
 }
