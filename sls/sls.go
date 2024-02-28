@@ -470,13 +470,13 @@ func (s *Sls) doMap(vals map[string]interface{}, action string) (map[string]inte
 		case reflect.Map:
 			var slice interface{}
 			slice, err = s.doMap(val.(map[string]interface{}), action)
-			if slice != nil {
+			if slice.(map[string]interface{}) != nil {
 				ret[key] = slice
 			}
 		default:
 			var slice interface{}
 			slice, err = s.doString(val, action)
-			if slice != nil {
+			if len(slice.(string)) != 0 {
 				ret[key] = slice
 			}
 		}
