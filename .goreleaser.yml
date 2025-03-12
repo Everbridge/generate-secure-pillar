@@ -1,6 +1,6 @@
 env_files:
   # use only one or release will fail!
-  github_token: ~/.config/goreleaser/github_token
+  github_token: ~/.config/goreleaser/new_token
 
 dist: packages
 
