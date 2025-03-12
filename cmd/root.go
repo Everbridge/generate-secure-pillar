@@ -95,7 +95,7 @@ $ generate-secure-pillar keys recurse -d /path/to/pillar/secure/stuff
 # show the PGP Key ID used for an element at a path in a file
 $ generate-secure-pillar keys path --path "some:yaml:path" --file new.sls
 `,
-	Version: "1.0.629",
+	Version: "1.0.631",
 }
 
 const all = "all"
