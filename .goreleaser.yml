@@ -1,3 +1,5 @@
+version: 2
+
 env_files:
   # use only one or release will fail!
   github_token: ~/.config/goreleaser/new_token
@@ -28,7 +30,7 @@ universal_binaries:
   - replace: true
 
 snapshot:
-  name_template: SNAPSHOT-{{.Commit}}
+  version_template: SNAPSHOT-{{.Commit}}
 
 changelog:
   sort: asc
