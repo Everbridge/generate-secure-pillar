@@ -27,6 +27,7 @@ import (
 	"path/filepath"
 
 	"github.com/Everbridge/generate-secure-pillar/pki"
+	"github.com/Everbridge/generate-secure-pillar/utils"
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -36,18 +37,33 @@ import (
 	tilde "gopkg.in/mattes/go-expand-tilde.v1"
 )
 
-var logger = zerolog.New(os.Stdout)
-var inputFilePath string
-var outputFilePath = os.Stdout.Name()
-var cfgFile string
-var profile string
-var pgpKeyName string
-var publicKeyRing = "~/.gnupg/pubring.gpg"
-var privateKeyRing = "~/.gnupg/secring.gpg"
-var updateInPlace bool
-var topLevelElement string
-var recurseDir string
-var yamlPath string
+// initLogger initializes a logger instance for the cmd package
+func initLogger() zerolog.Logger {
+	return zerolog.New(os.Stdout)
+}
+
+// Package-level variables for CLI configuration
+// These are initialized by cobra flags and used across commands
+var (
+	logger = initLogger()
+
+	// File path configuration
+	inputFilePath  string
+	outputFilePath = os.Stdout.Name()
+	cfgFile        string
+	recurseDir     string
+	yamlPath       string
+
+	// Profile and encryption configuration
+	profile         string
+	pgpKeyName      string
+	publicKeyRing   = "~/.gnupg/pubring.gpg"
+	privateKeyRing  = "~/.gnupg/secring.gpg"
+	topLevelElement string
+
+	// Operation flags
+	updateInPlace bool
+)
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -106,7 +122,7 @@ const path = "path"
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(err)
+		logger.Error().Err(err).Msg("Command execution failed")
 		os.Exit(1)
 	}
 }
@@ -127,6 +143,9 @@ func init() {
 	if err != nil {
 		logger.Fatal().Err(err).Msg("Error with GNUPG pubring path")
 	}
+	if utils.ContainsDirectoryTraversal(filePath) {
+		logger.Fatal().Msgf("Invalid pubring path: directory traversal detected in %s", filePath)
+	}
 	if _, err = os.Stat(filepath.Clean(filePath)); os.IsNotExist(err) {
 		if err != nil {
 			logger.Fatal().Err(err).Msg("Error finding GNUPG pubring file")
@@ -145,14 +164,17 @@ func init() {
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
 	if cfgFile != "" {
+		// Validate config file path for directory traversal
+		if utils.ContainsDirectoryTraversal(cfgFile) {
+			logger.Fatal().Msgf("Invalid config file path: directory traversal detected in %s", cfgFile)
+		}
 		// Use config file from the flag.
 		viper.SetConfigFile(cfgFile)
 	} else {
 		// Find home directory.
 		home, err := homedir.Dir()
 		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
+			logger.Fatal().Err(err).Msg("Failed to determine home directory")
 		}
 
 		configPath := fmt.Sprintf("%s/.config/generate-secure-pillar/", home)
@@ -161,10 +183,11 @@ func initConfig() {
 		if err != nil {
 			logger.Fatal().Err(err).Msg("error creating config file path")
 		}
-		_, err = os.OpenFile(dir+"/config.yaml", os.O_RDONLY|os.O_CREATE, 0660)
+		configFile, err := os.OpenFile(dir+"/config.yaml", os.O_RDONLY|os.O_CREATE, 0660)
 		if err != nil {
 			logger.Fatal().Err(err).Msg("Error creating config file")
 		}
+		defer configFile.Close()
 
 		// set config in "~/.config/generate-secure-pillar/config.yaml".
 		viper.AddConfigPath(configPath)
@@ -182,8 +205,12 @@ func initConfig() {
 	readProfile()
 }
 
-func getPki() pki.Pki {
-	return pki.New(pgpKeyName, publicKeyRing, privateKeyRing)
+func getPki() *pki.Pki {
+	p, err := pki.New(pgpKeyName, publicKeyRing, privateKeyRing)
+	if err != nil {
+		logger.Fatal().Err(err).Msg("failed to initialize PKI")
+	}
+	return p
 }
 
 func readProfile() {
@@ -195,16 +222,33 @@ func readProfile() {
 		}
 
 		if profName != "" || pgpKeyName == "" {
-			for _, prof := range profiles.([]interface{}) {
-				p := prof.(map[string]interface{})
-				if p["default"] == true || profName == p["name"] {
-					gpgHome := p["gnupg_home"].(string)
-					if gpgHome != "" {
-						publicKeyRing = fmt.Sprintf("%s/pubring.gpg", gpgHome)
-						privateKeyRing = fmt.Sprintf("%s/secring.gpg", gpgHome)
+			profileList, ok := profiles.([]interface{})
+			if !ok {
+				logger.Warn().Msg("profiles configuration is not a valid array")
+				return
+			}
+			for _, prof := range profileList {
+				profileMap, ok := prof.(map[string]interface{})
+				if !ok {
+					logger.Warn().Msg("profile entry is not a valid map")
+					continue
+				}
+				if profileMap["default"] == true || profName == profileMap["name"] {
+					if gnupgHomeVal, exists := profileMap["gnupg_home"]; exists {
+						if gpgHome, ok := gnupgHomeVal.(string); ok && gpgHome != "" {
+							// Validate path for directory traversal
+							if utils.ContainsDirectoryTraversal(gpgHome) {
+								logger.Warn().Msgf("Invalid gnupg_home path: directory traversal detected in %s", gpgHome)
+								continue
+							}
+							publicKeyRing = fmt.Sprintf("%s/pubring.gpg", gpgHome)
+							privateKeyRing = fmt.Sprintf("%s/secring.gpg", gpgHome)
+						}
 					}
-					if p["default_key"] != nil {
-						pgpKeyName = p["default_key"].(string)
+					if defaultKeyVal, exists := profileMap["default_key"]; exists && defaultKeyVal != nil {
+						if defaultKey, ok := defaultKeyVal.(string); ok {
+							pgpKeyName = defaultKey
+						}
 					}
 				}
 			}
@@ -217,7 +261,10 @@ func readProfile() {
 func stdinIsPiped() bool {
 	fi, err := os.Stdin.Stat()
 	if err != nil {
-		logger.Fatal().Err(err).Msgf("Fatal error: %s", err)
+		// Log error but don't use Fatal as this could be recoverable
+		logger.Error().Err(err).Msg("Error checking stdin status")
+		// assume we are piped if we can't determine
+		return true
 	}
 	if fi != nil {
 		return ((fi.Mode() & os.ModeCharDevice) == 0)

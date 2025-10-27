@@ -36,21 +36,38 @@ var rotateCmd = &cobra.Command{
 	Use:   "rotate",
 	Short: "decrypt existing files and re-encrypt with a new key",
 	Run: func(cmd *cobra.Command, args []string) {
+		// Validate file paths for directory traversal attacks
+		if utils.ContainsDirectoryTraversal(inputFilePath) {
+			logger.Fatal().Msgf("rotate: invalid input file path - directory traversal detected in %s", inputFilePath)
+		}
+		if utils.ContainsDirectoryTraversal(recurseDir) {
+			logger.Fatal().Msgf("rotate: invalid directory path - directory traversal detected in %s", recurseDir)
+		}
+		if utils.ContainsDirectoryTraversal(outputFilePath) {
+			logger.Fatal().Msgf("rotate: invalid output file path - directory traversal detected in %s", outputFilePath)
+		}
+
 		pk := getPki()
 
 		if recurseDir != "" {
-			err := utils.ProcessDir(recurseDir, ".sls", "rotate", outputFilePath, topLevelElement, pk)
+			err := utils.ProcessDir(recurseDir, ".sls", "rotate", outputFilePath, topLevelElement, *pk)
 			if err != nil {
-				logger.Warn().Err(err).Msg("rotate")
+				logger.Warn().Err(err).Msg("rotate: failed to process directory")
 			}
 		} else if inputFilePath != "" {
-			s := sls.New(inputFilePath, pk, topLevelElement)
+			s := sls.New(inputFilePath, *pk, topLevelElement)
+
+			// Check if the file contains include statements (not supported for rotation)
+			if s.IsInclude {
+				logger.Fatal().Msgf("rotate: file %s contains include statements and cannot be processed", inputFilePath)
+			}
+
 			buf, err := s.PerformAction("rotate")
 			utils.SafeWrite(buf, outputFilePath, err)
 		} else {
 			err := cmd.Help()
 			if err != nil {
-				logger.Fatal().Err(err)
+				logger.Fatal().Err(err).Msg("rotate: failed to display help")
 			}
 		}
 	},

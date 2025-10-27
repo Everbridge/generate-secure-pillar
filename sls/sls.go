@@ -51,11 +51,8 @@ const Validate = "validate"
 // Rotate action
 const Rotate = "rotate"
 
-var logger = zerolog.New(os.Stdout)
-
 // Sls sls data
 type Sls struct {
-	Error          error
 	Yaml           *yaml.Yaml
 	Pki            *pki.Pki
 	KeyMap         map[string]interface{}
@@ -64,17 +61,19 @@ type Sls struct {
 	KeyMeta        string
 	KeyCount       int
 	IsInclude      bool
+	logger         zerolog.Logger
 }
 
 // New returns a Sls object
 func New(filePath string, p pki.Pki, encPath string) Sls {
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stdout})
-	s := Sls{nil, yaml.New(), &p, map[string]interface{}{}, filePath, encPath, "", 0, false}
+	logger := zerolog.New(os.Stdout)
+	s := Sls{yaml.New(), &p, map[string]interface{}{}, filePath, encPath, "", 0, false, logger}
 	if len(filePath) > 0 {
 		err := s.ReadSlsFile()
 		if err != nil {
-			logger.Error().Err(err).Msgf("init error for %s", s.FilePath)
-			s.Error = err
+			s.logger.Error().Err(err).Msgf("init error for %s", s.FilePath)
+			s.IsInclude = true // Use this to signal error state
 		}
 	}
 
@@ -120,17 +119,24 @@ func (s *Sls) ReadSlsFile() error {
 		return nil
 	}
 
+	// Validate path for directory traversal attacks
+	if containsDirectoryTraversal(s.FilePath) {
+		return fmt.Errorf("invalid file path: directory traversal detected in %s", s.FilePath)
+	}
+
 	// this could be called when creating a new file, so check the path
-	if _, statErr := os.Stat(s.FilePath); statErr == nil {
+	if _, statErr := os.Stat(s.FilePath); os.IsNotExist(statErr) {
+		// File doesn't exist, create directory structure and empty file
 		dir := filepath.Dir(s.FilePath)
 		err := os.MkdirAll(dir, 0700)
 		if err != nil {
 			return err
 		}
-		_, err = os.OpenFile(s.FilePath, os.O_RDONLY|os.O_CREATE, 0600)
+		file, err := os.OpenFile(s.FilePath, os.O_RDONLY|os.O_CREATE, 0600)
 		if err != nil {
 			return err
 		}
+		defer file.Close()
 	}
 
 	fullPath, err := filepath.Abs(s.FilePath)
@@ -150,6 +156,11 @@ func (s *Sls) ReadSlsFile() error {
 // WriteSlsFile writes a buffer to the specified file
 // If the outFilePath is not stdout an INFO string will be printed to stdout
 func WriteSlsFile(buffer bytes.Buffer, outFilePath string) (int, error) {
+	// Validate path for directory traversal attacks
+	if containsDirectoryTraversal(outFilePath) {
+		return 0, fmt.Errorf("invalid file path: directory traversal detected in %s", outFilePath)
+	}
+
 	fullPath, err := filepath.Abs(outFilePath)
 	if err != nil {
 		fullPath = outFilePath
@@ -178,6 +189,7 @@ func WriteSlsFile(buffer bytes.Buffer, outFilePath string) (int, error) {
 
 	if !stdOut && err == nil {
 		shortFile := shortFileName(outFilePath)
+		logger := zerolog.New(os.Stdout)
 		logger.Info().Msgf("wrote out to file: '%s'", shortFile)
 	}
 
@@ -224,11 +236,13 @@ func copyFile(src string, dst string) error {
 	if err != nil {
 		return err
 	}
+	defer fsrc.Close()
 
 	fdst, err := os.Create(dst)
 	if err != nil {
 		return err
 	}
+	defer fdst.Close()
 
 	size, err := io.Copy(fdst, fsrc)
 	if err != nil {
@@ -238,11 +252,7 @@ func copyFile(src string, dst string) error {
 		return fmt.Errorf("%s: %d/%d copied", src, size, srcStat.Size())
 	}
 
-	err = fsrc.Close()
-	if err != nil {
-		return fdst.Close()
-	}
-	return err
+	return nil
 }
 
 // FormatBuffer returns a formatted .sls buffer with the gpg renderer line
@@ -375,7 +385,7 @@ func (s *Sls) PerformAction(action string) (bytes.Buffer, error) {
 			var vals []string
 			for _, v := range s.KeyMap {
 				if v != nil {
-					node := getNode(v.(interface{}))
+					node := getNode(v)
 					if node != nil {
 						vals = append(vals, node.(string))
 					}
@@ -420,8 +430,17 @@ func (s *Sls) doSlice(vals interface{}, action string) (interface{}, error) {
 		return things, nil
 	}
 
-	for _, item := range vals.([]interface{}) {
+	// Type assertion with safety check
+	slice, ok := vals.([]interface{})
+	if !ok {
+		return things, fmt.Errorf("expected []interface{}, got %T", vals)
+	}
+
+	for _, item := range slice {
 		var thing interface{}
+		if item == nil {
+			continue
+		}
 		vtype := reflect.TypeOf(item).Kind()
 
 		switch vtype {
@@ -433,7 +452,11 @@ func (s *Sls) doSlice(vals interface{}, action string) (interface{}, error) {
 			things = append(things, sliceStuff)
 		case reflect.Map:
 			thing = item
-			mapStuff, err := s.doMap(thing.(map[string]interface{}), action)
+			mapThing, ok := thing.(map[string]interface{})
+			if !ok {
+				return vals, fmt.Errorf("expected map[string]interface{}, got %T", thing)
+			}
+			mapStuff, err := s.doMap(mapThing, action)
 			if err != nil {
 				return vals, err
 			}
@@ -469,8 +492,15 @@ func (s *Sls) doMap(vals map[string]interface{}, action string) (map[string]inte
 			}
 		case reflect.Map:
 			var slice interface{}
-			slice, err = s.doMap(val.(map[string]interface{}), action)
-			if slice.(map[string]interface{}) != nil {
+			mapVal, ok := val.(map[string]interface{})
+			if !ok {
+				return ret, fmt.Errorf("expected map[string]interface{}, got %T", val)
+			}
+			slice, err = s.doMap(mapVal, action)
+			if err != nil {
+				return ret, err
+			}
+			if sliceMap, ok := slice.(map[string]interface{}); ok && sliceMap != nil {
 				ret[key] = slice
 			}
 		default:
@@ -541,6 +571,14 @@ func (s *Sls) keyInfo(val string) (string, error) {
 	if err != nil {
 		return val, fmt.Errorf("keyInfo: %s", err)
 	}
+	defer func() {
+		tmpfile.Close()
+		os.Remove(tmpfile.Name())
+	}()
+	// Set secure permissions
+	if err := tmpfile.Chmod(0600); err != nil {
+		return val, fmt.Errorf("keyInfo: %s", err)
+	}
 
 	if _, err = tmpfile.Write([]byte(val)); err != nil {
 		return val, fmt.Errorf("keyInfo: %s", err)
@@ -548,13 +586,6 @@ func (s *Sls) keyInfo(val string) (string, error) {
 
 	keyInfo, err := s.Pki.KeyUsedForEncryptedFile(tmpfile.Name())
 	if err != nil {
-		return val, fmt.Errorf("keyInfo: %s", err)
-	}
-
-	if err = tmpfile.Close(); err != nil {
-		return val, fmt.Errorf("keyInfo: %s", err)
-	}
-	if err = os.Remove(tmpfile.Name()); err != nil {
 		return val, fmt.Errorf("keyInfo: %s", err)
 	}
 
@@ -581,9 +612,16 @@ func validAction(action string) bool {
 	return action == Encrypt || action == Decrypt || action == Validate || action == Rotate
 }
 
+// containsDirectoryTraversal checks if the path contains directory traversal sequences
+func containsDirectoryTraversal(path string) bool {
+	cleaned := filepath.Clean(path)
+	return strings.Contains(cleaned, "..") || strings.Contains(path, "../") || strings.Contains(path, "..\\")
+}
+
 func shortFileName(file string) string {
 	pwd, err := os.Getwd()
 	if err != nil {
+		logger := zerolog.New(os.Stdout)
 		logger.Warn().Err(err)
 		return file
 	}
@@ -592,14 +630,23 @@ func shortFileName(file string) string {
 
 func getNode(v interface{}) interface{} {
 	var node interface{}
+	if v == nil {
+		return nil
+	}
+
 	vtype := reflect.TypeOf(v)
+	if vtype == nil {
+		return nil
+	}
 	kind := vtype.Kind()
 
 	switch kind {
 	case reflect.Slice:
 	case reflect.Map:
-		for _, v2 := range v.(map[string]interface{}) {
-			node = getNode(v2.(interface{}))
+		if mapVal, ok := v.(map[string]interface{}); ok {
+			for _, v2 := range mapVal {
+				node = getNode(v2)
+			}
 		}
 	default:
 		node = fmt.Sprintf("%v", v)

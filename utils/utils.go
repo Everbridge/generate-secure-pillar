@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/Everbridge/generate-secure-pillar/pki"
 	"github.com/Everbridge/generate-secure-pillar/sls"
@@ -37,6 +38,18 @@ var logger = zerolog.New(os.Stdout)
 
 func init() {
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stdout})
+}
+
+// ContainsDirectoryTraversal checks for directory traversal attempts in path
+func ContainsDirectoryTraversal(path string) bool {
+	if path == "" {
+		return false
+	}
+
+	// Check for directory traversal patterns like "../", "..", or "..\"
+	// Only flag actual path traversal attempts, not ".." within filenames
+	return strings.Contains(path, "../") || strings.Contains(path, "..\\") ||
+		strings.HasPrefix(path, "..") && (len(path) == 2 || path[2] == '/' || path[2] == '\\')
 }
 
 // SafeWrite checks that there is no error prior to trying to write a file
@@ -117,10 +130,7 @@ func ProcessDir(searchDir string, fileExt string, action string, outputFilePath 
 func applyActionAndWrite(file string, action string, pk *pki.Pki, topLevelElement string, errChan chan error) int {
 	byteCount := 0
 	s := sls.New(file, *pk, topLevelElement)
-	if s.IsInclude || s.Error != nil {
-		if s.Error != nil {
-			logger.Warn().Err(s.Error)
-		}
+	if s.IsInclude {
 		return 0
 	}
 

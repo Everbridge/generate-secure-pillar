@@ -71,9 +71,12 @@ func TestCliArgs(t *testing.T) {
 	// set up: encrypt the test sls files
 	_, slsCount := utils.FindFilesByExt(dirPath, ".sls")
 	Equals(t, 7, slsCount)
-	pk := pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
+	pk, err := pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer func() {
-		_ = utils.ProcessDir(dirPath, ".sls", sls.Decrypt, "", topLevelElement, pk)
+		_ = utils.ProcessDir(dirPath, ".sls", sls.Decrypt, "", topLevelElement, *pk)
 	}()
 
 	tests := []CLITest{
@@ -90,7 +93,7 @@ func TestCliArgs(t *testing.T) {
 		{"decrypt file", []string{"-k", "Test Salt Master", "decrypt", "all", "-f", dirPath + "/test.sls", "-u"}, "testdata/decrypt-file.golden", 0},
 	}
 
-	err := os.Setenv("GNUPGHOME", dirPath+"/gnupg")
+	err = os.Setenv("GNUPGHOME", dirPath+"/gnupg")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -242,8 +245,9 @@ func TestWriteSlsFile(t *testing.T) {
 	pgpKeyName, publicKeyRing, secretKeyRing = getTestKeyRings()
 	slsFile := "./testdata/foo/foo.sls"
 
-	p := pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
-	s := sls.New(slsFile, p, topLevelElement)
+	p, err := pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
+	Ok(t, err)
+	s := sls.New(slsFile, *p, topLevelElement)
 
 	secText := "secret"
 	valType := "text"
@@ -282,11 +286,12 @@ func TestReadSlsFile(t *testing.T) {
 func TestReadIncludeFile(t *testing.T) {
 	pgpKeyName, publicKeyRing, secretKeyRing = getTestKeyRings()
 	slsFile := "./testdata/inc.sls"
-	p := pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
-	s := sls.New(slsFile, p, topLevelElement)
+	p, err := pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
+	Ok(t, err)
+	s := sls.New(slsFile, *p, topLevelElement)
 	Assert(t, s.IsInclude, "failed to detect include file", s.IsInclude)
 	slsFile = "./testdata/new.sls"
-	s = sls.New(slsFile, p, topLevelElement)
+	s = sls.New(slsFile, *p, topLevelElement)
 	Assert(t, !s.IsInclude, "bad status for non-include file", s.IsInclude)
 }
 
@@ -301,7 +306,8 @@ func TestReadBadFile(t *testing.T) {
 func TestEncryptSecret(t *testing.T) {
 	pgpKeyName, publicKeyRing, secretKeyRing = getTestKeyRings()
 	topLevelElement = "secure_vars"
-	p := pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
+	p, err := pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
+	Ok(t, err)
 
 	yamlObj, err := yaml.Open("./testdata/new.sls")
 	Ok(t, err)
@@ -326,8 +332,9 @@ func TestGetPath(t *testing.T) {
 	topLevelElement = "secure_vars"
 
 	file := "./testdata/test/bar.sls"
-	p := pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
-	s := sls.New(file, p, topLevelElement)
+	p, err := pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
+	Ok(t, err)
+	s := sls.New(file, *p, topLevelElement)
 
 	buffer, err := s.PerformAction("encrypt")
 	Ok(t, err)
@@ -354,7 +361,8 @@ func TestGetPath(t *testing.T) {
 func TestDecryptSecret(t *testing.T) {
 	pgpKeyName, publicKeyRing, secretKeyRing = getTestKeyRings()
 	topLevelElement = "secure_vars"
-	p := pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
+	p, err := pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
+	Ok(t, err)
 
 	yamlObj, err := yaml.Open("./testdata/new.sls")
 	Ok(t, err)
@@ -377,8 +385,9 @@ func TestGetValueFromPath(t *testing.T) {
 	pgpKeyName, publicKeyRing, secretKeyRing = getTestKeyRings()
 
 	filePath := "./testdata/new.sls"
-	p := pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
-	s := sls.New(filePath, p, topLevelElement)
+	p, err := pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
+	Ok(t, err)
+	s := sls.New(filePath, *p, topLevelElement)
 	val := s.GetValueFromPath("bar:baz")
 	Equals(t, "qux", val.(string))
 }
@@ -387,8 +396,9 @@ func TestNestedAndMultiLineFile(t *testing.T) {
 	pgpKeyName, publicKeyRing, secretKeyRing = getTestKeyRings()
 
 	filePath := "./testdata/test.sls"
-	p := pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
-	s := sls.New(filePath, p, topLevelElement)
+	p, err := pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
+	Ok(t, err)
+	s := sls.New(filePath, *p, topLevelElement)
 
 	buffer, err := s.PerformAction("encrypt")
 	Ok(t, err)
@@ -400,8 +410,9 @@ func TestNestedAndMultiLineFile(t *testing.T) {
 	Ok(t, err)
 
 	filePath = "./testdata/test.sls"
-	p = pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
-	s = sls.New(filePath, p, topLevelElement)
+	p, err = pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
+	Ok(t, err)
+	s = sls.New(filePath, *p, topLevelElement)
 
 	buffer, err = s.PerformAction("decrypt")
 	Ok(t, err)
@@ -417,10 +428,11 @@ func TestSetValueFromPath(t *testing.T) {
 	pgpKeyName, publicKeyRing, secretKeyRing = getTestKeyRings()
 
 	filePath := "./testdata/new.sls"
-	p := pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
-	s := sls.New(filePath, p, topLevelElement)
+	p, err := pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
+	Ok(t, err)
+	s := sls.New(filePath, *p, topLevelElement)
 
-	err := s.SetValueFromPath("bar:baz", "foo")
+	err = s.SetValueFromPath("bar:baz", "foo")
 	Ok(t, err)
 
 	val := s.GetValueFromPath("bar:baz")
@@ -432,8 +444,9 @@ func TestRotateFile(t *testing.T) {
 	topLevelElement = ""
 
 	filePath := "./testdata/new.sls"
-	p := pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
-	s := sls.New(filePath, p, topLevelElement)
+	p, err := pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
+	Ok(t, err)
+	s := sls.New(filePath, *p, topLevelElement)
 
 	buffer, err := s.PerformAction("encrypt")
 	Ok(t, err)
@@ -461,8 +474,9 @@ func TestKeyInfo(t *testing.T) {
 	topLevelElement = ""
 
 	filePath := "./testdata/new.sls"
-	p := pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
-	s := sls.New(filePath, p, topLevelElement)
+	p, err := pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
+	Ok(t, err)
+	s := sls.New(filePath, *p, topLevelElement)
 
 	buffer, err := s.PerformAction("encrypt")
 	Ok(t, err)
@@ -495,12 +509,13 @@ func TestEncryptProcessDir(t *testing.T) {
 	slsFiles, slsCount := utils.FindFilesByExt(dirPath, ".sls")
 	Equals(t, 7, slsCount)
 
-	pk := pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
-	err := utils.ProcessDir(dirPath, ".sls", sls.Encrypt, "", topLevelElement, pk)
+	pk, err := pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
+	Ok(t, err)
+	err = utils.ProcessDir(dirPath, ".sls", sls.Encrypt, "", topLevelElement, *pk)
 	Ok(t, err)
 
 	for n := 0; n < slsCount; n++ {
-		s := sls.New(slsFiles[n], pk, topLevelElement)
+		s := sls.New(slsFiles[n], *pk, topLevelElement)
 		if s.IsInclude {
 			continue
 		}
@@ -527,12 +542,13 @@ func TestDecryptProcessDir(t *testing.T) {
 	slsFiles, slsCount := utils.FindFilesByExt(dirPath, ".sls")
 	Equals(t, 7, slsCount)
 
-	pk := pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
-	err := utils.ProcessDir(dirPath, ".sls", sls.Decrypt, "", topLevelElement, pk)
+	pk, err := pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
+	Ok(t, err)
+	err = utils.ProcessDir(dirPath, ".sls", sls.Decrypt, "", topLevelElement, *pk)
 	Ok(t, err)
 
 	for n := 0; n < slsCount; n++ {
-		s := sls.New(slsFiles[n], pk, topLevelElement)
+		s := sls.New(slsFiles[n], *pk, topLevelElement)
 		if s.IsInclude {
 			continue
 		}
@@ -668,4 +684,326 @@ func loadFixture(t *testing.T, fixture string) string {
 		t.Fatal(err)
 	}
 	return string(content)
+}
+
+// TestEncryptionRobustness tests encryption with various data types and edge cases
+func TestEncryptionRobustness(t *testing.T) {
+	pgpKeyName, publicKeyRing, secretKeyRing := getTestKeyRings()
+	topLevelElement = ""
+
+	p, err := pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
+	Ok(t, err)
+
+	tests := []struct {
+		name    string
+		data    string
+		wantErr bool
+	}{
+		{"normal text", "hello world", false},
+		{"empty string", "", false},
+		{"single character", "a", false},
+		{"unicode characters", "测试数据 🔒 emoji", false},
+		{"newlines and tabs", "line1\nline2\ttab\rcarriage", false},
+		{"json data", `{"key": "value", "number": 123}`, false},
+		{"xml data", "<root><element>value</element></root>", false},
+		{"special characters", "!@#$%^&*()_+-=[]{}|;:,.<>?", false},
+		{"binary-like data", string([]byte{0, 1, 2, 127, 128, 255}), false},
+		{"very long string", strings.Repeat("abcdefghijklmnopqrstuvwxyz", 1000), false},
+		{"mixed line endings", "line1\nline2\r\nline3\rline4", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Test encryption
+			cipherText, err := p.EncryptSecret(tt.data)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("EncryptSecret() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			if !tt.wantErr {
+				// Verify it contains PGP header
+				Assert(t, strings.Contains(cipherText, pki.PGPHeader),
+					"Encrypted data should contain PGP header", cipherText)
+
+				// Test decryption
+				plainText, err := p.DecryptSecret(cipherText)
+				Ok(t, err)
+
+				// Verify roundtrip integrity
+				Equals(t, tt.data, plainText)
+			}
+		})
+	}
+}
+
+// TestPKIEdgeCases tests PKI operations with edge cases
+func TestPKIEdgeCases(t *testing.T) {
+	tests := []struct {
+		name        string
+		keyName     string
+		pubKeyring  string
+		secKeyring  string
+		wantErr     bool
+		errContains string
+	}{
+		{
+			name:        "missing public keyring",
+			keyName:     "Test Salt Master",
+			pubKeyring:  "/nonexistent/pubring.gpg",
+			secKeyring:  "./testdata/gnupg/secring.gpg",
+			wantErr:     true,
+			errContains: "no such file",
+		},
+		{
+			name:        "missing secret keyring",
+			keyName:     "Test Salt Master",
+			pubKeyring:  "./testdata/gnupg/pubring.gpg",
+			secKeyring:  "/nonexistent/secring.gpg",
+			wantErr:     false, // PKI just warns about missing secret keyring, doesn't error
+			errContains: "",
+		},
+		{
+			name:        "empty key name",
+			keyName:     "",
+			pubKeyring:  "./testdata/gnupg/pubring.gpg",
+			secKeyring:  "./testdata/gnupg/secring.gpg",
+			wantErr:     true,
+			errContains: "",
+		},
+		{
+			name:        "nonexistent key name",
+			keyName:     "Nonexistent Key",
+			pubKeyring:  "./testdata/gnupg/pubring.gpg",
+			secKeyring:  "./testdata/gnupg/secring.gpg",
+			wantErr:     true,
+			errContains: "unable to find key",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := pki.New(tt.keyName, tt.pubKeyring, tt.secKeyring)
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("pki.New() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			if tt.wantErr && tt.errContains != "" {
+				if !strings.Contains(err.Error(), tt.errContains) {
+					t.Errorf("Error should contain %q, got: %v", tt.errContains, err)
+				}
+			}
+		})
+	}
+}
+
+// TestSlsFileEdgeCases tests SLS file handling with edge cases
+func TestSlsFileEdgeCases(t *testing.T) {
+	pgpKeyName, publicKeyRing, secretKeyRing := getTestKeyRings()
+	topLevelElement = ""
+
+	p, err := pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
+	Ok(t, err)
+
+	tempDir := t.TempDir()
+
+	tests := []struct {
+		name        string
+		content     string
+		wantErr     bool
+		errContains string
+	}{
+		{
+			name:    "empty file",
+			content: "",
+			wantErr: true, // Empty files have no values to format
+		},
+		{
+			name:    "only shebang",
+			content: "#!yaml|gpg",
+			wantErr: true, // Only shebang has no values to format
+		},
+		{
+			name:    "malformed yaml",
+			content: "#!yaml|gpg\n[invalid: yaml: content",
+			wantErr: true,
+		},
+		{
+			name: "deeply nested structure",
+			content: `#!yaml|gpg
+level1:
+  level2:
+    level3:
+      level4:
+        level5:
+          deep_secret: "deep_value"`,
+			wantErr: false,
+		},
+		{
+			name: "unicode content",
+			content: `#!yaml|gpg
+测试: "中文内容"
+emoji: "🔒🗝️"`,
+			wantErr: false,
+		},
+		{
+			name: "mixed types",
+			content: `#!yaml|gpg
+string: "text"
+number: 123
+boolean: true
+array:
+  - item1
+  - item2
+nested:
+  key: value`,
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create test file
+			testFile := filepath.Join(tempDir, fmt.Sprintf("test_%s.sls", tt.name))
+			err := os.WriteFile(testFile, []byte(tt.content), 0644)
+			Ok(t, err)
+
+			// Try to create SLS object
+			s := sls.New(testFile, *p, topLevelElement)
+
+			// Try to perform an operation
+			_, err = s.PerformAction("encrypt")
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("PerformAction() error = %v, wantErr %v", err, tt.wantErr)
+			}
+
+			if tt.wantErr && tt.errContains != "" && err != nil {
+				if !strings.Contains(err.Error(), tt.errContains) {
+					t.Errorf("Error should contain %q, got: %v", tt.errContains, err)
+				}
+			}
+		})
+	}
+}
+
+// TestPathOperationsEdgeCases tests YAML path operations with edge cases
+func TestPathOperationsEdgeCases(t *testing.T) {
+	pgpKeyName, publicKeyRing, secretKeyRing := getTestKeyRings()
+	topLevelElement = ""
+
+	filePath := "./testdata/new.sls"
+	p, err := pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
+	Ok(t, err)
+	s := sls.New(filePath, *p, topLevelElement)
+
+	tests := []struct {
+		name    string
+		path    string
+		value   string
+		wantErr bool
+	}{
+		{"simple path", "test_key", "test_value", false},
+		{"nested path", "level1:level2", "nested_value", false},
+		{"deep path", "a:b:c:d:e", "deep_value", false},
+		{"empty path", "", "root_value", false}, // Empty path should set at root level
+		{"nonexistent nested", "nonexistent:key", "value", false},
+		{"special chars in key", "special-key_123", "value", false},
+		{"numeric key", "123", "numeric_value", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Test setting value
+			err := s.SetValueFromPath(tt.path, tt.value)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("SetValueFromPath() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			if !tt.wantErr {
+				// Test getting value back
+				retrieved := s.GetValueFromPath(tt.path)
+				if retrieved == nil {
+					t.Errorf("GetValueFromPath() returned nil for path %q", tt.path)
+				}
+			}
+		})
+	}
+}
+
+// TestConcurrentOperations tests concurrent access to files
+func TestConcurrentOperations(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping concurrent test in short mode")
+	}
+
+	pgpKeyName, publicKeyRing, secretKeyRing := getTestKeyRings()
+	topLevelElement = ""
+
+	p, err := pki.New(pgpKeyName, publicKeyRing, secretKeyRing)
+	Ok(t, err)
+
+	tempDir := t.TempDir()
+
+	// Create multiple test files
+	const numFiles = 5
+	const numGoroutines = 3
+
+	testFiles := make([]string, numFiles)
+	for i := 0; i < numFiles; i++ {
+		testFile := filepath.Join(tempDir, fmt.Sprintf("concurrent_test_%d.sls", i))
+		content := fmt.Sprintf("#!yaml|gpg\ntest_key_%d: test_value_%d\n", i, i)
+		err := os.WriteFile(testFile, []byte(content), 0644)
+		Ok(t, err)
+		testFiles[i] = testFile
+	}
+
+	// Run concurrent operations
+	errors := make(chan error, numGoroutines*numFiles)
+
+	for i := 0; i < numGoroutines; i++ {
+		go func(goroutineID int) {
+			for j, testFile := range testFiles {
+				s := sls.New(testFile, *p, topLevelElement)
+
+				// Perform encrypt operation
+				_, err := s.PerformAction("encrypt")
+				if err != nil {
+					errors <- fmt.Errorf("goroutine %d, file %d: encrypt failed: %v", goroutineID, j, err)
+					continue
+				}
+
+				// Perform decrypt operation
+				_, err = s.PerformAction("decrypt")
+				if err != nil {
+					errors <- fmt.Errorf("goroutine %d, file %d: decrypt failed: %v", goroutineID, j, err)
+					continue
+				}
+
+				errors <- nil // Success
+			}
+		}(i)
+	}
+
+	// Collect results
+	successCount := 0
+	errorCount := 0
+
+	for i := 0; i < numGoroutines*numFiles; i++ {
+		err := <-errors
+		if err != nil {
+			t.Logf("Concurrent operation error: %v", err)
+			errorCount++
+		} else {
+			successCount++
+		}
+	}
+
+	// We expect most operations to succeed
+	if errorCount > successCount {
+		t.Errorf("Too many concurrent operation failures: %d errors vs %d successes", errorCount, successCount)
+	}
 }

@@ -45,18 +45,26 @@ var keysCmd = &cobra.Command{
 		if len(args) == 0 {
 			err := cmd.Help()
 			if err != nil {
-				logger.Fatal().Err(err)
+				return err
 			}
 			os.Exit(0)
 		}
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {
+		// Validate file paths for directory traversal attacks
+		if utils.ContainsDirectoryTraversal(inputFilePath) {
+			logger.Fatal().Msgf("keys: invalid input file path - directory traversal detected in %s", inputFilePath)
+		}
+		if utils.ContainsDirectoryTraversal(recurseDir) {
+			logger.Fatal().Msgf("keys: invalid directory path - directory traversal detected in %s", recurseDir)
+		}
+
 		pk := getPki()
 		outputFilePath = os.Stdout.Name()
 		inputFilePath, err := filepath.Abs(inputFilePath)
 		if err != nil {
-			logger.Fatal().Err(err)
+			logger.Fatal().Err(err).Msg("keys: failed to resolve absolute path for input file")
 		}
 
 		// process args
@@ -65,25 +73,43 @@ var keysCmd = &cobra.Command{
 			if inputFilePath == os.Stdin.Name() && !stdinIsPiped() {
 				logger.Info().Msgf("reading from %s", os.Stdin.Name())
 			}
-			s := sls.New(inputFilePath, pk, topLevelElement)
+			s := sls.New(inputFilePath, *pk, topLevelElement)
+
+			// Check if the file contains include statements (not supported for key operations)
+			if s.IsInclude {
+				logger.Fatal().Msgf("keys: file %s contains include statements and cannot be processed", inputFilePath)
+			}
+
 			buffer, err := s.PerformAction("validate")
 			if err != nil {
-				logger.Fatal().Err(err)
+				logger.Fatal().Err(err).Msg("keys: failed to validate PGP keys")
 			}
 			fmt.Printf("%s\n", buffer.String())
 		case recurse:
-			err := utils.ProcessDir(recurseDir, ".sls", "validate", outputFilePath, topLevelElement, pk)
+			err := utils.ProcessDir(recurseDir, ".sls", "validate", outputFilePath, topLevelElement, *pk)
 			if err != nil {
 				logger.Warn().Err(err).Msg("keys")
 			}
 		case path:
-			s := sls.New(inputFilePath, pk, topLevelElement)
+			s := sls.New(inputFilePath, *pk, topLevelElement)
+
+			// Check if the file contains include statements (not supported for path operations)
+			if s.IsInclude {
+				logger.Fatal().Msgf("keys: file %s contains include statements and cannot be processed", inputFilePath)
+			}
+
 			utils.PathAction(&s, yamlPath, "validate")
 		case count:
-			s := sls.New(inputFilePath, pk, topLevelElement)
-			_, err := s.PerformAction("validate")
+			s := sls.New(inputFilePath, *pk, topLevelElement)
+
+			// Check if the file contains include statements (not supported for count operations)
+			if s.IsInclude {
+				logger.Fatal().Msgf("keys: file %s contains include statements and cannot be processed", inputFilePath)
+			}
+
+			_, err = s.PerformAction("validate")
 			if err != nil {
-				logger.Fatal().Err(err)
+				logger.Fatal().Err(err).Msg("keys: failed to validate PGP keys for count")
 			}
 			if verbose {
 				fmt.Println(s.KeyMeta)
