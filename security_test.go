@@ -187,7 +187,7 @@ func TestFilePermissionHandling(t *testing.T) {
 		},
 	}
 
-	pgpKeyName, publicKeyRing, secretKeyRing := getTestKeyRings()
+	pgpKeyName, gnupgHome := getTestKeyInfo()
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -202,8 +202,7 @@ func TestFilePermissionHandling(t *testing.T) {
 			binaryPath := filepath.Join(dir, "generate-secure-pillar")
 			cmd := exec.Command(binaryPath,
 				"-k", pgpKeyName,
-				"--pubring", publicKeyRing,
-				"--secring", secretKeyRing,
+				"--gnupg-home", gnupgHome,
 				"keys", "all", "-f", filePath)
 
 			output, err := cmd.CombinedOutput()
@@ -228,7 +227,7 @@ func TestMalformedInputHandling(t *testing.T) {
 	}
 
 	tempDir := t.TempDir()
-	pgpKeyName, publicKeyRing, secretKeyRing := getTestKeyRings()
+	pgpKeyName, gnupgHome := getTestKeyInfo()
 
 	testCases := []struct {
 		name        string
@@ -241,8 +240,7 @@ func TestMalformedInputHandling(t *testing.T) {
 				outputFile := filepath.Join(tempDir, "empty_names.sls")
 				args := []string{
 					"-k", pgpKeyName,
-					"--pubring", publicKeyRing,
-					"--secring", secretKeyRing,
+					"--gnupg-home", gnupgHome,
 					"create", "-n", "", "-s", "value", "-o", outputFile,
 				}
 				return args, "secret names"
@@ -255,8 +253,7 @@ func TestMalformedInputHandling(t *testing.T) {
 				outputFile := filepath.Join(tempDir, "empty_values.sls")
 				args := []string{
 					"-k", pgpKeyName,
-					"--pubring", publicKeyRing,
-					"--secring", secretKeyRing,
+					"--gnupg-home", gnupgHome,
 					"create", "-n", "name", "-s", "", "-o", outputFile,
 				}
 				return args, ""
@@ -269,8 +266,7 @@ func TestMalformedInputHandling(t *testing.T) {
 				outputFile := filepath.Join(tempDir, "mismatched.sls")
 				args := []string{
 					"-k", pgpKeyName,
-					"--pubring", publicKeyRing,
-					"--secring", secretKeyRing,
+					"--gnupg-home", gnupgHome,
 					"create", "-n", "name1,name2", "-s", "value1", "-o", outputFile,
 				}
 				return args, "mismatch"
@@ -288,8 +284,7 @@ func TestMalformedInputHandling(t *testing.T) {
 				}
 				args := []string{
 					"-k", pgpKeyName,
-					"--pubring", publicKeyRing,
-					"--secring", secretKeyRing,
+					"--gnupg-home", gnupgHome,
 					"keys", "all", "-f", malformedFile,
 				}
 				return args, "yaml"
@@ -338,7 +333,7 @@ func TestIncludeFileHandling(t *testing.T) {
 	}
 
 	tempDir := t.TempDir()
-	pgpKeyName, publicKeyRing, secretKeyRing := getTestKeyRings()
+	pgpKeyName, gnupgHome := getTestKeyInfo()
 
 	// Create a file with include directive
 	includeFile := filepath.Join(tempDir, "include_test.sls")
@@ -378,8 +373,7 @@ data:
 		t.Run(testName, func(t *testing.T) {
 			args := []string{
 				"-k", pgpKeyName,
-				"--pubring", publicKeyRing,
-				"--secring", secretKeyRing,
+				"--gnupg-home", gnupgHome,
 			}
 			args = append(args, cmdArgs...)
 
@@ -419,7 +413,7 @@ func TestResourceCleanup(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	pgpKeyName, publicKeyRing, secretKeyRing := getTestKeyRings()
+	pgpKeyName, gnupgHome := getTestKeyInfo()
 
 	// Perform multiple operations that could create temporary resources
 	dir, err := os.Getwd()
@@ -431,8 +425,7 @@ func TestResourceCleanup(t *testing.T) {
 	for i := 0; i < 5; i++ {
 		cmd := exec.Command(binaryPath,
 			"-k", pgpKeyName,
-			"--pubring", publicKeyRing,
-			"--secring", secretKeyRing,
+			"--gnupg-home", gnupgHome,
 			"keys", "all", "-f", testFile)
 
 		_, err := cmd.CombinedOutput()

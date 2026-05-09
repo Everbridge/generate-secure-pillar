@@ -22,18 +22,19 @@
 package pki
 
 import (
-	"bufio"
 	"bytes"
+	"bufio"
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"os/user"
 	"path/filepath"
 	"strings"
 	"time"
 
-	"github.com/keybase/go-crypto/openpgp"
-	"github.com/keybase/go-crypto/openpgp/armor"
+	"github.com/ProtonMail/go-crypto/openpgp"
+	"github.com/ProtonMail/go-crypto/openpgp/armor"
 	"github.com/rs/zerolog"
 	"github.com/ryboe/q"
 )
@@ -43,15 +44,14 @@ const PGPHeader string = "-----BEGIN PGP MESSAGE-----"
 
 // Pki pki info
 type Pki struct {
-	PublicKey     *openpgp.Entity
-	SecretKey     *openpgp.Entity
-	PubRing       *openpgp.EntityList
-	SecRing       *openpgp.EntityList
-	PublicKeyRing string
-	SecretKeyRing string
-	PgpKeyName    string
-	logger        zerolog.Logger
-	debug         bool
+	PublicKey  *openpgp.Entity
+	SecretKey  *openpgp.Entity
+	PubRing   *openpgp.EntityList
+	SecRing   *openpgp.EntityList
+	GnupgHome string
+	PgpKeyName string
+	logger     zerolog.Logger
+	debug      bool
 }
 
 // dbg creates a debug dumper function
@@ -63,63 +63,104 @@ func (p *Pki) dbg() func(thing ...interface{}) {
 	}
 }
 
+// findGPGBinary locates the gpg binary, preferring gpg2
+func findGPGBinary() (string, error) {
+	for _, name := range []string{"gpg2", "gpg"} {
+		path, err := exec.LookPath(name)
+		if err == nil {
+			return path, nil
+		}
+	}
+	return "", fmt.Errorf("cannot find gpg or gpg2 binary in PATH")
+}
+
+// exportKeysFromGPG runs gpg to export keys and returns them as an EntityList
+func exportKeysFromGPG(gnupgHome string, secret bool) (*openpgp.EntityList, error) {
+	gpgBin, err := findGPGBinary()
+	if err != nil {
+		return nil, err
+	}
+
+	args := []string{"--homedir", gnupgHome, "--batch", "--yes", "--export"}
+	if secret {
+		args = []string{"--homedir", gnupgHome, "--batch", "--yes", "--export-secret-keys"}
+	}
+
+	cmd := exec.Command(gpgBin, args...)
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	if err := cmd.Run(); err != nil {
+		return nil, fmt.Errorf("gpg export failed: %w: %s", err, stderr.String())
+	}
+
+	if stdout.Len() == 0 {
+		return nil, fmt.Errorf("gpg exported zero bytes (no keys found in %s)", gnupgHome)
+	}
+
+	ring, err := openpgp.ReadKeyRing(&stdout)
+	if err != nil {
+		return nil, fmt.Errorf("cannot parse exported keys: %w", err)
+	}
+	if ring == nil {
+		return nil, fmt.Errorf("exported keyring is empty")
+	}
+
+	return &ring, nil
+}
+
 // New returns a pki object and an error
-func New(pgpKeyName string, publicKeyRing string, secretKeyRing string) (*Pki, error) {
+func New(pgpKeyName string, gnupgHome string) (*Pki, error) {
 	// Initialize logger
 	logger := zerolog.New(os.Stdout).Output(zerolog.ConsoleWriter{Out: os.Stdout})
 
 	// Check for debug mode
 	debugMode := os.Getenv("GSPPKI_DEBUG") != ""
 
-	var err error
-
 	// Validate input parameters
 	if pgpKeyName == "" {
 		return nil, fmt.Errorf("PGP key name cannot be empty")
 	}
-	if publicKeyRing == "" {
-		return nil, fmt.Errorf("public key ring path cannot be empty")
-	}
-	if secretKeyRing == "" {
-		return nil, fmt.Errorf("secret key ring path cannot be empty")
+	if gnupgHome == "" {
+		return nil, fmt.Errorf("GnuPG home directory cannot be empty")
 	}
 
 	p := &Pki{
-		PublicKey:     nil,
-		SecretKey:     nil,
-		PubRing:       nil,
-		SecRing:       nil,
-		PublicKeyRing: publicKeyRing,
-		SecretKeyRing: secretKeyRing,
-		PgpKeyName:    pgpKeyName,
-		logger:        logger,
-		debug:         debugMode,
+		PublicKey:  nil,
+		SecretKey:  nil,
+		PubRing:    nil,
+		SecRing:    nil,
+		GnupgHome: gnupgHome,
+		PgpKeyName: pgpKeyName,
+		logger:     logger,
+		debug:      debugMode,
 	}
 
-	// Expand and validate public key ring path
-	publicKeyRing, err = p.ExpandTilde(p.PublicKeyRing)
+	// Expand tilde in gnupg home path
+	expandedHome, err := p.ExpandTilde(gnupgHome)
 	if err != nil {
-		return nil, fmt.Errorf("cannot expand public key ring path: %w", err)
+		return nil, fmt.Errorf("cannot expand GnuPG home path: %w", err)
 	}
-	p.PublicKeyRing = publicKeyRing
+	p.GnupgHome = expandedHome
 
-	// Load public key ring
-	p.PubRing, err = p.setKeyRing(p.PublicKeyRing)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load public key ring '%s': %w", p.PublicKeyRing, err)
+	// Verify the GnuPG home directory exists
+	if fi, err := os.Stat(p.GnupgHome); err != nil {
+		return nil, fmt.Errorf("GnuPG home directory '%s' not accessible: %w", p.GnupgHome, err)
+	} else if !fi.IsDir() {
+		return nil, fmt.Errorf("GnuPG home '%s' is not a directory", p.GnupgHome)
 	}
 
-	// Expand and validate secret key ring path
-	secKeyRing, err := p.ExpandTilde(p.SecretKeyRing)
+	// Export public keys from GnuPG
+	p.PubRing, err = exportKeysFromGPG(p.GnupgHome, false)
 	if err != nil {
-		return nil, fmt.Errorf("cannot expand secret key ring path: %w", err)
+		return nil, fmt.Errorf("failed to export public keys: %w", err)
 	}
-	p.SecretKeyRing = secKeyRing
 
-	// Load secret key ring (this may fail and is non-fatal for encryption-only operations)
-	p.SecRing, err = p.setKeyRing(p.SecretKeyRing)
+	// Export secret keys from GnuPG (non-fatal if it fails)
+	p.SecRing, err = exportKeysFromGPG(p.GnupgHome, true)
 	if err != nil {
-		p.logger.Warn().Err(err).Str("keyring", p.SecretKeyRing).Msg("failed to load secret key ring - decryption operations will not be available")
+		p.logger.Warn().Err(err).Msg("failed to export secret keys - decryption operations will not be available")
 	}
 
 	// Load keys
@@ -128,7 +169,7 @@ func New(pgpKeyName string, publicKeyRing string, secretKeyRing string) (*Pki, e
 	}
 	p.PublicKey = p.GetKeyByID(p.PubRing, p.PgpKeyName)
 	if p.PublicKey == nil {
-		return nil, fmt.Errorf("unable to find key '%s' in public key ring '%s'", p.PgpKeyName, p.PublicKeyRing)
+		return nil, fmt.Errorf("unable to find key '%s' in public keyring", p.PgpKeyName)
 	}
 
 	// Debug dump if enabled
@@ -136,37 +177,6 @@ func New(pgpKeyName string, publicKeyRing string, secretKeyRing string) (*Pki, e
 	dumper(p)
 
 	return p, nil
-}
-
-func (p *Pki) setKeyRing(keyRingPath string) (*openpgp.EntityList, error) {
-	if keyRingPath == "" {
-		return nil, fmt.Errorf("key ring path cannot be empty")
-	}
-
-	keyRing, err := p.ExpandTilde(keyRingPath)
-	if err != nil {
-		return nil, fmt.Errorf("error expanding key ring path '%s': %w", keyRingPath, err)
-	}
-
-	keyRingFile, err := os.Open(filepath.Clean(keyRing))
-	if err != nil {
-		return nil, fmt.Errorf("unable to open key ring file '%s': %w", keyRing, err)
-	}
-	defer func() {
-		if closeErr := keyRingFile.Close(); closeErr != nil {
-			p.logger.Warn().Err(closeErr).Str("keyring", keyRing).Msg("failed to close key ring file")
-		}
-	}()
-
-	ring, err := openpgp.ReadKeyRing(keyRingFile)
-	if err != nil {
-		return nil, fmt.Errorf("cannot read key ring from file '%s': %w", keyRing, err)
-	}
-	if ring == nil {
-		return nil, fmt.Errorf("key ring file '%s' is empty or invalid", keyRing)
-	}
-
-	return &ring, nil
 }
 
 // EncryptSecret returns encrypted plainText
@@ -209,7 +219,7 @@ func (p *Pki) EncryptSecret(plainText string) (string, error) {
 // DecryptSecret returns decrypted cipherText
 func (p *Pki) DecryptSecret(cipherText string) (plainText string, err error) {
 	if p.SecRing == nil {
-		return cipherText, fmt.Errorf("no secring set")
+		return cipherText, fmt.Errorf("no secret keyring available")
 	}
 	if p.SecretKey == nil {
 		return cipherText, fmt.Errorf("unable to load PGP secret key for '%s'", p.PgpKeyName)
@@ -224,7 +234,7 @@ func (p *Pki) DecryptSecret(cipherText string) (plainText string, err error) {
 		return cipherText, fmt.Errorf("block type is not PGP MESSAGE: %s", err)
 	}
 
-	md, err := openpgp.ReadMessage(block.Body, p.SecRing, nil, nil)
+	md, err := openpgp.ReadMessage(block.Body, *p.SecRing, nil, nil)
 	if err != nil {
 		return cipherText, fmt.Errorf("unable to read PGP message: %s", err)
 	}
@@ -384,7 +394,7 @@ func (p *Pki) KeyUsedForEncryptedFile(file string) (string, error) {
 		return "", fmt.Errorf("invalid block type '%s', expected 'PGP MESSAGE' in file '%s'", block.Type, filePath)
 	}
 
-	md, err := openpgp.ReadMessage(block.Body, p.SecRing, nil, nil)
+	md, err := openpgp.ReadMessage(block.Body, *p.SecRing, nil, nil)
 	if err != nil {
 		return "", fmt.Errorf("unable to read PGP message from file '%s': %w", filePath, err)
 	}
@@ -408,7 +418,7 @@ func (p *Pki) keyStringForID(id uint64) string {
 		return ""
 	}
 
-	keys := p.SecRing.KeysById(id, nil)
+	keys := p.SecRing.KeysById(id)
 	if len(keys) == 0 {
 		return ""
 	}
