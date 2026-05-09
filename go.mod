@@ -1,6 +1,6 @@
 module github.com/Everbridge/generate-secure-pillar
 
-go 1.21
+go 1.22.0
 
 require (
 	github.com/ProtonMail/go-crypto v1.1.6
@@ -16,7 +16,7 @@ require (
 )
 
 require (
-	github.com/cloudflare/circl v1.3.7 // indirect
+	github.com/cloudflare/circl v1.6.3 // indirect
 	github.com/edlitmus/dig v0.0.0-20231025150220-13b7e66ce5ac // indirect
 	github.com/edlitmus/to v0.0.0-20231025141937-dd8488388a59 // indirect
 	github.com/esilva-everbridge/dig v0.0.0-20230222145646-42ad4ced5ae3 // indirect
@@ -39,8 +39,8 @@ require (
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/subosito/gotenv v1.4.2 // indirect
-	golang.org/x/crypto v0.28.0 // indirect
-	golang.org/x/sys v0.26.0 // indirect
-	golang.org/x/text v0.19.0 // indirect
+	golang.org/x/crypto v0.30.0 // indirect
+	golang.org/x/sys v0.28.0 // indirect
+	golang.org/x/text v0.21.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 )
