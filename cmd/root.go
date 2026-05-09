@@ -34,7 +34,6 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	tilde "gopkg.in/mattes/go-expand-tilde.v1"
 )
 
 // initLogger initializes a logger instance for the cmd package
@@ -55,10 +54,9 @@ var (
 	yamlPath       string
 
 	// Profile and encryption configuration
-	profile         string
-	pgpKeyName      string
-	publicKeyRing   = "~/.gnupg/pubring.gpg"
-	privateKeyRing  = "~/.gnupg/secring.gpg"
+	profile    string
+	pgpKeyName string
+	gnupgHome  = "~/.gnupg"
 	topLevelElement string
 
 	// Operation flags
@@ -93,13 +91,13 @@ $ generate-secure-pillar -k "Salt Master" --element secret_stuff encrypt all --f
 # recurse through all sls files, encrypting all values
 $ generate-secure-pillar -k "Salt Master" encrypt recurse -d /path/to/pillar/secure/stuff
 
-# recurse through all sls files, decrypting all values (requires imported private key)
+# recurse through all sls files, decrypting all values (requires secret key in gpg-agent)
 $ generate-secure-pillar decrypt recurse -d /path/to/pillar/secure/stuff
 
-# decrypt a specific existing value (requires imported private key)
+# decrypt a specific existing value (requires secret key in gpg-agent)
 $ generate-secure-pillar decrypt path --path "some:yaml:path" --file new.sls
 
-# decrypt all files and re-encrypt with given key (requires imported private key)
+# decrypt all files and re-encrypt with given key (requires secret key in gpg-agent)
 $ generate-secure-pillar -k "New Salt Master Key" rotate -d /path/to/pillar/secure/stuff
 
 # show all PGP key IDs used in a file
@@ -111,7 +109,7 @@ $ generate-secure-pillar keys recurse -d /path/to/pillar/secure/stuff
 # show the PGP Key ID used for an element at a path in a file
 $ generate-secure-pillar keys path --path "some:yaml:path" --file new.sls
 `,
-	Version: "1.0.640",
+	Version: "2.0.0",
 }
 
 const all = "all"
@@ -132,32 +130,16 @@ func init() {
 	cobra.OnInitialize(initConfig)
 
 	// respect the env var if set
-	gpgHome := os.Getenv("GNUPGHOME")
-	if gpgHome != "" {
-		publicKeyRing = fmt.Sprintf("%s/pubring.gpg", gpgHome)
-		privateKeyRing = fmt.Sprintf("%s/secring.gpg", gpgHome)
-	}
-
-	// check for GNUPG1 pubring file
-	filePath, err := tilde.Expand(publicKeyRing)
-	if err != nil {
-		logger.Fatal().Err(err).Msg("Error with GNUPG pubring path")
-	}
-	if utils.ContainsDirectoryTraversal(filePath) {
-		logger.Fatal().Msgf("Invalid pubring path: directory traversal detected in %s", filePath)
-	}
-	if _, err = os.Stat(filepath.Clean(filePath)); os.IsNotExist(err) {
-		if err != nil {
-			logger.Fatal().Err(err).Msg("Error finding GNUPG pubring file")
-		}
+	gpgHomeEnv := os.Getenv("GNUPGHOME")
+	if gpgHomeEnv != "" {
+		gnupgHome = gpgHomeEnv
 	}
 
 	rootCmd.PersistentFlags().Bool("version", false, "print the version")
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.config/generate-secure-pillar/config.yaml)")
 	rootCmd.PersistentFlags().StringVar(&profile, "profile", "", "profile name from profile specified in the config file")
 	rootCmd.PersistentFlags().StringVarP(&pgpKeyName, "pgp_key", "k", pgpKeyName, "PGP key name, email, or ID to use for encryption")
-	rootCmd.PersistentFlags().StringVar(&publicKeyRing, "pubring", publicKeyRing, "PGP public keyring (default is $HOME/.gnupg/pubring.gpg)")
-	rootCmd.PersistentFlags().StringVar(&privateKeyRing, "secring", privateKeyRing, "PGP private keyring (default is $HOME/.gnupg/secring.gpg)")
+	rootCmd.PersistentFlags().StringVar(&gnupgHome, "gnupg-home", gnupgHome, "GnuPG home directory (default is $HOME/.gnupg)")
 	rootCmd.PersistentFlags().StringVarP(&topLevelElement, "element", "e", "", "Name of the top level element under which encrypted key/value pairs are kept")
 }
 
@@ -206,7 +188,7 @@ func initConfig() {
 }
 
 func getPki() *pki.Pki {
-	p, err := pki.New(pgpKeyName, publicKeyRing, privateKeyRing)
+	p, err := pki.New(pgpKeyName, gnupgHome)
 	if err != nil {
 		logger.Fatal().Err(err).Msg("failed to initialize PKI")
 	}
@@ -241,8 +223,7 @@ func readProfile() {
 								logger.Warn().Msgf("Invalid gnupg_home path: directory traversal detected in %s", gpgHome)
 								continue
 							}
-							publicKeyRing = fmt.Sprintf("%s/pubring.gpg", gpgHome)
-							privateKeyRing = fmt.Sprintf("%s/secring.gpg", gpgHome)
+							gnupgHome = gpgHome
 						}
 					}
 					if defaultKeyVal, exists := profileMap["default_key"]; exists && defaultKeyVal != nil {
