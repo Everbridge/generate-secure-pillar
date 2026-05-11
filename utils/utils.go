@@ -52,15 +52,15 @@ func ContainsDirectoryTraversal(path string) bool {
 		strings.HasPrefix(path, "..") && (len(path) == 2 || path[2] == '/' || path[2] == '\\')
 }
 
-// SafeWrite checks that there is no error prior to trying to write a file
+// SafeWrite checks that there is no error prior to trying to write a file.
+// Any error (incoming or from the write itself) panics so callers cannot
+// silently swallow failures.
 func SafeWrite(buffer bytes.Buffer, outputFilePath string, err error) {
 	if err != nil {
-		logger.Fatal().Err(err)
-	} else {
-		_, err = sls.WriteSlsFile(buffer, outputFilePath)
-		if err != nil {
-			logger.Fatal().Err(err)
-		}
+		logger.Panic().Err(err).Msg("SafeWrite: input error")
+	}
+	if _, err = sls.WriteSlsFile(buffer, outputFilePath); err != nil {
+		logger.Panic().Err(err).Msg("SafeWrite: write failed")
 	}
 }
 
@@ -79,7 +79,7 @@ func PathAction(s *sls.Sls, path string, action string) {
 }
 
 // ProcessDir applies an action concurrently to a directory of files
-func ProcessDir(searchDir string, fileExt string, action string, outputFilePath string, topLevelElement string, pk pki.Pki) error {
+func ProcessDir(searchDir string, fileExt string, action string, outputFilePath string, topLevelElement string, pk pki.Crypter) error {
 	if len(searchDir) == 0 {
 		return fmt.Errorf("search directory not specified")
 	}
@@ -103,7 +103,7 @@ func ProcessDir(searchDir string, fileExt string, action string, outputFilePath 
 	for i := 0; i < count; i++ {
 		go func() {
 			for file := range filesChan {
-				resChan <- applyActionAndWrite(file, action, &pk, topLevelElement, errChan)
+				resChan <- applyActionAndWrite(file, action, pk, topLevelElement, errChan)
 			}
 		}()
 	}
@@ -127,9 +127,9 @@ func ProcessDir(searchDir string, fileExt string, action string, outputFilePath 
 	return nil
 }
 
-func applyActionAndWrite(file string, action string, pk *pki.Pki, topLevelElement string, errChan chan error) int {
+func applyActionAndWrite(file string, action string, pk pki.Crypter, topLevelElement string, errChan chan error) int {
 	byteCount := 0
-	s := sls.New(file, *pk, topLevelElement)
+	s := sls.New(file, pk, topLevelElement)
 	if s.IsInclude {
 		return 0
 	}

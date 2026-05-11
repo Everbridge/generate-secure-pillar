@@ -22,85 +22,99 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/Everbridge/generate-secure-pillar/pki"
 	"github.com/Everbridge/generate-secure-pillar/sls"
 	"github.com/Everbridge/generate-secure-pillar/utils"
 	"github.com/spf13/cobra"
 )
+
+// CreateOpts is the fully-resolved input set for the create command.
+type CreateOpts struct {
+	Crypter         pki.Crypter
+	OutputFilePath  string
+	TopLevelElement string
+	NameStr         string // raw "name" flag value, comma-separated
+	ValueStr        string // raw "value" flag value, comma-separated
+}
+
+// runCreate is the testable handler body.
+func runCreate(opts CreateOpts) error {
+	if utils.ContainsDirectoryTraversal(opts.OutputFilePath) {
+		return fmt.Errorf("create: invalid output file path - directory traversal detected in %s", opts.OutputFilePath)
+	}
+
+	outputPath, err := filepath.Abs(opts.OutputFilePath)
+	if err != nil {
+		return fmt.Errorf("create: failed to resolve output file path: %w", err)
+	}
+
+	nameStr := strings.Trim(strings.TrimSpace(opts.NameStr), "[]")
+	valueStr := strings.Trim(strings.TrimSpace(opts.ValueStr), "[]")
+	secretNames := strings.Split(nameStr, ",")
+	secretValues := strings.Split(valueStr, ",")
+	for i := range secretNames {
+		secretNames[i] = strings.TrimSpace(secretNames[i])
+	}
+	for i := range secretValues {
+		secretValues[i] = strings.TrimSpace(secretValues[i])
+	}
+
+	// strings.Split("", ",") returns [""], so the right check is for a single
+	// empty element after trimming.
+	if len(secretNames) == 0 || (len(secretNames) == 1 && secretNames[0] == "") {
+		return fmt.Errorf("create: no secret names provided")
+	}
+	// Empty values are intentionally allowed: encrypting an empty string is a
+	// valid use case (placeholder secret to fill in later).
+	if len(secretNames) != len(secretValues) {
+		return fmt.Errorf("create: mismatch between number of names (%d) and values (%d)", len(secretNames), len(secretValues))
+	}
+	for i, name := range secretNames {
+		if name == "" {
+			return fmt.Errorf("create: secret name at position %d is empty", i+1)
+		}
+	}
+
+	s := sls.New(outputPath, opts.Crypter, opts.TopLevelElement)
+	if s.IsInclude {
+		return fmt.Errorf("create: file %s contains include statements and cannot be processed", outputPath)
+	}
+	if err := s.ProcessYaml(secretNames, secretValues); err != nil {
+		return fmt.Errorf("create: failed to process YAML: %w", err)
+	}
+	buffer, err := s.FormatBuffer("")
+	if err != nil {
+		return fmt.Errorf("create: failed to format buffer: %w", err)
+	}
+	if _, err = sls.WriteSlsFile(buffer, outputPath); err != nil {
+		return fmt.Errorf("create: failed to write output file: %w", err)
+	}
+	return nil
+}
 
 // createCmd represents the create command
 var createCmd = &cobra.Command{
 	Use:   "create",
 	Short: "create a new sls file",
 	Run: func(cmd *cobra.Command, args []string) {
-		// Validate path for directory traversal attacks
-		if utils.ContainsDirectoryTraversal(outputFilePath) {
-			logger.Fatal().Msgf("create: invalid output file path - directory traversal detected in %s", outputFilePath)
-		}
-
-		outputFilePath, err := filepath.Abs(outputFilePath)
+		pk, err := getPki()
 		if err != nil {
-			logger.Fatal().Err(err).Msg("create: failed to resolve output file path")
+			logger.Fatal().Err(err).Msg("failed to initialize PKI")
 		}
-		// Parse secret names and values with proper trimming
-		nameStr := strings.TrimSpace(cmd.Flag("name").Value.String())
-		valueStr := strings.TrimSpace(cmd.Flag("value").Value.String())
-
-		// Remove surrounding brackets if present
-		nameStr = strings.Trim(nameStr, "[]")
-		valueStr = strings.Trim(valueStr, "[]")
-
-		secretNames := strings.Split(nameStr, ",")
-		secretValues := strings.Split(valueStr, ",")
-
-		// Trim whitespace from individual elements
-		for i := range secretNames {
-			secretNames[i] = strings.TrimSpace(secretNames[i])
-		}
-		for i := range secretValues {
-			secretValues[i] = strings.TrimSpace(secretValues[i])
-		}
-
-		// Validate input arrays
-		if len(secretNames) == 0 {
-			logger.Fatal().Msg("create: no secret names provided")
-		}
-		if len(secretValues) == 0 {
-			logger.Fatal().Msg("create: no secret values provided")
-		}
-		if len(secretNames) != len(secretValues) {
-			logger.Fatal().Msgf("create: mismatch between number of names (%d) and values (%d)", len(secretNames), len(secretValues))
-		}
-
-		// Check for empty names or values
-		for i, name := range secretNames {
-			if strings.TrimSpace(name) == "" {
-				logger.Fatal().Msgf("create: secret name at position %d is empty", i+1)
-			}
-		}
-
-		pk := getPki()
-		s := sls.New(outputFilePath, *pk, topLevelElement)
-
-		// Check if the file contains include statements (not supported)
-		if s.IsInclude {
-			logger.Fatal().Msgf("create: file %s contains include statements and cannot be processed", outputFilePath)
-		}
-
-		err = s.ProcessYaml(secretNames, secretValues)
+		err = runCreate(CreateOpts{
+			Crypter:         pk,
+			OutputFilePath:  outputFilePath,
+			TopLevelElement: topLevelElement,
+			NameStr:         cmd.Flag("name").Value.String(),
+			ValueStr:        cmd.Flag("value").Value.String(),
+		})
 		if err != nil {
-			logger.Fatal().Err(err).Msg("create: failed to process YAML")
-		}
-		buffer, err := s.FormatBuffer("")
-		if err != nil {
-			logger.Fatal().Err(err).Msg("create: failed to format buffer")
-		}
-		_, err = sls.WriteSlsFile(buffer, outputFilePath)
-		if err != nil {
-			logger.Fatal().Err(err).Msg("create: failed to write output file")
+			logger.Fatal().Err(err).Msg("create")
 		}
 	},
 }

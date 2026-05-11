@@ -105,11 +105,7 @@ func TestCommandPathValidation(t *testing.T) {
 		{"rotate with malicious dir", []string{"rotate", "-d"}},
 	}
 
-	// Set up GPG environment
-	err = os.Setenv("GNUPGHOME", filepath.Join(dir, "testdata", "gnupg"))
-	if err != nil {
-		t.Fatal(err)
-	}
+	// GNUPGHOME is set by TestMain -> initGPGDir; no override needed here.
 
 	for _, cmdTest := range commandTests {
 		for _, maliciousPath := range maliciousPaths {

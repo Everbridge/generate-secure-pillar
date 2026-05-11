@@ -75,7 +75,7 @@ func TestCliArgs(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() {
-		_ = utils.ProcessDir(dirPath, ".sls", sls.Decrypt, "", topLevelElement, *pk)
+		_ = utils.ProcessDir(dirPath, ".sls", sls.Decrypt, "", topLevelElement, pk)
 	}()
 
 	tests := []CLITest{
@@ -90,11 +90,6 @@ func TestCliArgs(t *testing.T) {
 		{"keys count", []string{"-k", "Test Salt Master", "keys", "count", "-v", "-f", dirPath + "/test.sls"}, "testdata/keys-count.golden", 1},
 		{"decrypt path", []string{"-k", "Test Salt Master", "decrypt", "path", "-f", dirPath + "/test.sls", "-p", "key", "-u"}, "testdata/decrypt-path.golden", 0},
 		{"decrypt file", []string{"-k", "Test Salt Master", "decrypt", "all", "-f", dirPath + "/test.sls", "-u"}, "testdata/decrypt-file.golden", 0},
-	}
-
-	err = os.Setenv("GNUPGHOME", dirPath+"/gnupg")
-	if err != nil {
-		t.Fatal(err)
 	}
 
 	for _, tt := range tests {
@@ -246,7 +241,7 @@ func TestWriteSlsFile(t *testing.T) {
 
 	p, err := pki.New(pgpKeyName, gnupgHome)
 	Ok(t, err)
-	s := sls.New(slsFile, *p, topLevelElement)
+	s := sls.New(slsFile, p, topLevelElement)
 
 	secText := "secret"
 	valType := "text"
@@ -287,10 +282,10 @@ func TestReadIncludeFile(t *testing.T) {
 	slsFile := "./testdata/inc.sls"
 	p, err := pki.New(pgpKeyName, gnupgHome)
 	Ok(t, err)
-	s := sls.New(slsFile, *p, topLevelElement)
+	s := sls.New(slsFile, p, topLevelElement)
 	Assert(t, s.IsInclude, "failed to detect include file", s.IsInclude)
 	slsFile = "./testdata/new.sls"
-	s = sls.New(slsFile, *p, topLevelElement)
+	s = sls.New(slsFile, p, topLevelElement)
 	Assert(t, !s.IsInclude, "bad status for non-include file", s.IsInclude)
 }
 
@@ -333,7 +328,7 @@ func TestGetPath(t *testing.T) {
 	file := "./testdata/test/bar.sls"
 	p, err := pki.New(pgpKeyName, gnupgHome)
 	Ok(t, err)
-	s := sls.New(file, *p, topLevelElement)
+	s := sls.New(file, p, topLevelElement)
 
 	buffer, err := s.PerformAction("encrypt")
 	Ok(t, err)
@@ -386,7 +381,7 @@ func TestGetValueFromPath(t *testing.T) {
 	filePath := "./testdata/new.sls"
 	p, err := pki.New(pgpKeyName, gnupgHome)
 	Ok(t, err)
-	s := sls.New(filePath, *p, topLevelElement)
+	s := sls.New(filePath, p, topLevelElement)
 	val := s.GetValueFromPath("bar:baz")
 	Equals(t, "qux", val.(string))
 }
@@ -397,7 +392,7 @@ func TestNestedAndMultiLineFile(t *testing.T) {
 	filePath := "./testdata/test.sls"
 	p, err := pki.New(pgpKeyName, gnupgHome)
 	Ok(t, err)
-	s := sls.New(filePath, *p, topLevelElement)
+	s := sls.New(filePath, p, topLevelElement)
 
 	buffer, err := s.PerformAction("encrypt")
 	Ok(t, err)
@@ -411,7 +406,7 @@ func TestNestedAndMultiLineFile(t *testing.T) {
 	filePath = "./testdata/test.sls"
 	p, err = pki.New(pgpKeyName, gnupgHome)
 	Ok(t, err)
-	s = sls.New(filePath, *p, topLevelElement)
+	s = sls.New(filePath, p, topLevelElement)
 
 	buffer, err = s.PerformAction("decrypt")
 	Ok(t, err)
@@ -429,7 +424,7 @@ func TestSetValueFromPath(t *testing.T) {
 	filePath := "./testdata/new.sls"
 	p, err := pki.New(pgpKeyName, gnupgHome)
 	Ok(t, err)
-	s := sls.New(filePath, *p, topLevelElement)
+	s := sls.New(filePath, p, topLevelElement)
 
 	err = s.SetValueFromPath("bar:baz", "foo")
 	Ok(t, err)
@@ -445,7 +440,7 @@ func TestRotateFile(t *testing.T) {
 	filePath := "./testdata/new.sls"
 	p, err := pki.New(pgpKeyName, gnupgHome)
 	Ok(t, err)
-	s := sls.New(filePath, *p, topLevelElement)
+	s := sls.New(filePath, p, topLevelElement)
 
 	buffer, err := s.PerformAction("encrypt")
 	Ok(t, err)
@@ -475,7 +470,7 @@ func TestKeyInfo(t *testing.T) {
 	filePath := "./testdata/new.sls"
 	p, err := pki.New(pgpKeyName, gnupgHome)
 	Ok(t, err)
-	s := sls.New(filePath, *p, topLevelElement)
+	s := sls.New(filePath, p, topLevelElement)
 
 	buffer, err := s.PerformAction("encrypt")
 	Ok(t, err)
@@ -510,11 +505,11 @@ func TestEncryptProcessDir(t *testing.T) {
 
 	pk, err := pki.New(pgpKeyName, gnupgHome)
 	Ok(t, err)
-	err = utils.ProcessDir(dirPath, ".sls", sls.Encrypt, "", topLevelElement, *pk)
+	err = utils.ProcessDir(dirPath, ".sls", sls.Encrypt, "", topLevelElement, pk)
 	Ok(t, err)
 
 	for n := 0; n < slsCount; n++ {
-		s := sls.New(slsFiles[n], *pk, topLevelElement)
+		s := sls.New(slsFiles[n], pk, topLevelElement)
 		if s.IsInclude {
 			continue
 		}
@@ -543,11 +538,11 @@ func TestDecryptProcessDir(t *testing.T) {
 
 	pk, err := pki.New(pgpKeyName, gnupgHome)
 	Ok(t, err)
-	err = utils.ProcessDir(dirPath, ".sls", sls.Decrypt, "", topLevelElement, *pk)
+	err = utils.ProcessDir(dirPath, ".sls", sls.Decrypt, "", topLevelElement, pk)
 	Ok(t, err)
 
 	for n := 0; n < slsCount; n++ {
-		s := sls.New(slsFiles[n], *pk, topLevelElement)
+		s := sls.New(slsFiles[n], pk, topLevelElement)
 		if s.IsInclude {
 			continue
 		}
@@ -626,29 +621,28 @@ func Equals(tb testing.TB, exp, act interface{}) {
 	}
 }
 
+// testGnupgHome returns the keyring directory used by the test suite. It lives
+// under /tmp instead of testdata/ because macOS caps Unix-socket paths at ~104
+// chars and the repo path would push gpg-agent's socket past that limit.
+func testGnupgHome() string {
+	user := os.Getenv("USER")
+	if user == "" {
+		user = "test"
+	}
+	return "/tmp/gsp-test-gnupg-" + user
+}
+
 func initGPGDir() {
 	teardownGPGDir()
 	dirPath, _ = filepath.Abs("./testdata")
-	gnupgDir := dirPath + "/gnupg"
-	os.Setenv("GNUPGHOME", gnupgDir)
+	os.Setenv("GNUPGHOME", testGnupgHome())
 	cmd := exec.Command("./testdata/testkeys.sh")
 	out, _ := cmd.CombinedOutput()
 	fmt.Printf("%s", string(out))
 }
 
 func teardownGPGDir() {
-	gnupgDir, _ := filepath.Abs("./testdata/gnupg")
-	// Remove all files in the gnupg directory but keep the directory itself
-	entries, err := os.ReadDir(gnupgDir)
-	if err != nil {
-		return
-	}
-	for _, entry := range entries {
-		if entry.Name() == ".gitkeep" {
-			continue
-		}
-		os.RemoveAll(filepath.Join(gnupgDir, entry.Name()))
-	}
+	os.RemoveAll(testGnupgHome())
 }
 
 func getTestKeyInfo() (pgpKeyName string, gnupgHome string) {
@@ -862,7 +856,7 @@ nested:
 			Ok(t, err)
 
 			// Try to create SLS object
-			s := sls.New(testFile, *p, topLevelElement)
+			s := sls.New(testFile, p, topLevelElement)
 
 			// Try to perform an operation
 			_, err = s.PerformAction("encrypt")
@@ -888,7 +882,7 @@ func TestPathOperationsEdgeCases(t *testing.T) {
 	filePath := "./testdata/new.sls"
 	p, err := pki.New(pgpKeyName, gnupgHome)
 	Ok(t, err)
-	s := sls.New(filePath, *p, topLevelElement)
+	s := sls.New(filePath, p, topLevelElement)
 
 	tests := []struct {
 		name    string
@@ -958,7 +952,7 @@ func TestConcurrentOperations(t *testing.T) {
 	for i := 0; i < numGoroutines; i++ {
 		go func(goroutineID int) {
 			for j, testFile := range testFiles {
-				s := sls.New(testFile, *p, topLevelElement)
+				s := sls.New(testFile, p, topLevelElement)
 
 				// Perform encrypt operation
 				_, err := s.PerformAction("encrypt")

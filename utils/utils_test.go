@@ -220,7 +220,7 @@ func TestProcessDirErrorConditions(t *testing.T) {
 			// Create a dummy PKI struct - in real tests this would be properly initialized
 			var dummyPKI pki.Pki
 
-			err := ProcessDir(tt.searchDir, ".sls", "encrypt", "", "", dummyPKI)
+			err := ProcessDir(tt.searchDir, ".sls", "encrypt", "", "", &dummyPKI)
 
 			if tt.expectError {
 				if err == nil {

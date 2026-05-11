@@ -5,9 +5,6 @@ set -e
 
 PATH=$PATH:/usr/local/bin
 
-DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-echo $DIR
-
 # find the gpg binary (prefer gpg2, fall back to gpg)
 if command -v gpg2 &> /dev/null; then
   GPG=gpg2
@@ -25,17 +22,28 @@ if [[ $GPG_MAJOR_VERSION != "2" ]]; then
     exit 1
 fi
 
-GNUPGHOME=$DIR/gnupg
+# macOS caps Unix-socket paths at ~104 chars (sockaddr_un.sun_path). The repo
+# checkout path under testdata/ blows past that, so gpg-agent fails to bind its
+# socket. Honor an inherited GNUPGHOME if it points somewhere short; otherwise
+# fall back to a short, stable path under /tmp.
+if [[ -z "$GNUPGHOME" || ${#GNUPGHOME} -gt 80 ]]; then
+    GNUPGHOME="/tmp/gsp-test-gnupg-${USER:-$(id -un)}"
+fi
 export GNUPGHOME
+echo "$GNUPGHOME"
 
-mkdir -p $GNUPGHOME
-chmod 700 $GNUPGHOME
+# stop any agent attached to a previous keyring so we get a clean state
+gpgconf --kill all 2>/dev/null || true
+
+rm -rf "$GNUPGHOME"
+mkdir -p "$GNUPGHOME"
+chmod 700 "$GNUPGHOME"
 
 # Generate a test key with no passphrase using GnuPG 2.x batch mode
-$GPG --homedir $GNUPGHOME --batch --passphrase '' --quick-gen-key "Test Salt Master (test key)" rsa2048 encrypt,sign 0
+$GPG --batch --passphrase '' --quick-gen-key "Test Salt Master (test key)" rsa2048 encrypt,sign 0
 
 # Trust the key ultimately
-KEYID=$($GPG --homedir $GNUPGHOME --list-keys --with-colons | grep '^fpr' | head -1 | cut -d ':' -f 10)
-echo -e "5\ny\n" | $GPG --homedir $GNUPGHOME --batch --command-fd 0 --edit-key $KEYID trust quit 2>/dev/null || true
+KEYID=$($GPG --list-keys --with-colons | grep '^fpr' | head -1 | cut -d ':' -f 10)
+echo -e "5\ny\n" | $GPG --batch --command-fd 0 --edit-key $KEYID trust quit 2>/dev/null || true
 
 exit 0

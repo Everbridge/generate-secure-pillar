@@ -143,98 +143,121 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&topLevelElement, "element", "e", "", "Name of the top level element under which encrypted key/value pairs are kept")
 }
 
-// initConfig reads in config file and ENV variables if set.
+// recurseError wraps errors from the recurse subcommand so the cobra wrapper
+// can downgrade them from Fatal to Warn. This preserves the historical
+// behavior where partial failures during recurse don't kill the process,
+// while still letting tests inspect the error returned by the handler.
+type recurseError struct{ Err error }
+
+func (r recurseError) Error() string { return r.Err.Error() }
+func (r recurseError) Unwrap() error { return r.Err }
+
+// initConfig is the cobra-compatible callback. It defers to initConfigE and
+// halts the process on error.
 func initConfig() {
+	if err := initConfigE(); err != nil {
+		logger.Fatal().Err(err).Msg("config initialization failed")
+	}
+}
+
+// initConfigE reads in config file and ENV variables if set, returning the
+// first error encountered instead of calling logger.Fatal. Split out from
+// initConfig so tests can drive it without subprocess execution.
+func initConfigE() error {
 	if cfgFile != "" {
-		// Validate config file path for directory traversal
 		if utils.ContainsDirectoryTraversal(cfgFile) {
-			logger.Fatal().Msgf("Invalid config file path: directory traversal detected in %s", cfgFile)
+			return fmt.Errorf("invalid config file path: directory traversal detected in %s", cfgFile)
 		}
-		// Use config file from the flag.
 		viper.SetConfigFile(cfgFile)
 	} else {
-		// Find home directory.
 		home, err := homedir.Dir()
 		if err != nil {
-			logger.Fatal().Err(err).Msg("Failed to determine home directory")
+			return fmt.Errorf("failed to determine home directory: %w", err)
 		}
 
 		configPath := fmt.Sprintf("%s/.config/generate-secure-pillar/", home)
 		dir := filepath.Clean(configPath)
-		err = os.MkdirAll(dir, 0700)
-		if err != nil {
-			logger.Fatal().Err(err).Msg("error creating config file path")
+		if err := os.MkdirAll(dir, 0700); err != nil {
+			return fmt.Errorf("error creating config file path: %w", err)
 		}
 		configFile, err := os.OpenFile(dir+"/config.yaml", os.O_RDONLY|os.O_CREATE, 0660)
 		if err != nil {
-			logger.Fatal().Err(err).Msg("Error creating config file")
+			return fmt.Errorf("error creating config file: %w", err)
 		}
 		defer configFile.Close()
 
-		// set config in "~/.config/generate-secure-pillar/config.yaml".
 		viper.AddConfigPath(configPath)
 		viper.SetConfigName("config")
 		viper.SetConfigType("yaml")
 	}
 
-	viper.AutomaticEnv() // read in environment variables that match
+	viper.AutomaticEnv()
 
-	// If a config file is found, read it in.
-	err := viper.ReadInConfig() // Find and read the config file
-	if err != nil {             // Handle errors reading the config file
-		logger.Fatal().Err(err).Msg("Fatal error config file")
+	if err := viper.ReadInConfig(); err != nil {
+		return fmt.Errorf("fatal error config file: %w", err)
 	}
-	readProfile()
+	return readProfileE()
 }
 
-func getPki() *pki.Pki {
-	p, err := pki.New(pgpKeyName, gnupgHome)
-	if err != nil {
-		logger.Fatal().Err(err).Msg("failed to initialize PKI")
-	}
-	return p
+// getPki constructs a Pki from the current pgpKeyName/gnupgHome globals.
+// Returns an error so tests can verify failure modes without process exit.
+func getPki() (*pki.Pki, error) {
+	return pki.New(pgpKeyName, gnupgHome)
 }
 
+// readProfile is kept for any direct callers; defers to the testable variant.
 func readProfile() {
-	if viper.IsSet("profiles") {
-		profiles := viper.Get("profiles")
-		profName := ""
-		if rootCmd.Flag("profile") != nil && rootCmd.Flag("profile").Value != nil {
-			profName = rootCmd.Flag("profile").Value.String()
-		}
+	if err := readProfileE(); err != nil {
+		logger.Warn().Err(err).Msg("readProfile")
+	}
+}
 
-		if profName != "" || pgpKeyName == "" {
-			profileList, ok := profiles.([]interface{})
-			if !ok {
-				logger.Warn().Msg("profiles configuration is not a valid array")
-				return
-			}
-			for _, prof := range profileList {
-				profileMap, ok := prof.(map[string]interface{})
-				if !ok {
-					logger.Warn().Msg("profile entry is not a valid map")
+// readProfileE applies the active profile (or default) from viper to the
+// pgpKeyName/gnupgHome globals. Returns an error instead of warning so callers
+// (and tests) can react to malformed config.
+func readProfileE() error {
+	if !viper.IsSet("profiles") {
+		return nil
+	}
+	profiles := viper.Get("profiles")
+	profName := ""
+	if rootCmd.Flag("profile") != nil && rootCmd.Flag("profile").Value != nil {
+		profName = rootCmd.Flag("profile").Value.String()
+	}
+
+	if profName == "" && pgpKeyName != "" {
+		return nil
+	}
+
+	profileList, ok := profiles.([]interface{})
+	if !ok {
+		return fmt.Errorf("profiles configuration is not a valid array")
+	}
+	for _, prof := range profileList {
+		profileMap, ok := prof.(map[string]interface{})
+		if !ok {
+			logger.Warn().Msg("profile entry is not a valid map")
+			continue
+		}
+		if profileMap["default"] != true && profName != profileMap["name"] {
+			continue
+		}
+		if gnupgHomeVal, exists := profileMap["gnupg_home"]; exists {
+			if gpgHome, ok := gnupgHomeVal.(string); ok && gpgHome != "" {
+				if utils.ContainsDirectoryTraversal(gpgHome) {
+					logger.Warn().Msgf("Invalid gnupg_home path: directory traversal detected in %s", gpgHome)
 					continue
 				}
-				if profileMap["default"] == true || profName == profileMap["name"] {
-					if gnupgHomeVal, exists := profileMap["gnupg_home"]; exists {
-						if gpgHome, ok := gnupgHomeVal.(string); ok && gpgHome != "" {
-							// Validate path for directory traversal
-							if utils.ContainsDirectoryTraversal(gpgHome) {
-								logger.Warn().Msgf("Invalid gnupg_home path: directory traversal detected in %s", gpgHome)
-								continue
-							}
-							gnupgHome = gpgHome
-						}
-					}
-					if defaultKeyVal, exists := profileMap["default_key"]; exists && defaultKeyVal != nil {
-						if defaultKey, ok := defaultKeyVal.(string); ok {
-							pgpKeyName = defaultKey
-						}
-					}
-				}
+				gnupgHome = gpgHome
+			}
+		}
+		if defaultKeyVal, exists := profileMap["default_key"]; exists && defaultKeyVal != nil {
+			if defaultKey, ok := defaultKeyVal.(string); ok {
+				pgpKeyName = defaultKey
 			}
 		}
 	}
+	return nil
 }
 
 // if we are getting stdin from a pipe we don't want

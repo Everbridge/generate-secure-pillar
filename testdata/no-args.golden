@@ -1,1 +1,1 @@
-      --config string    config file (default is $HOME/.config/generate-secure-pillar/config.yaml)
+      --config string       config file (default is $HOME/.config/generate-secure-pillar/config.yaml)

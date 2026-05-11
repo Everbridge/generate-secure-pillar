@@ -54,7 +54,7 @@ const Rotate = "rotate"
 // Sls sls data
 type Sls struct {
 	Yaml           *yaml.Yaml
-	Pki            *pki.Pki
+	Pki            pki.Crypter
 	KeyMap         map[string]interface{}
 	FilePath       string
 	EncryptionPath string
@@ -64,11 +64,12 @@ type Sls struct {
 	logger         zerolog.Logger
 }
 
-// New returns a Sls object
-func New(filePath string, p pki.Pki, encPath string) Sls {
+// New returns a Sls object. The Crypter is the seam used by tests to inject
+// a fake in place of a real *pki.Pki.
+func New(filePath string, c pki.Crypter, encPath string) Sls {
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stdout})
 	logger := zerolog.New(os.Stdout)
-	s := Sls{yaml.New(), &p, map[string]interface{}{}, filePath, encPath, "", 0, false, logger}
+	s := Sls{yaml.New(), c, map[string]interface{}{}, filePath, encPath, "", 0, false, logger}
 	if len(filePath) > 0 {
 		err := s.ReadSlsFile()
 		if err != nil {
@@ -612,10 +613,17 @@ func validAction(action string) bool {
 	return action == Encrypt || action == Decrypt || action == Validate || action == Rotate
 }
 
-// containsDirectoryTraversal checks if the path contains directory traversal sequences
+// containsDirectoryTraversal checks if the path contains directory traversal sequences.
+// A bare ".." segment only counts when it stands alone as a path component, so
+// filenames like "my..file.txt" or "file.v1.0.txt" are not flagged.
 func containsDirectoryTraversal(path string) bool {
-	cleaned := filepath.Clean(path)
-	return strings.Contains(cleaned, "..") || strings.Contains(path, "../") || strings.Contains(path, "..\\")
+	normalized := strings.ReplaceAll(path, "\\", "/")
+	for _, part := range strings.Split(normalized, "/") {
+		if part == ".." {
+			return true
+		}
+	}
+	return false
 }
 
 func shortFileName(file string) string {
@@ -642,6 +650,11 @@ func getNode(v interface{}) interface{} {
 
 	switch kind {
 	case reflect.Slice:
+		if sliceVal, ok := v.([]interface{}); ok {
+			for _, v2 := range sliceVal {
+				node = getNode(v2)
+			}
+		}
 	case reflect.Map:
 		if mapVal, ok := v.(map[string]interface{}); ok {
 			for _, v2 := range mapVal {

@@ -22,15 +22,88 @@
 package cmd
 
 import (
+	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 
+	"github.com/Everbridge/generate-secure-pillar/pki"
 	"github.com/Everbridge/generate-secure-pillar/sls"
 	"github.com/Everbridge/generate-secure-pillar/utils"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
+
+// EncryptOpts is the fully-resolved input set for the encrypt command,
+// extracted from cobra flags so the handler can be unit-tested.
+type EncryptOpts struct {
+	Crypter         pki.Crypter
+	Subcommand      string
+	InputFilePath   string
+	OutputFilePath  string
+	RecurseDir      string
+	YamlPath        string
+	TopLevelElement string
+	UpdateInPlace   bool
+}
+
+// runEncrypt is the testable handler body. It returns errors instead of
+// calling logger.Fatal so tests can drive every branch without a subprocess.
+func runEncrypt(opts EncryptOpts) error {
+	if utils.ContainsDirectoryTraversal(opts.OutputFilePath) {
+		return fmt.Errorf("encrypt: invalid output file path - directory traversal detected in %s", opts.OutputFilePath)
+	}
+	if utils.ContainsDirectoryTraversal(opts.InputFilePath) {
+		return fmt.Errorf("encrypt: invalid input file path - directory traversal detected in %s", opts.InputFilePath)
+	}
+	if utils.ContainsDirectoryTraversal(opts.RecurseDir) {
+		return fmt.Errorf("encrypt: invalid directory path - directory traversal detected in %s", opts.RecurseDir)
+	}
+
+	outputPath, err := filepath.Abs(opts.OutputFilePath)
+	if err != nil {
+		return fmt.Errorf("encrypt: failed to resolve absolute path for output file: %w", err)
+	}
+	inputPath, err := filepath.Abs(opts.InputFilePath)
+	if err != nil {
+		return fmt.Errorf("encrypt: failed to resolve absolute path for input file: %w", err)
+	}
+
+	switch opts.Subcommand {
+	case all:
+		if inputPath == os.Stdin.Name() && !stdinIsPiped() {
+			logger.Info().Msgf("reading from %s", os.Stdin.Name())
+		}
+		s := sls.New(inputPath, opts.Crypter, opts.TopLevelElement)
+		if s.IsInclude {
+			return fmt.Errorf("encrypt: file %s contains include statements and cannot be processed", inputPath)
+		}
+		if inputPath != os.Stdin.Name() && opts.UpdateInPlace {
+			outputPath = inputPath
+		}
+		buffer, err := s.PerformAction(sls.Encrypt)
+		if err != nil {
+			return fmt.Errorf("encrypt: %w", err)
+		}
+		_, err = sls.WriteSlsFile(buffer, outputPath)
+		return err
+	case recurse:
+		if err := utils.ProcessDir(opts.RecurseDir, ".sls", sls.Encrypt, outputPath, opts.TopLevelElement, opts.Crypter); err != nil {
+			return recurseError{Err: err}
+		}
+		return nil
+	case path:
+		s := sls.New(inputPath, opts.Crypter, opts.TopLevelElement)
+		if s.IsInclude {
+			return fmt.Errorf("encrypt: file %s contains include statements and cannot be processed", inputPath)
+		}
+		utils.PathAction(&s, opts.YamlPath, sls.Encrypt)
+		return nil
+	default:
+		return fmt.Errorf("encrypt: unknown subcommand %q", opts.Subcommand)
+	}
+}
 
 // encryptCmd represents the encrypt command
 var encryptCmd = &cobra.Command{
@@ -47,64 +120,27 @@ var encryptCmd = &cobra.Command{
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		// Validate file paths for directory traversal attacks
-		if utils.ContainsDirectoryTraversal(outputFilePath) {
-			logger.Fatal().Msgf("encrypt: invalid output file path - directory traversal detected in %s", outputFilePath)
-		}
-		if utils.ContainsDirectoryTraversal(inputFilePath) {
-			logger.Fatal().Msgf("encrypt: invalid input file path - directory traversal detected in %s", inputFilePath)
-		}
-		if utils.ContainsDirectoryTraversal(recurseDir) {
-			logger.Fatal().Msgf("encrypt: invalid directory path - directory traversal detected in %s", recurseDir)
-		}
-
-		pk := getPki()
-		outputFilePath, err := filepath.Abs(outputFilePath)
+		pk, err := getPki()
 		if err != nil {
-			logger.Fatal().Err(err).Msg("encrypt: failed to resolve absolute path for output file")
+			logger.Fatal().Err(err).Msg("failed to initialize PKI")
 		}
-		inputFilePath, err := filepath.Abs(inputFilePath)
+		err = runEncrypt(EncryptOpts{
+			Crypter:         pk,
+			Subcommand:      args[0],
+			InputFilePath:   inputFilePath,
+			OutputFilePath:  outputFilePath,
+			RecurseDir:      recurseDir,
+			YamlPath:        yamlPath,
+			TopLevelElement: topLevelElement,
+			UpdateInPlace:   updateInPlace,
+		})
+		var rerr recurseError
+		if errors.As(err, &rerr) {
+			logger.Warn().Err(rerr.Err).Msg("encrypt")
+			return
+		}
 		if err != nil {
-			logger.Fatal().Err(err).Msg("encrypt: failed to resolve absolute path for input file")
-		}
-
-		// process args
-		switch args[0] {
-		case all:
-			if inputFilePath == os.Stdin.Name() && !stdinIsPiped() {
-				logger.Info().Msgf("reading from %s", os.Stdin.Name())
-			}
-			s := sls.New(inputFilePath, *pk, topLevelElement)
-
-			// Check if the file contains include statements (not supported for encryption)
-			if s.IsInclude {
-				logger.Fatal().Msgf("encrypt: file %s contains include statements and cannot be processed", inputFilePath)
-			}
-
-			if inputFilePath != os.Stdin.Name() && updateInPlace {
-				outputFilePath = inputFilePath
-			}
-			buffer, err := s.PerformAction("encrypt")
-			utils.SafeWrite(buffer, outputFilePath, err)
-		case recurse:
-			err := utils.ProcessDir(recurseDir, ".sls", "encrypt", outputFilePath, topLevelElement, *pk)
-			if err != nil {
-				logger.Warn().Err(err).Msg("encrypt")
-			}
-		case path:
-			s := sls.New(inputFilePath, *pk, topLevelElement)
-
-			// Check if the file contains include statements (not supported for path operations)
-			if s.IsInclude {
-				logger.Fatal().Msgf("encrypt: file %s contains include statements and cannot be processed", inputFilePath)
-			}
-
-			utils.PathAction(&s, yamlPath, "encrypt")
-		default:
-			err = cmd.Help()
-			if err != nil {
-				logger.Fatal().Err(err).Msg("encrypt: failed to display help")
-			}
+			logger.Fatal().Err(err).Msg("encrypt")
 		}
 	},
 }
