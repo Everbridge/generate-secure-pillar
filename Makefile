@@ -8,11 +8,11 @@ TARGET := $(shell echo $${PWD\#\#*/})
 
 # These will be provided to the target
 BUILD := `git rev-parse HEAD`
-# always add one to the commit number to fix an off by one bug
-# as the release makes a commit prior to publishing
-# NOTE: hard coded for new 2.0 release, should be updated for future releases
-COMMIT := $(shell git rev-list HEAD | wc -l | sed 's/^ *//g' | awk '{print $$1 + 1}')
-VERSION := 2.0.$(COMMIT)
+# Read the current Version: "X.Y.Z" from cmd/root.go and bump the patch
+# component. `make release` writes this incremented value back into root.go,
+# README, and a git tag, so the next release reads the bumped value and
+# increments again. Bump major/minor by editing cmd/root.go directly.
+VERSION := $(shell awk -F'"' '/^[[:space:]]*Version:/ { split($$2, v, "."); print v[1]"."v[2]"."v[3]+1; exit }' cmd/root.go)
 
 # Use linker flags to provide version/build settings to the target
 LDFLAGS=-ldflags "-X=main.Version=$(VERSION) -X=main.Build=$(BUILD) -s -w"

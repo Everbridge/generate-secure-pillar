@@ -10,7 +10,7 @@
 
    generate-secure-pillar [command] [flags]
 
-## VERSION 2.0.660
+## VERSION 2.0.1
 
 ## AUTHOR
 
