@@ -56,9 +56,9 @@ var (
 	yamlPath       string
 
 	// Profile and encryption configuration
-	profile    string
-	pgpKeyName string
-	gnupgHome  = "~/.gnupg"
+	profile         string
+	pgpKeyName      string
+	gnupgHome       = "~/.gnupg"
 	topLevelElement string
 
 	// Operation flags
@@ -205,13 +205,6 @@ func initConfigE() error {
 // Returns an error so tests can verify failure modes without process exit.
 func getPki() (*pki.Pki, error) {
 	return pki.New(pgpKeyName, gnupgHome)
-}
-
-// readProfile is kept for any direct callers; defers to the testable variant.
-func readProfile() {
-	if err := readProfileE(); err != nil {
-		logger.Warn().Err(err).Msg("readProfile")
-	}
 }
 
 // readProfileE applies the active profile (or default) from viper to the
