@@ -11,10 +11,8 @@ BUILD := `git rev-parse HEAD`
 # always add one to the commit number to fix an off by one bug
 # as the release makes a commit prior to publishing
 # NOTE: hard coded for new 2.0 release, should be updated for future releases
-COMMIT := 0
-# COMMIT := $(shell git rev-list HEAD | wc -l | sed 's/^ *//g' | awk '{print $$1 + 1}')
-
-VERSION := 2.0.$(COMMIT)
+COMMIT := $(shell git rev-list HEAD | wc -l | sed 's/^ *//g' | awk '{print $$1 + 1}')
+VERSION := 2.0.0 # $(COMMIT)
 
 # Use linker flags to provide version/build settings to the target
 LDFLAGS=-ldflags "-X=main.Version=$(VERSION) -X=main.Build=$(BUILD) -s -w"
