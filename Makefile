@@ -10,8 +10,9 @@ TARGET := $(shell echo $${PWD\#\#*/})
 BUILD := `git rev-parse HEAD`
 # always add one to the commit number to fix an off by one bug
 # as the release makes a commit prior to publishing
-COMMIT := $(shell git rev-list HEAD | wc -l | sed 's/^ *//g' | awk '{print $$1 + 1}')
-VERSION := 1.0.$(COMMIT)
+COMMIT := 0
+# $(shell git rev-list HEAD | wc -l | sed 's/^ *//g' | awk '{print $$1 + 1}')
+VERSION := 2.0.$(COMMIT)
 
 # Use linker flags to provide version/build settings to the target
 LDFLAGS=-ldflags "-X=main.Version=$(VERSION) -X=main.Build=$(BUILD) -s -w"
@@ -38,10 +39,8 @@ build: $(TARGET) deps check test
 	@go build $(LDFLAGS)
 
 release: build
-	@sed -i .bak 's/\"2.0.*\"/\"1.0.'$(COMMIT)'\"/' cmd/root.go
-	@grep $(COMMIT) cmd/root.go 2> /dev/null && rm cmd/root.go.bak
-	@sed -i .bak 's/VERSION 1.0.*/VERSION 1.0.'$(COMMIT)'/' README.md
-	@grep $(COMMIT) README.md 2> /dev/null && rm README.md.bak
+	@sed -i.bak -E 's/Version: "[0-9]+\.[0-9]+\.[0-9]+"/Version: "$(VERSION)"/' cmd/root.go && rm cmd/root.go.bak
+	@sed -i.bak -E 's/VERSION [0-9]+\.[0-9]+\.[0-9]+/VERSION $(VERSION)/' README.md && rm README.md.bak
 	@git commit -am "new $(BRANCH) build: $(VERSION)"
 	@git tag -a v$(VERSION) -m "new $(BRANCH) build: $(VERSION)"
 	@echo pushing to branch $(BRANCH)
