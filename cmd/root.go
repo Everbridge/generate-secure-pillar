@@ -1,4 +1,6 @@
-// Package cmd/root handles the base command line arguments
+// Package cmd implements the generate-secure-pillar CLI: cobra command
+// wiring, configuration loading, and the runX handlers that each command's
+// Run closure delegates to.
 package cmd
 
 // Copyright © 2018 Everbridge, Inc.
