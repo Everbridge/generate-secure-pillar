@@ -38,7 +38,7 @@ build: $(TARGET) deps check test
 	@go build $(LDFLAGS)
 
 release: build
-	@sed -i .bak 's/\"1.0.*\"/\"1.0.'$(COMMIT)'\"/' cmd/root.go
+	@sed -i .bak 's/\"2.0.*\"/\"1.0.'$(COMMIT)'\"/' cmd/root.go
 	@grep $(COMMIT) cmd/root.go 2> /dev/null && rm cmd/root.go.bak
 	@sed -i .bak 's/VERSION 1.0.*/VERSION 1.0.'$(COMMIT)'/' README.md
 	@grep $(COMMIT) README.md 2> /dev/null && rm README.md.bak
