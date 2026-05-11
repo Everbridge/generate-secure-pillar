@@ -42,7 +42,7 @@ changelog:
 brews:
   - # Repository to push the tap to.
     repository:
-      owner: esilva-everbridge
+      owner: ed-silva-eb
       name: homebrew-generate-secure-pillar
 
     skip_upload: false
