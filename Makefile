@@ -13,6 +13,7 @@ BUILD := `git rev-parse HEAD`
 # NOTE: hard coded for new 2.0 release, should be updated for future releases
 COMMIT := 0
 # COMMIT := $(shell git rev-list HEAD | wc -l | sed 's/^ *//g' | awk '{print $$1 + 1}')
+
 VERSION := 2.0.$(COMMIT)
 
 # Use linker flags to provide version/build settings to the target
