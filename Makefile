@@ -12,7 +12,7 @@ BUILD := `git rev-parse HEAD`
 # as the release makes a commit prior to publishing
 # NOTE: hard coded for new 2.0 release, should be updated for future releases
 COMMIT := $(shell git rev-list HEAD | wc -l | sed 's/^ *//g' | awk '{print $$1 + 1}')
-VERSION := 2.0.0 #$(COMMIT)
+VERSION := 2.0.$(COMMIT)
 
 # Use linker flags to provide version/build settings to the target
 LDFLAGS=-ldflags "-X=main.Version=$(VERSION) -X=main.Build=$(BUILD) -s -w"
@@ -39,6 +39,7 @@ build: $(TARGET) deps check test
 	@go build $(LDFLAGS)
 
 release: build
+	@gh auth status > /dev/null || (echo "Please login to GitHub CLI with 'gh auth login' to create a release" && exit 1)
 	@sed -i.bak -E 's/Version: "[0-9]+\.[0-9]+\.[0-9]+"/Version: "$(VERSION)"/' cmd/root.go && rm cmd/root.go.bak
 	@sed -i.bak -E 's/VERSION [0-9]+\.[0-9]+\.[0-9]+/VERSION $(VERSION)/' README.md && rm README.md.bak
 	@git commit -am "new $(BRANCH) build: $(VERSION)"
