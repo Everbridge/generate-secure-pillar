@@ -1,7 +1,5 @@
 # generate-secure-pillar
 
-[![Go Report Card](https://goreportcard.com/badge/github.com/Everbridge/generate-secure-pillar)](https://goreportcard.com/report/github.com/Everbridge/generate-secure-pillar)
-
 ## Create and update encrypted content or decrypt encrypted content in YAML files
 
 <https://github.com/Everbridge/generate-secure-pillar/wiki/stupid-command-line-tricks>
